@@ -12,8 +12,10 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   } catch {
     throw new AiError('Keine Verbindung zum Server. Bist du online?');
   }
-  const data = (await res.json().catch(() => ({}))) as { error?: string } & T;
-  if (!res.ok) throw new AiError(data.error || 'Die KI ist gerade nicht erreichbar.', res.status === 401);
+  const data = (await res.json().catch(() => null)) as ({ error?: string } & T) | null;
+  if (res.status === 504) throw new AiError('Die KI hat zu lange gebraucht. Versuch es bitte noch einmal.');
+  if (!res.ok) throw new AiError(data?.error || `Die KI ist gerade nicht erreichbar (Fehler ${res.status}).`, res.status === 401);
+  if (!data || typeof (data as { text?: unknown }).text !== 'string') throw new AiError(`Der Server hat keine lesbare Antwort geschickt (Status ${res.status}).`);
   return data;
 }
 
