@@ -13,7 +13,8 @@ export function Tutor({ context, onClearContext }: { context: TutorContext | nul
   const [needsCode, setNeedsCode] = useState(false);
   const [draft, setDraft] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => endRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), [chat, busy]);
+  // Geschweifte Klammern: Neuere Browser geben bei scrollIntoView ein Promise zurück, das React sonst als Aufräum-Funktion aufrufen würde.
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [chat, busy]);
 
   const send = async (text: string) => {
     if (busy || !text.trim()) return;

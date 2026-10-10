@@ -7,7 +7,7 @@ import { Html } from './Html';
 /** „Erklär es mir anders“: Die KI bekommt nur den fertigen Rechenweg der Engine. */
 export function AiExplain({ req, onAskTutor }: { req: ExplainRequest; onAskTutor: (ctx: TutorContext) => void }) {
   const [state, setState] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; text?: string; needsCode?: boolean }>({ status: 'idle' });
-  useEffect(() => setState({ status: 'idle' }), [req.task, req.steps]);
+  useEffect(() => { setState({ status: 'idle' }); }, [req.task, req.steps]);
 
   const run = async () => {
     setState({ status: 'loading' });
