@@ -311,9 +311,11 @@ export interface Answer { v: Q; raw: boolean }
 export function parseAnswer(input: string): Answer {
   const s = String(input || '').trim()
     .replace(/^x\s*=\s*/i, '')
-    .replace(/°\s*c?|[%€]|\b(kg|g|t|mm|dm|cm|km|m|l|ml|ct|cent|euro|eur|stück|stücke|schüler|kinder|min|minuten|h|s|sek|sekunden|jahre|jahr|tage|liter|personen|stunden|std|seiten|punkte|plätze|gläser|tüten|hefte|stifte|pakete|packungen|grad)[²³]?(?![a-zäöüß])\.?/gi, '')
+    .replace(/°\s*c?|[%€°]|\b(kg|g|t|mm|dm|cm|km|m|l|ml|ct|cent|euro|eur|stück|stücke|schüler|kinder|min|minuten|h|s|sek|sekunden|jahre|jahr|tage|liter|personen|stunden|std|seiten|punkte|plätze|gläser|tüten|hefte|stifte|pakete|packungen|grad)[²³]?(?![a-zäöüß])\.?/gi, '')
     .trim();
   if (!s) throw new MathError('Gib zuerst eine Antwort ein.');
+  // Große Zahlen mit Tausenderpunkten oder Leerzeichen: 4.382.615 oder 4 382 615
+  if (/^-?\d{1,3}([ .\u202f\u00a0]\d{3})+$/.test(s)) return { v: q(BigInt(s.replace(/[ .\u202f\u00a0]/g, ''))), raw: false };
   let m = s.match(/^(-|−)?\s*(\d+)\s*\/\s*(\d+)$/);
   if (m) {
     if (BigInt(m[3]) === 0n) throw new MathError('Ein Bruch mit Nenner 0 ist nicht erlaubt.');

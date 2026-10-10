@@ -20,7 +20,7 @@ export const STAGES: Stage[] = [
 
 export function makeTask(topic: Topic, level: number): Task | null {
   if (level >= 4) {
-    const t = TEXT[topic.id]?.(level);
+    const t = TEXT[topic.id]?.(level) ?? topic.text?.(level);
     if (t) return t;
   }
   return topic.gen(Math.min(level, 3));

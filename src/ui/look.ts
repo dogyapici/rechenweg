@@ -14,6 +14,16 @@ const LOOKS: Record<string, Look> = {
   dez: { icon: '🪙', color: '#0c8599', teaser: 'Rechnen mit Komma' },
   neg: { icon: '🌡️', color: '#1098ad', teaser: 'Zahlen unter null' },
   proz: { icon: '🏷️', color: '#2f9e44', teaser: 'Prozente wie beim Einkaufen' },
+  zahl: { icon: '🔟', color: '#4263eb', teaser: 'Bis zur Million und weiter' },
+  rund: { icon: '🎯', color: '#e67700', teaser: 'Ungefähr reicht oft' },
+  pot: { icon: '🚀', color: '#9c36b5', teaser: 'Hoch zwei, hoch drei' },
+  prop: { icon: '🛒', color: '#2b8a3e', teaser: 'Der Dreisatz' },
+  mass: { icon: '🗺️', color: '#5f3dc4', teaser: 'Karten lesen' },
+  daten: { icon: '📊', color: '#1971c2', teaser: 'Diagramme und Durchschnitt' },
+  winkel: { icon: '📐', color: '#c92a2a', teaser: 'Messen mit dem Geodreieck' },
+  sym: { icon: '🦋', color: '#d6336c', teaser: 'Spiegeln und Falten' },
+  koerper: { icon: '🧊', color: '#0b7285', teaser: 'Würfel zum Drehen' },
+  koord: { icon: '📍', color: '#5c940d', teaser: 'Erst gehen, dann steigen' },
   gl: { icon: '⚖️', color: '#c2255c', teaser: 'Finde das x' },
 };
 const FALLBACK: Look = { icon: '📘', color: '#1d47c9', teaser: '' };

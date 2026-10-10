@@ -74,7 +74,7 @@ export function ProfilePage({ profile, onSave, onBack }: { profile: Profile | nu
               <p className="ai-note">Diese Themen kommen nach und nach dazu. Bis dahin kannst du im Bereich „Fragen“ alles dazu fragen.</p>
             </details>
           )}
-          {draft.klasse >= MAX_COVERED && <p className="hintbox">Für Klasse {draft.klasse} gibt es in der App bisher vor allem Wiederholung. Themen wie Terme, lineare Funktionen oder Geometrie kommen noch dazu.</p>}
+          {draft.klasse >= MAX_COVERED && <p className="hintbox">Für Klasse {draft.klasse} gibt es in der App bisher vor allem Wiederholung. Themen wie Terme, Zinsen oder lineare Funktionen kommen noch dazu.</p>}
         </section>
       )}
 

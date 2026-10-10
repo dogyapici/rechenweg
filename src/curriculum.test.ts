@@ -13,8 +13,8 @@ describe('Lernpfad-Kapitel', () => {
   });
   it('schaltet der Reihe nach frei', () => {
     let n = pathNodes({}, {}, false, title);
-    expect(n.filter(x => x.state === 'open').map(x => x.id)).toEqual(['pvs']);
-    const s: Stats = { pvs: st(4), teil: st(4) };
+    expect(n.filter(x => x.state === 'open').map(x => x.id)).toEqual(['zahl']);
+    const s: Stats = { zahl: st(4), rund: st(4), pvs: st(4), pot: st(4), teil: st(4) };
     n = pathNodes(s, {}, false, title);
     expect(nextNode(n)?.id).toBe('k1');
     expect(n.find(x => x.id === 'groe')!.state).toBe('locked');
@@ -27,7 +27,7 @@ describe('Lernpfad-Kapitel', () => {
   it('bevorzugt Stoff der eigenen Klasse', () => {
     const n = pathNodes({}, {}, false, title, ['pvs', 'kuerzen', 'bradd']);
     expect(nextNode(n, x => x.id === 'bradd')?.id).toBe('bradd');
-    expect(nextNode(n, () => false)?.id).toBe('pvs');
+    expect(nextNode(n, () => false)?.id).toBe('zahl');
   });
   it('freies Üben öffnet alles', () => {
     expect(pathNodes({}, {}, true, title).every(x => x.state !== 'locked')).toBe(true);
@@ -46,7 +46,7 @@ describe('Klassenarbeit', () => {
     it(`${ch.id}: vollständige Aufgaben, alle Themen kommen vor`, () => {
       for (let r = 0; r < 10; r++) {
         const e = buildExam(ch.topics);
-        expect(e.length).toBe(ch.topics.length > 4 ? 12 : 8);
+        expect(e.length).toBe(ch.topics.length > 4 ? Math.max(12, ch.topics.length) : 8);
         for (const id of ch.topics) expect(e.some(x => x.topic === id)).toBe(true);
         for (const x of e) expect(mark(x.task, '').state).toBe('empty');
       }

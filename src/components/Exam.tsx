@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { solHTML } from '../engine/index.js';
 import { CHAPTERS, FINAL, PASS, grade, type Exams } from '../curriculum';
 import { buildExam, mark, type ExamTask, type Mark } from '../exam';
+import { answerLabel } from '../widgets';
 import { TOPICS } from '../topics';
 import { look } from '../ui/look';
-import { Keypad } from '../ui/bits';
+import { AnswerInput } from './Widgets';
 import { Html } from './Html';
 
 interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void; custom?: { name: string; topics: string[]; back: string } }
@@ -88,8 +89,7 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom }: Props)
           <span className="stage-tag" style={{ '--tc': look(t.topic).color } as React.CSSProperties}>{look(t.topic).icon} {title(t.topic)}</span>
           <Html as="p" className={`prompt${t.task.word ? ' story' : ''}`} html={t.task.prompt} />
           <form className="answer" autoComplete="off" onSubmit={e => { e.preventDefault(); if (i < tasks.length - 1) setI(i + 1); else setConfirm(true); }}>
-            <input ref={inputRef} value={answers[i]} onChange={e => setA(e.target.value)} placeholder={t.task.placeholder || 'Deine Lösung'} aria-label="Deine Lösung" />
-            <Keypad inputRef={inputRef} value={answers[i]} onChange={setA} />
+            <AnswerInput key={i} task={t.task} value={answers[i]} onChange={setA} inputRef={inputRef} />
             <div className="exam-nav">
               <button type="button" className="btn quiet" disabled={i === 0} onClick={() => setI(i - 1)}>← Zurück</button>
               {i < tasks.length - 1
@@ -152,7 +152,7 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom }: Props)
             <li key={k} className={marks[k].state}>
               <div className="er-h"><span className="er-i" aria-hidden="true">{ICON[marks[k].state]}</span><b>Aufgabe {k + 1}</b><span className="er-pts">{num(marks[k].points)} P.</span></div>
               <Html as="p" html={t.task.prompt} />
-              <p className="er-a">Deine Antwort: <b>{answers[k].trim() || 'keine'}</b>{marks[k].state !== 'right' && <> · Richtig ist: <Html as="b" html={t.task.sol.resultHTML} /></>}{marks[k].state === 'half' && ' (nicht vollständig gekürzt)'}</p>
+              <p className="er-a">Deine Antwort: <b>{answerLabel(t.task.widget, answers[k]) || 'keine'}</b>{marks[k].state !== 'right' && <> · Richtig ist: <Html as="b" html={t.task.sol.resultHTML} /></>}{marks[k].state === 'half' && ' (nicht vollständig gekürzt)'}</p>
               {marks[k].state !== 'right' && <details className="solbox"><summary>Rechenweg ansehen</summary><Html html={solHTML(t.task.sol)} /></details>}
             </li>
           ))}

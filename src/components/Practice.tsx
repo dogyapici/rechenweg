@@ -4,7 +4,8 @@ import { pick, type Task, type Topic } from '../topics';
 import { freshStats, type Stats, type TopicStats } from '../storage';
 import { MAX_LEVEL, STAGES, STREAK_UP, guideFor, makeTask } from '../stages';
 import type { TutorContext } from '../ai';
-import { Keypad, StepReveal } from '../ui/bits';
+import { StepReveal } from '../ui/bits';
+import { AnswerInput } from './Widgets';
 import { AiExplain } from './AiExplain';
 import { Guide } from './Guide';
 import { Html } from './Html';
@@ -19,7 +20,7 @@ interface TaskState {
 function newTask(topic: Topic, s: TopicStats, n = 0): TaskState {
   let task: Task | null = null;
   for (let i = 0; i < 5 && !task; i++) task = makeTask(topic, s.level);
-  const guided = !!task && s.level >= 2 && !(s.atLevel ?? 0) && guideFor(task).length > 1;
+  const guided = !!task && s.level >= 2 && !(s.atLevel ?? 0) && guideFor(task).length > 1 && !task.widget;
   return { task, tries: 0, hint: guided, revealed: false, done: false, guided, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n };
 }
 const PARTY = ['🎉', '⭐', '✨', '🎈', '⭐', '🎉'];
@@ -85,6 +86,8 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
     }
   };
   const guidedDone = () => {
+    // Bei Zeichen- und Klickaufgaben bereiten die Schritte nur vor. Die Antwort setzt man danach selbst.
+    if (T.task?.widget) { setT({ ...T, guided: false, hint: true, fb: { state: 'almost', msg: 'Gut vorbereitet! Jetzt setz es oben um und prüfe deine Antwort.' } }); return; }
     const next = { ...T, tries: T.tries + 1, hint: true, done: true };
     const lm = finish(true, next);
     setT({ ...next, levelMsg: lm, fb: { state: 'right', msg: 'Super, gemeinsam geschafft! Die nächste Aufgabe probierst du allein.' } });
@@ -148,8 +151,7 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
 
         {!T.done && !T.guided && (
           <form className="answer" onSubmit={check} autoComplete="off">
-            <input ref={inputRef} id="ans" value={input} onChange={e => setInput(e.target.value)} placeholder={k.placeholder || 'Deine Lösung'} aria-label="Deine Lösung" />
-            <Keypad inputRef={inputRef} value={input} onChange={setInput} />
+            <AnswerInput task={k} value={input} onChange={setInput} inputRef={inputRef} />
             <button className="btn big wide" type="submit" disabled={!input.trim()}>Prüfen ✔</button>
           </form>
         )}

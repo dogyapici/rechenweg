@@ -23,6 +23,16 @@ export interface Profile { name: string; klasse: number; schulform: Schulform; l
  */
 const GRADE: Record<string, { gym: number; other: number }> = {
   pvs: { gym: 5, other: 5 },
+  zahl: { gym: 5, other: 5 },
+  rund: { gym: 5, other: 5 },
+  pot: { gym: 5, other: 6 },
+  koord: { gym: 5, other: 5 },
+  winkel: { gym: 5, other: 6 },
+  sym: { gym: 5, other: 5 },
+  koerper: { gym: 5, other: 5 },
+  daten: { gym: 5, other: 6 },
+  prop: { gym: 6, other: 7 },
+  mass: { gym: 6, other: 6 },
   groe: { gym: 5, other: 5 },
   flae: { gym: 5, other: 5 },
   teil: { gym: 6, other: 6 },
@@ -70,11 +80,10 @@ export interface Curriculum {
  */
 const BW_GYM: Curriculum = {
   name: 'Bildungsplan Baden-Württemberg, Gymnasium',
-  band: { pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8' },
-  grade: { pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7 },
+  band: { zahl: '5/6', rund: '5/6', pot: '5/6', koord: '5/6', winkel: '5/6', sym: '5/6', koerper: '5/6', daten: '5/6', prop: '5/6', mass: '5/6', pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8' },
+  grade: { zahl: 5, rund: 5, pot: 5, koord: 5, winkel: 5, sym: 5, koerper: 5, daten: 6, prop: 6, mass: 6, pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7 },
   missing: {
-    '5/6': ['Große Zahlen und Stellenwerte', 'Runden und Überschlagen', 'Potenzen', 'Winkel, Dreiecke und Vierecke', 'Symmetrie und Spiegeln', 'Körper und Netze',
-      'Koordinatensystem', 'Proportional und antiproportional', 'Maßstab', 'Daten, Diagramme und Mittelwert'],
+    '5/6': [],
     '7/8': ['Zinsrechnung', 'Terme mit Variablen und Klammern', 'Binomische Formeln', 'Wurzeln und reelle Zahlen', 'Lineare Gleichungssysteme',
       'Quadratische Gleichungen', 'Lineare und quadratische Funktionen'],
   },

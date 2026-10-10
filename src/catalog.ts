@@ -14,6 +14,16 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'neg', title: 'Negative Zahlen', covers: 'Negative Zahlen, ganze Zahlen, Zahlenstrahl, Temperatur, Kontostand, Vorzeichen, Rechnen mit negativen Zahlen, Addieren, Subtrahieren, Multiplizieren und Dividieren ganzer Zahlen' },
   { id: 'proz', title: 'Prozentrechnung', covers: 'Prozent, Prozentsatz, Prozentwert, Grundwert, Dreisatz mit Prozent, Rabatt, Anteile in Prozent' },
   { id: 'gl', title: 'Gleichungen lösen', covers: 'Gleichungen, lineare Gleichungen, Variable x, Äquivalenzumformungen, Waagemodell, Gleichungen mit Klammern' },
+  { id: 'zahl', title: 'Große Zahlen und Stellenwerte', covers: 'Große Zahlen, Millionen, Milliarden, Stellenwerttafel, Stellenwertsystem, Zahlen lesen und schreiben, Zahlwörter, Vorgänger und Nachfolger, natürliche Zahlen ordnen' },
+  { id: 'rund', title: 'Runden und Überschlagen', covers: 'Runden, Zahlen runden, Dezimalzahlen runden, Überschlag, Überschlagsrechnung, Schätzen, ungefähr' },
+  { id: 'pot', title: 'Potenzen', covers: 'Potenzen, Basis, Exponent, Quadratzahlen, Zehnerpotenzen, Hochzahl, Potenz vor Punkt vor Strich' },
+  { id: 'prop', title: 'Proportional und antiproportional', covers: 'Zuordnungen, proportional, antiproportional, Dreisatz, Wertetabelle, je mehr desto mehr, je mehr desto weniger' },
+  { id: 'mass', title: 'Maßstab', covers: 'Maßstab, Karten, Baupläne, Vergrößern, Verkleinern, Entfernungen auf Karten' },
+  { id: 'daten', title: 'Daten, Diagramme und Mittelwert', covers: 'Daten, Strichliste, Häufigkeit, Säulendiagramm, Balkendiagramm, Diagramme lesen, Mittelwert, Durchschnitt, Spannweite, Statistik' },
+  { id: 'winkel', title: 'Winkel, Dreiecke und Vierecke', covers: 'Winkel messen, Winkel zeichnen, Geodreieck, Winkelarten spitz recht stumpf gestreckt überstumpf, Winkelsumme Dreieck und Viereck, Nebenwinkel, Dreiecke, Vierecke' },
+  { id: 'sym', title: 'Symmetrie und Spiegeln', covers: 'Symmetrie, achsensymmetrisch, Symmetrieachse, punktsymmetrisch, Spiegeln, Spiegelbild, Figuren spiegeln' },
+  { id: 'koerper', title: 'Körper und Netze', covers: 'Körper, Würfel, Quader, Pyramide, Prisma, Zylinder, Kegel, Ecken Kanten Flächen, Netze, Würfelnetz, Schrägbild, Volumen, Rauminhalt, Oberfläche' },
+  { id: 'koord', title: 'Koordinatensystem', covers: 'Koordinatensystem, Koordinaten, Punkte eintragen, Punkte ablesen, x-Achse, y-Achse, Figuren im Koordinatensystem, Quadranten' },
 ];
 export const CATALOG_IDS = CATALOG.map(c => c.id);
 

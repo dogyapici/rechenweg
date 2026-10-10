@@ -525,3 +525,71 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .fig .sh { fill: color-mix(in srgb, var(--tc, var(--blue)) 16%, transparent); stroke: var(--tc, var(--blue)); stroke-width: 2.5; stroke-linejoin: round; }
 .fig .hl { stroke: var(--tc, var(--blue)); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .fig text { font-size: 13px; font-weight: 600; fill: currentColor; }
+
+/* Geometrie: Figuren, Körper, Diagramme */
+.fig .rt { fill: none; stroke: var(--tc, var(--blue)); stroke-width: 1.5; }
+.fig .dot { fill: var(--tc, var(--blue)); }
+.fig .ray, .angle-w .ray { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.fig .arc, .angle-w .arc { fill: none; stroke: var(--tc, var(--blue)); stroke-width: 2.5; }
+.fig .arc.b { stroke: var(--red); }
+.fig .vertex, .angle-w .vertex { fill: var(--ink); }
+.protractor { fill: color-mix(in srgb, var(--sun) 22%, transparent); stroke: color-mix(in srgb, var(--sun) 70%, var(--ink)); stroke-width: 1.2; }
+.tick { stroke: var(--ink); stroke-width: 1; opacity: .65; }
+.tk { font-size: 11px; font-weight: 600; fill: var(--muted); }
+.fig-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
+.fig-row figure { margin: 0; text-align: center; font-size: 14px; line-height: 1.35; }
+.fig-row .fig { max-width: 150px; }
+.solid-wrap { display: block; text-align: center; margin: 10px auto 0; }
+.solid { display: block; width: 100%; max-width: 230px; margin: 0 auto; touch-action: none; cursor: grab; border-radius: 14px; }
+.solid:active { cursor: grabbing; }
+.solid:focus-visible { outline: 3px solid var(--blue); }
+.solid .fr { fill: color-mix(in srgb, var(--tc, var(--blue)) 18%, var(--card)); fill-opacity: .82; stroke: var(--tc, var(--blue)); stroke-width: 2.2; stroke-linejoin: round; }
+.solid .fr.sm { stroke: color-mix(in srgb, var(--tc, var(--blue)) 18%, var(--card)); stroke-width: .6; }
+.solid .bk { fill: none; stroke: var(--tc, var(--blue)); stroke-width: 1.4; stroke-dasharray: 5 4; opacity: .7; }
+.solid text { font-size: 14px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+.solid-hint { display: block; color: var(--muted); font-size: 13px; }
+.fig-row .solid { max-width: 140px; }
+.chart { display: block; width: 100%; max-width: 330px; margin: 10px auto 0; }
+.chart .gl, .coord .gl { stroke: var(--line); stroke-width: 1; }
+.chart .bar-r { fill: var(--tc, var(--blue)); rx: 3; }
+.tally-s { max-width: 260px; }
+.tally { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.net { display: inline-block; vertical-align: middle; margin: 6px; }
+.net rect { fill: color-mix(in srgb, var(--tc, var(--blue)) 18%, var(--card)); stroke: var(--tc, var(--blue)); stroke-width: 2; }
+.net.big { display: block; margin: 10px auto 0; width: auto; max-width: 260px; height: auto; }
+.net rect.hl { fill: color-mix(in srgb, var(--sun) 55%, var(--card)); }
+.net text { font-size: 17px; font-weight: 700; fill: var(--ink); }
+
+/* Widgets zum Antworten */
+.widget { display: grid; gap: 6px; }
+.widget-read { margin: 0; color: var(--muted); font-size: 16px; text-align: center; }
+.coord { display: block; width: 100%; max-width: 360px; margin: 10px auto 0; touch-action: none; }
+.widget .coord { cursor: crosshair; border-radius: 12px; background: var(--card); }
+.widget .coord:focus-visible, .angle-w:focus-visible { outline: 3px solid var(--blue); }
+.coord .ax { stroke: var(--ink); stroke-width: 2; }
+.coord .ax-l { font-size: 14px; fill: var(--ink); }
+.coord .pt circle { fill: var(--ink); }
+.coord .pt text { font-size: 15px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+.coord .pt.mine circle { fill: var(--red); stroke: var(--card); stroke-width: 2; }
+.coord .poly { fill: color-mix(in srgb, var(--tc, var(--blue)) 14%, transparent); stroke: var(--tc, var(--blue)); stroke-width: 2.2; }
+.mirror-svg { display: block; width: 100%; max-width: 200px; margin: 8px auto 0; }
+.mirror-svg.big { max-width: 380px; touch-action: manipulation; }
+.mc { fill: var(--card); stroke: var(--line); stroke-width: 1; cursor: pointer; }
+.mc.given { fill: var(--tc, var(--blue)); cursor: default; }
+.mc.added { fill: color-mix(in srgb, var(--sun) 80%, var(--card)); }
+.mc:focus-visible { stroke: var(--blue); stroke-width: 3; outline: none; }
+.axis { stroke: var(--red); stroke-width: 3; stroke-dasharray: 7 4; }
+.axis-pt { fill: var(--red); }
+.angle-w { display: block; width: 100%; max-width: 360px; margin: 6px auto 0; touch-action: none; cursor: pointer; }
+.angle-w .ray.mine { stroke: var(--red); }
+.angle-w .knob { fill: var(--red); stroke: var(--card); stroke-width: 3; cursor: grab; }
+.angle-w.drag .knob { cursor: grabbing; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.pick { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px; border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 14px; background: var(--card); color: var(--ink); font: inherit; font-size: 17px; text-align: left; cursor: pointer; }
+.pick.on { border-color: var(--blue); background: var(--blue-soft); }
+.pick:disabled { cursor: default; }
+.pick-l { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--paper); font-weight: 700; }
+.pick.on .pick-l { background: var(--blue); color: #fff; }
+.pick-c { flex: 1; display: flex; justify-content: center; }
+.tk.sm { font-size: 8px; }
+.solid:focus:not(:focus-visible), .coord:focus:not(:focus-visible), .angle-w:focus:not(:focus-visible) { outline: none; }
