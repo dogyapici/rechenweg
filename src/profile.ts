@@ -30,7 +30,11 @@ const GRADE: Record<string, { gym: number; other: number }> = {
   proz: { gym: 7, other: 7 },
   gl: { gym: 7, other: 8 },
 };
-export const gradeOf = (id: string, p: Profile | null) => (GRADE[id] ? (p?.schulform === 'gym' ? GRADE[id].gym : GRADE[id].other) : 5);
+export const gradeOf = (id: string, p: Profile | null) => {
+  const c = curriculumFor(p);
+  if (c?.grade[id]) return c.grade[id];
+  return GRADE[id] ? (p?.schulform === 'gym' ? GRADE[id].gym : GRADE[id].other) : 5;
+};
 
 export type Fit = 'past' | 'now' | 'later';
 /** Wiederholung aus früheren Klassen, Stoff dieses Jahres oder kommt erst später */
@@ -41,3 +45,46 @@ export const reachable = (p: Profile | null) => (p ? CHAPTERS.flatMap(c => c.top
 
 /** Die App hat bisher Stoff bis etwa Klasse 7/8. */
 export const MAX_COVERED = 8;
+
+/** Ein konkreter Landeslehrplan, den wir gelesen und den App-Themen zugeordnet haben. */
+export interface Curriculum {
+  name: string;
+  /** Doppeljahrgang laut Plan, z. B. „5/6“ */
+  band: Record<string, string>;
+  /** Übliche Klasse innerhalb des Doppeljahrgangs */
+  grade: Record<string, number>;
+  /** Was der Plan für diese Stufen vorsieht, die App aber noch nicht kann */
+  missing: Record<string, string[]>;
+  sources: { label: string; url: string }[];
+}
+
+/**
+ * Bildungsplan Gymnasium Baden-Württemberg, Mathematik (gelesen am 10.10.2026).
+ * Klassen 5/6 aus der überarbeiteten Fassung V3.0 vom 21.05.2026, Klassen 7/8 aus dem Bildungsplan 2016.
+ * Brüche (kürzen, alle vier Grundrechenarten), Dezimalzahlen und Zahlterme stehen in 5/6 (3.1.1 Nr. 10–18, 23–27),
+ * Prozentrechnung und Äquivalenzumformungen in 7/8 (3.2.1 Nr. 2 und 19). In 5/6 werden Gleichungen nur durch Probieren gelöst.
+ */
+const BW_GYM: Curriculum = {
+  name: 'Bildungsplan Baden-Württemberg, Gymnasium',
+  band: { pvs: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8' },
+  grade: { pvs: 5, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7 },
+  missing: {
+    '5/6': ['Große Zahlen und Stellenwerte', 'Teilbarkeit und Primzahlen', 'Negative Zahlen und Zahlenstrahl', 'Runden und Überschlagen', 'Potenzen',
+      'Größen und Einheiten umrechnen', 'Umfang und Flächeninhalt', 'Winkel, Dreiecke und Vierecke', 'Symmetrie und Spiegeln', 'Körper und Netze',
+      'Koordinatensystem', 'Proportional und antiproportional', 'Maßstab', 'Daten, Diagramme und Mittelwert'],
+    '7/8': ['Zinsrechnung', 'Terme mit Variablen und Klammern', 'Binomische Formeln', 'Wurzeln und reelle Zahlen', 'Lineare Gleichungssysteme',
+      'Quadratische Gleichungen', 'Lineare und quadratische Funktionen'],
+  },
+  sources: [
+    { label: 'Bildungsplan Mathematik Gymnasium (Fassung V3.0)', url: 'https://www.bildungsplaene-bw.de/,Lde/DE_BW_BILDUNGSPLAENE_GEN2X_BPBW_ALLG_GYM_M(V3.0)' },
+    { label: 'Bildungsplan 2016, Klassen 7/8', url: 'https://www.bildungsplaene-bw.de/,Lde/LS/BP2016BW/ALLG/GYM/M/IK/7-8/01' },
+  ],
+};
+
+/** Der genau eingelesene Lehrplan für dieses Profil, falls es einen gibt. */
+export function curriculumFor(p: Profile | null): Curriculum | null {
+  if (p?.land === 'Baden-Württemberg' && p.schulform === 'gym') return BW_GYM;
+  return null;
+}
+/** Doppeljahrgang einer Klasse, z. B. 6 → „5/6“ */
+export const bandOf = (klasse: number) => (klasse <= 6 ? '5/6' : klasse <= 8 ? '7/8' : '9/10');

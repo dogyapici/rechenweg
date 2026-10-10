@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CATALOG } from '../catalog';
-import { LAENDER, MAX_COVERED, SCHULFORMEN, fitOf, gradeOf, longPrimary, type Profile, type Schulform } from '../profile';
+import { LAENDER, MAX_COVERED, SCHULFORMEN, bandOf, curriculumFor, fitOf, gradeOf, longPrimary, type Profile, type Schulform } from '../profile';
 import { look } from '../ui/look';
 
 const KLASSEN = [5, 6, 7, 8, 9, 10];
@@ -14,6 +14,8 @@ export function ProfilePage({ profile, onSave, onBack }: { profile: Profile | nu
   const forms = SCHULFORMEN.filter(f => f.id !== 'grund' || (longPrimary(land) && klasse <= 6));
   const formOk = forms.some(f => f.id === form);
   const draft: Profile | null = klasse && land && formOk ? { name: name.trim(), klasse, land, schulform: form as Schulform } : null;
+  const cur = curriculumFor(draft);
+  const missing = draft && cur ? cur.missing[bandOf(draft.klasse)] ?? [] : [];
 
   return (
     <div className="profile">
@@ -54,12 +56,24 @@ export function ProfilePage({ profile, onSave, onBack }: { profile: Profile | nu
               return (
                 <li key={c.id}>
                   <span aria-hidden="true">{look(c.id).icon}</span><span className="ert-t">{c.title}</span>
-                  <span className={`fit ${fit}`}>{fit === 'past' ? `Wiederholung (Kl. ${g})` : fit === 'now' ? 'Jetzt dran' : `Kommt in Kl. ${g}`}</span>
+                  <span className={`fit ${fit}`}>{fit === 'past' ? `Wiederholung (Kl. ${cur?.band[c.id] ?? g})` : fit === 'now' ? 'Jetzt dran' : `Kommt in Kl. ${cur?.band[c.id] ?? g}`}</span>
                 </li>
               );
             })}
           </ul>
-          <p className="ai-note">Was bis zu deiner Klasse dran ist, ist gleich offen. Spätere Themen schaltest du der Reihe nach frei. Die Klassen sind Richtwerte aus den Lehrplänen. Was in deiner nächsten Arbeit wirklich drankommt, steht auf deinem Themenzettel.</p>
+          {cur ? (
+            <p className="ai-note">Eingeordnet nach dem <b>{cur.name}</b>. Der Plan legt den Stoff für zwei Klassen zusammen fest (z. B. 5/6), die genaue Reihenfolge bestimmt deine Schule. Was in deiner nächsten Arbeit drankommt, steht auf deinem Themenzettel.
+              {' '}Quelle: {cur.sources.map((q, i) => <span key={q.url}>{i > 0 && ', '}<a href={q.url} target="_blank" rel="noreferrer">{q.label}</a></span>)}</p>
+          ) : (
+            <p className="ai-note">Was bis zu deiner Klasse dran ist, ist gleich offen. Spätere Themen schaltest du der Reihe nach frei. Die Klassen sind Richtwerte, für dein Bundesland habe ich den Lehrplan noch nicht genau eingelesen. Was in deiner nächsten Arbeit wirklich drankommt, steht auf deinem Themenzettel.</p>
+          )}
+          {missing.length > 0 && (
+            <details className="solbox">
+              <summary>Laut Lehrplan in Klasse {bandOf(draft.klasse)}, aber noch nicht in der App ({missing.length})</summary>
+              <ul className="pf-missing">{missing.map(m => <li key={m}>{m}</li>)}</ul>
+              <p className="ai-note">Diese Themen kommen nach und nach dazu. Bis dahin kannst du im Bereich „Fragen“ alles dazu fragen.</p>
+            </details>
+          )}
           {draft.klasse >= MAX_COVERED && <p className="hintbox">Für Klasse {draft.klasse} gibt es in der App bisher vor allem Wiederholung. Themen wie Terme, lineare Funktionen oder Geometrie kommen noch dazu.</p>}
         </section>
       )}
