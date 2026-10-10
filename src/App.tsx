@@ -3,6 +3,7 @@ import { Home } from './components/Home';
 import { TopicPage } from './components/TopicPage';
 import { Calculator } from './components/Calculator';
 import { Tutor } from './components/Tutor';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { loadLast, loadStats, saveLast, saveStats, type Stats } from './storage';
 import type { TutorContext } from './ai';
 
@@ -47,12 +48,14 @@ export function App() {
         </div>
       </header>
       <main>
+        <ErrorBoundary key={view.name === 'topic' ? view.id : view.name}>
         {view.name === 'home' && <Home stats={stats} last={last} onOpen={id => go({ name: 'topic', id })} />}
         {view.name === 'topic' && (
           <TopicPage key={view.id} id={view.id} stats={stats} onStats={updateStats} onBack={() => go({ name: 'home' })} onAskTutor={askTutor} />
         )}
         {view.name === 'calc' && <Calculator onAskTutor={askTutor} />}
         {view.name === 'tutor' && <Tutor context={tutorCtx} onClearContext={() => setTutorCtx(null)} />}
+        </ErrorBoundary>
       </main>
     </>
   );
