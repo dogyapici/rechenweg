@@ -1,11 +1,11 @@
 import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Html } from '../components/Html';
 
-/** Drei Sterne für die drei Stufen eines Themas. */
-export function Stars({ n, label = true }: { n: number; label?: boolean }) {
+/** Sterne für die abgeschlossenen Stufen eines Themas. */
+export function Stars({ n, max = 5, label = true }: { n: number; max?: number; label?: boolean }) {
   return (
-    <span className="stars" role="img" aria-label={label ? `${n} von 3 Sternen` : undefined} aria-hidden={label ? undefined : true}>
-      {[1, 2, 3].map(i => <span key={i} className={i <= n ? 'on' : ''}>★</span>)}
+    <span className="stars" role="img" aria-label={label ? `${n} von ${max} Sternen` : undefined} aria-hidden={label ? undefined : true}>
+      {Array.from({ length: max }, (_, k) => k + 1).map(i => <span key={i} className={i <= n ? 'on' : ''}>★</span>)}
     </span>
   );
 }

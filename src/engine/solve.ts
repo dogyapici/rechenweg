@@ -8,7 +8,8 @@ export interface ExprSolution {
   /** Alle Zwischenergebnisse, z. B. für Generatoren, die nur ganze Zahlen wollen. */
   vals: Q[]; result: Q; resultHTML: string; extra: string[];
 }
-export interface EqRow { eq: string; op?: string; expl: string }
+/** `ask`: Frage für „Gemeinsam lösen“ mit der Zahl, die nach diesem Schritt herauskommt. */
+export interface EqRow { eq: string; op?: string; expl: string; ask?: { q: string; v: Q } }
 export interface EqSolution {
   kind: 'eq'; input: string; rows: EqRow[]; probe?: string;
   solution: 'one' | 'none' | 'all'; result: Q | null; resultHTML: string;
@@ -267,7 +268,7 @@ export function solveEq(str: string): EqSolution {
     const op = a2.sign() > 0 ? `${MINUS} ${coefH(a2)}<i>x</i>` : `+ ${coefH(a2.neg())}<i>x</i>`;
     a1 = a1.sub(a2);
     a2 = q(0);
-    rows.push({ eq: `${linH({ a: a1, b: b1 })} = ${qH(b2)}`, op: `| ${op}`, expl: `Alle x sollen auf die linke Seite. Rechne dafür auf beiden Seiten ${op}. Was du links machst, machst du auch rechts, wie bei einer Waage.` });
+    rows.push({ eq: `${linH({ a: a1, b: b1 })} = ${qH(b2)}`, op: `| ${op}`, ask: { q: 'Welche Zahl steht danach links vor dem <i>x</i>?', v: a1 }, expl: `Alle x sollen auf die linke Seite. Rechne dafür auf beiden Seiten ${op}. Was du links machst, machst du auch rechts, wie bei einer Waage.` });
   }
   if (a1.isZero()) {
     const all = b1.eq(b2);
@@ -283,7 +284,7 @@ export function solveEq(str: string): EqSolution {
     const op = b1.sign() > 0 ? `${MINUS} ${qH(b1)}` : `+ ${qH(b1.neg())}`;
     const nb = b2.sub(b1);
     const shown = b1.sign() > 0 ? '+ ' + qH(b1) : MINUS + ' ' + qH(b1.neg());
-    rows.push({ eq: `${linH({ a: a1, b: q(0) })} = ${qH(nb)}`, op: `| ${op}`, expl: `Die Zahl ${shown} soll weg von der x-Seite. Mach das Gegenteil und rechne auf beiden Seiten ${op}: ${qH(b2)} ${b1.sign() > 0 ? MINUS + ' ' + qH(b1) : '+ ' + qH(b1.neg())} = ${qH(nb)}.` });
+    rows.push({ eq: `${linH({ a: a1, b: q(0) })} = ${qH(nb)}`, op: `| ${op}`, ask: { q: 'Welche Zahl steht danach rechts vom = ?', v: nb }, expl: `Die Zahl ${shown} soll weg von der x-Seite. Mach das Gegenteil und rechne auf beiden Seiten ${op}: ${qH(b2)} ${b1.sign() > 0 ? MINUS + ' ' + qH(b1) : '+ ' + qH(b1.neg())} = ${qH(nb)}.` });
     b2 = nb;
     b1 = q(0);
   }
@@ -291,7 +292,7 @@ export function solveEq(str: string): EqSolution {
   if (!a1.eq(q(1))) {
     x = b2.div(a1);
     const isFrac = a1.d !== 1n;
-    rows.push({ eq: `<i>x</i> = ${qH(x)}`, op: `| : ${hb(a1)}`, expl: `Vor dem x steht ${qH(a1)}. Das heißt „${qH(a1)} mal x“. Das Gegenteil von Malnehmen ist Teilen: Teile beide Seiten durch ${hb(a1)}. ${isFrac ? 'Durch einen Bruch teilen heißt, mit dem Kehrwert malnehmen. ' : ''}${qH(b2)} : ${hb(a1)} = ${qH(x)}.` });
+    rows.push({ eq: `<i>x</i> = ${qH(x)}`, op: `| : ${hb(a1)}`, ask: { q: 'Was ist <i>x</i>?', v: x }, expl: `Vor dem x steht ${qH(a1)}. Das heißt „${qH(a1)} mal x“. Das Gegenteil von Malnehmen ist Teilen: Teile beide Seiten durch ${hb(a1)}. ${isFrac ? 'Durch einen Bruch teilen heißt, mit dem Kehrwert malnehmen. ' : ''}${qH(b2)} : ${hb(a1)} = ${qH(x)}.` });
   }
   const lv = evalLin(L, x), rv = evalLin(R, x);
   const probe = `Probe: Setze <i>x</i> = ${qH(x)} in die Gleichung ein. Links kommt ${qH(lv)} heraus, rechts ${qH(rv)}. ${lv.eq(rv) ? 'Beide Seiten sind gleich, die Lösung stimmt ✓' : 'Achtung, die Seiten sind verschieden!'}`;
@@ -310,7 +311,7 @@ export interface Answer { v: Q; raw: boolean }
 export function parseAnswer(input: string): Answer {
   const s = String(input || '').trim()
     .replace(/^x\s*=\s*/i, '')
-    .replace(/[%€]|\b(kg|g|m|cm|km|l|ml|euro|eur|stück|schüler|kinder|min)\b\.?/gi, '')
+    .replace(/[%€]|\b(kg|g|m|cm|km|l|ml|euro|eur|stück|schüler|kinder|min|jahre|jahr|liter|personen|stunden|std|seiten|punkte|plätze|gläser|tüten|hefte|stifte)(?![a-zäöüß])\.?/gi, '')
     .trim();
   if (!s) throw new MathError('Gib zuerst eine Antwort ein.');
   let m = s.match(/^(-|−)?\s*(\d+)\s*\/\s*(\d+)$/);

@@ -1,4 +1,5 @@
 /* ===== Themen, Theorie und Aufgaben-Generatoren ===== */
+import type { GuideStep } from './guide.js';
 import { MathError, Q, q, dp, gcd, qH, fracH, evalExpr, solveEq, tokenize, type Solution, type ExprSolution, type ListSolution } from './engine/index.js';
 
 /** Eine Übungsaufgabe. `answer` und `sol` kommen immer aus der Recheneinheit. */
@@ -11,6 +12,10 @@ export interface Task {
   diag?: (v: Q) => string | null;
   placeholder?: string;
   int?: Q;
+  /** Eigene Schritte für „Gemeinsam lösen“ (sonst aus dem Rechenweg abgeleitet). */
+  guide?: GuideStep[];
+  /** Textaufgabe */
+  word?: boolean;
 }
 export interface Topic {
   id: string;
@@ -68,6 +73,29 @@ function percentSol(kind: 'W' | 'p' | 'G', G: Q, p: Q, W: Q, unit: string): List
   return { kind: 'list', steps, result: G, resultHTML: `${h(G)}${u}`, extra: [`Mit Formel: G = W · 100 : p = ${h(W)} · 100 : ${h(p)} = ${h(G)}${u}`] };
 }
 
+function percentGuide(kind: 'W' | 'p' | 'G', G: Q, p: Q, W: Q, unit: string): GuideStep[] {
+  const h = (x: Q) => qH(x, true); const u = unit ? ' ' + unit : '';
+  if (kind === 'W') {
+    const c = G.div(q(100));
+    return [
+      { title: 'Erst 1 % ausrechnen', ask: `Das Ganze sind ${h(G)}${u} (100 %). Wie viel ist 1 %?`, answer: c, hint: 'Für 1 % teilst du das Ganze durch 100.', explain: `${h(G)} : 100 = ${h(c)}${u}` },
+      { title: `Dann ${h(p)} % ausrechnen`, ask: `Wie viel sind ${h(p)} %?`, answer: W, hint: `${h(p)} % ist ${h(p)}-mal so viel wie 1 %.`, explain: `${h(p)} · ${h(c)} = ${h(W)}${u}`, placeholder: `Antwort in ${unit}` },
+    ];
+  }
+  if (kind === 'p') {
+    const share = W.div(G);
+    return [
+      { title: 'Anteil als Bruch', ask: `Schreibe den Teil (${h(W)}) geteilt durch das Ganze (${h(G)}) als Bruch oder Kommazahl.`, answer: share, hint: 'Teil durch Ganzes.', explain: `${fracH(h(W), h(G))} = ${qH(share)}`, placeholder: 'z. B. 3/10' },
+      { title: 'In Prozent umrechnen', ask: 'Wie viel Prozent sind das?', answer: p, hint: 'Prozent heißt „von Hundert“: Rechne mal 100.', explain: `${qH(share)} · 100 = ${h(p)} %`, placeholder: 'Antwort in %' },
+    ];
+  }
+  const one = W.div(p);
+  return [
+    { title: 'Erst 1 % ausrechnen', ask: `${h(p)} % sind ${h(W)}${u}. Wie viel ist 1 %?`, answer: one, hint: `Teile durch ${h(p)}.`, explain: `${h(W)} : ${h(p)} = ${h(one)}${u}` },
+    { title: 'Dann 100 % ausrechnen', ask: 'Wie viel sind 100 %, also das Ganze?', answer: G, hint: 'Rechne mal 100.', explain: `100 · ${h(one)} = ${h(G)}${u}`, placeholder: `Antwort in ${unit}` },
+  ];
+}
+
 /* Hilfen für Generatoren */
 function exprTask(s: string, o: { prompt?: string; needReduced?: boolean; diag?: (v: Q) => string | null; placeholder?: string } = {}): Task & { sol: ExprSolution } {
   const sol = evalExpr(s);
@@ -123,7 +151,12 @@ export const TOPICS: Topic[] = [
       const [n0, d0] = coprimeFrac([6, 9, 12][level - 1]);
       const k = pick([[2, 3], [2, 3, 4, 5], [4, 6, 7, 8, 9, 12]][level - 1]);
       const n = n0 * k, d = d0 * k;
-      return { prompt: `Kürze den Bruch vollständig: ${M(qH(q(n, d)))}`, plain: `${n}/${d} vollständig kürzen`, answer: q(n0, d0), sol: kuerzenSol(n, d), needReduced: true, placeholder: 'z. B. 3/4',
+      const g = Number(gcd(BigInt(n), BigInt(d)));
+      const guide: GuideStep[] = [
+        { title: 'ggT finden', ask: `Was ist die größte Zahl, durch die ${n} und ${d} beide teilbar sind?`, answer: q(g), hint: `Schreibe die Teiler von ${n} und von ${d} auf und suche die größte Zahl, die in beiden Listen vorkommt.`, explain: `Der ggT von ${n} und ${d} ist ${g}.` },
+        { title: 'Kürzen', ask: `Teile Zähler und Nenner von ${M(qH(q(n, d)))} durch ${g}. Welcher Bruch kommt heraus?`, answer: q(n0, d0), needReduced: true, hint: `${n} : ${g} und ${d} : ${g}`, explain: `${M(`${qH(q(n, d))} = ${fracH(`${n} : ${g}`, `${d} : ${g}`)} = ${qH(q(n0, d0))}`)}`, placeholder: 'z. B. 3/4' },
+      ];
+      return { guide, prompt: `Kürze den Bruch vollständig: ${M(qH(q(n, d)))}`, plain: `${n}/${d} vollständig kürzen`, answer: q(n0, d0), sol: kuerzenSol(n, d), needReduced: true, placeholder: 'z. B. 3/4',
         diag: v => (v.eq(q(n, d)) ? 'Das ist noch der Ausgangsbruch. Teile Zähler und Nenner durch dieselbe Zahl.' : 'Prüfe: Hast du Zähler und Nenner durch <b>dieselbe</b> Zahl geteilt?') };
     },
   },
@@ -233,9 +266,9 @@ export const TOPICS: Topic[] = [
         const p = pick([[10, 20, 25, 50, 75], [5, 15, 30, 40, 60, 80], [12, 35, 45, 65, 8]][level - 1]);
         const W = q(G).mul(q(p)).div(q(100));
         const kind = level === 1 ? pick(['W', 'W', 'p']) : level === 2 ? pick(['W', 'p']) : pick(['G', 'p', 'W']);
-        if (kind === 'W') return { prompt: c.W(p, G), plain: c.W(p, G), answer: W, sol: percentSol('W', q(G), q(p), W, c.unit), placeholder: `Antwort in ${c.unit}`, diag: v => (v.eq(q(G * p)) ? 'Du hast G · p gerechnet, aber noch nicht durch 100 geteilt.' : v.eq(q(G).div(q(p))) ? 'Du hast durch den Prozentsatz geteilt. Rechne zuerst aus, wie viel 1 % ist.' : null), int: W };
-        if (kind === 'p') { const t = c.P(W.toDec(), G); return { prompt: t, plain: t, answer: q(p), sol: percentSol('p', q(G), q(p), W, c.unit), placeholder: 'Antwort in %', diag: v => (v.eq(W.div(q(G))) ? 'Das ist der Anteil als Zahl. Für Prozent musst du noch mal 100 rechnen.' : null), int: W }; }
-        const t = c.Gq(W.toDec(), p); return { prompt: t, plain: t, answer: q(G), sol: percentSol('G', q(G), q(p), W, c.unit), placeholder: `Antwort in ${c.unit}`, diag: v => (v.eq(W.mul(q(p)).div(q(100))) ? 'Du hast den Prozentwert ausgerechnet. Gesucht ist aber das Ganze (100 %).' : null), int: W };
+        if (kind === 'W') return { prompt: c.W(p, G), plain: c.W(p, G), answer: W, sol: percentSol('W', q(G), q(p), W, c.unit), guide: percentGuide('W', q(G), q(p), W, c.unit), placeholder: `Antwort in ${c.unit}`, diag: v => (v.eq(q(G * p)) ? 'Du hast G · p gerechnet, aber noch nicht durch 100 geteilt.' : v.eq(q(G).div(q(p))) ? 'Du hast durch den Prozentsatz geteilt. Rechne zuerst aus, wie viel 1 % ist.' : null), int: W };
+        if (kind === 'p') { const t = c.P(W.toDec(), G); return { prompt: t, plain: t, answer: q(p), sol: percentSol('p', q(G), q(p), W, c.unit), guide: percentGuide('p', q(G), q(p), W, c.unit), placeholder: 'Antwort in %', diag: v => (v.eq(W.div(q(G))) ? 'Das ist der Anteil als Zahl. Für Prozent musst du noch mal 100 rechnen.' : null), int: W }; }
+        const t = c.Gq(W.toDec(), p); return { prompt: t, plain: t, answer: q(G), sol: percentSol('G', q(G), q(p), W, c.unit), guide: percentGuide('G', q(G), q(p), W, c.unit), placeholder: `Antwort in ${c.unit}`, diag: v => (v.eq(W.mul(q(p)).div(q(100))) ? 'Du hast den Prozentwert ausgerechnet. Gesucht ist aber das Ganze (100 %).' : null), int: W };
       }, t => t.int.terminating() && dp(t.int) <= 2 && (t.prompt.includes('Kinder') ? t.int.isInt() : true));
     },
   },

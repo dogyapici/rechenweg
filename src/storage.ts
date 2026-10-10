@@ -1,5 +1,6 @@
 /** Fortschritt und Zugangscode bleiben nur in diesem Browser gespeichert. */
-export interface TopicStats { level: number; streak: number; miss: number; right: number; total: number }
+/** `intro`: höchste Stufe, deren Einführung schon gezeigt wurde. `atLevel`: erledigte Aufgaben auf der aktuellen Stufe. */
+export interface TopicStats { level: number; streak: number; miss: number; right: number; total: number; intro?: number; atLevel?: number }
 export type Stats = Record<string, TopicStats>;
 
 const read = <T,>(key: string, fallback: T): T => {
