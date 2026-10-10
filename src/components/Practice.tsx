@@ -34,7 +34,8 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const solution = useMemo(() => (T.task ? solHTML(T.task.sol) : ''), [T.task]);
   const guide = useMemo(() => (T.task ? guideFor(T.task) : []), [T.task]);
-  const showIntro = (s.intro ?? 0) < s.level;
+  // Nach dem Aufstieg erst das Lob zeigen, die Einführung der neuen Stufe kommt mit der nächsten Aufgabe.
+  const showIntro = (s.intro ?? 0) < s.level && !T.done;
   useEffect(() => { if (!T.done && !T.guided) inputRef.current?.focus(); }, [T.task, T.done, T.guided]);
 
   /** Stufe anpassen: 3 richtige in Folge ohne Hilfe → nächste Stufe, 2 nicht gelöste Aufgaben → eine Stufe zurück. */
