@@ -4,17 +4,18 @@ import type { Stats } from '../storage';
 import { CHAPTERS, grade, nextNode, pathNodes, type Exams, type PathNode } from '../curriculum';
 import { MAX_LEVEL, STAGES } from '../stages';
 import { look, tone } from '../ui/look';
+import { SCHULFORMEN, fitOf, gradeOf, reachable, type Profile } from '../profile';
 import { DAILY_GOAL, isActive, streak, type Activity } from '../progress';
 import { dateH, daysLeft, isoDay, ready, todayItem, type Plan } from '../plan';
 
 const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? id;
 
-interface Props { stats: Stats; exams: Exams; free: boolean; plan: Plan | null; act: Activity; onProgress: () => void; onFree: (f: boolean) => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void }
+interface Props { stats: Stats; exams: Exams; free: boolean; plan: Plan | null; profile: Profile | null; onProfile: () => void; act: Activity; onProgress: () => void; onFree: (f: boolean) => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void }
 
-export function Home({ stats, exams, free, plan, act, onProgress, onFree, onOpen, onExam, onPlan, onPlacement }: Props) {
+export function Home({ stats, exams, free, plan, profile, onProfile, act, onProgress, onFree, onOpen, onExam, onPlan, onPlacement }: Props) {
   const [why, setWhy] = useState<string | null>(null);
-  const nodes = pathNodes(stats, exams, free, title, plan?.topics);
-  const next = nextNode(nodes);
+  const nodes = pathNodes(stats, exams, free, title, [...(plan?.topics ?? []), ...reachable(profile)]);
+  const next = nextNode(nodes, n => n.kind === 'topic' && !!profile && fitOf(n.id, profile) === 'now');
   const done = nodes.filter(n => n.state === 'done').length;
   const open = (n: PathNode) => {
     if (n.state === 'locked') { setWhy(why === n.id ? null : n.id); return; }
@@ -24,10 +25,17 @@ export function Home({ stats, exams, free, plan, act, onProgress, onFree, onOpen
   return (
     <>
       <section className="hello">
-        <h1>Hallo! 👋<br />Dein Mathe-Lernpfad</h1>
+        <h1>Hallo{profile?.name ? ` ${profile.name}` : ''}! 👋<br />Dein Mathe-Lernpfad</h1>
+        {profile && <p className="hello-who">Klasse {profile.klasse} · {SCHULFORMEN.find(f => f.id === profile.schulform)?.name.split(' (')[0]} · {profile.land} <button className="linkbtn" onClick={onProfile}>ändern</button></p>}
         <p className="hello-stars">Du hast schon <b>{done} von {nodes.length}</b> Stationen geschafft.</p>
       </section>
 
+      {!profile && (
+        <button className="card panel promo" onClick={onProfile}>
+          <span className="ticon" aria-hidden="true">👤</span>
+          <span><b>In welche Klasse gehst du?</b><small>Sag mir Klasse, Schule und Bundesland. Dann passt der Lernpfad zu deinem Unterricht.</small></span>
+        </button>
+      )}
       <DayGoal act={act} onClick={onProgress} />
       <PlanCard plan={plan} stats={stats} onPlan={onPlan} />
       {!Object.keys(stats).length && (
@@ -54,13 +62,13 @@ export function Home({ stats, exams, free, plan, act, onProgress, onFree, onOpen
           <li key={ch.id} className="map-ch">
             <div className="map-ch-h"><span className="map-ch-n">Kapitel {ci + 1}</span><h2>{ch.title}</h2><p>{ch.why}</p></div>
             <ol className="map-nodes">
-              {nodes.filter(n => n.chapter?.id === ch.id).map(n => <Node key={n.id} n={n} stats={stats} exams={exams} why={why === n.id} onClick={() => open(n)} />)}
+              {nodes.filter(n => n.chapter?.id === ch.id).map(n => <Node key={n.id} n={n} stats={stats} exams={exams} profile={profile} why={why === n.id} onClick={() => open(n)} />)}
             </ol>
           </li>
         ))}
         <li className="map-ch">
           <div className="map-ch-h"><span className="map-ch-n">Zum Schluss</span><h2>Prüfungsvorbereitung</h2><p>Alles aus allen Kapiteln gemischt, wie in einer großen Arbeit.</p></div>
-          <ol className="map-nodes">{nodes.filter(n => !n.chapter).map(n => <Node key={n.id} n={n} stats={stats} exams={exams} why={why === n.id} onClick={() => open(n)} />)}</ol>
+          <ol className="map-nodes">{nodes.filter(n => !n.chapter).map(n => <Node key={n.id} n={n} stats={stats} exams={exams} profile={profile} why={why === n.id} onClick={() => open(n)} />)}</ol>
         </li>
       </ol>
 
@@ -73,7 +81,7 @@ export function Home({ stats, exams, free, plan, act, onProgress, onFree, onOpen
   );
 }
 
-function Node({ n, stats, exams, why, onClick }: { n: PathNode; stats: Stats; exams: Exams; why: boolean; onClick: () => void }) {
+function Node({ n, stats, exams, profile, why, onClick }: { n: PathNode; stats: Stats; exams: Exams; profile: Profile | null; why: boolean; onClick: () => void }) {
   if (n.kind === 'topic') {
     const lv = stats[n.id]?.level ?? 1;
     return (
@@ -82,6 +90,7 @@ function Node({ n, stats, exams, why, onClick }: { n: PathNode; stats: Stats; ex
           <span className="ticon" aria-hidden="true">{n.state === 'locked' ? '🔒' : look(n.id).icon}</span>
           <span className="node-t">
             <b>{title(n.id)}</b>
+            {profile && <FitTag id={n.id} profile={profile} />}
             <small>{n.state === 'locked' ? 'Noch gesperrt' : n.state === 'done' && lv === MAX_LEVEL ? 'Profi-Stufe erreicht 🏆' : `Stufe ${lv}: ${STAGES[lv - 1].name}`}</small>
             <span className="node-bar" aria-hidden="true">{STAGES.map((_, k) => <i key={k} className={k < lv - 1 ? 'on' : ''} />)}</span>
           </span>
@@ -152,4 +161,9 @@ function DayGoal({ act, onClick }: { act: Activity; onClick: () => void }) {
       <span className="dg-go" aria-hidden="true">›</span>
     </button>
   );
+}
+
+function FitTag({ id, profile }: { id: string; profile: Profile }) {
+  const fit = fitOf(id, profile), g = gradeOf(id, profile);
+  return <span className={`fit ${fit}`}>{fit === 'past' ? `Wiederholung aus Kl. ${g}` : fit === 'now' ? `Klasse ${g}: jetzt dran` : `Kommt meist in Kl. ${g}`}</span>;
 }

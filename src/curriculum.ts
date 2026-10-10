@@ -49,7 +49,9 @@ export function pathNodes(stats: Stats, exams: Exams, free: boolean, titleOf: (i
 }
 
 /** Der nächste sinnvolle Schritt: die erste offene, noch nicht geschaffte Station. */
-export const nextNode = (nodes: PathNode[]) => nodes.find(n => n.state === 'open') ?? null;
+/** `prefer`: Stationen, die zuerst vorgeschlagen werden (z. B. Stoff der eigenen Klasse). */
+export const nextNode = (nodes: PathNode[], prefer: (n: PathNode) => boolean = () => false) =>
+  nodes.find(n => n.state === 'open' && prefer(n)) ?? nodes.find(n => n.state === 'open') ?? null;
 
 /** Schulnote aus dem Anteil der Punkte (übliche Skala). */
 export function grade(p: number): { note: number; word: string } {

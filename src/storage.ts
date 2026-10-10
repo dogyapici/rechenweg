@@ -1,5 +1,6 @@
 import type { Exams } from './curriculum';
 import type { Plan } from './plan';
+import type { Profile } from './profile';
 import type { Activity, Unlocked } from './progress';
 
 /** Fortschritt und Zugangscode bleiben nur in diesem Browser gespeichert. */
@@ -36,3 +37,5 @@ export const loadActivity = (): Activity => read<Activity>('rechenweg-activity',
 export const saveActivity = (a: Activity) => write('rechenweg-activity', a);
 export const loadUnlocked = (): Unlocked => read<Unlocked>('rechenweg-unlocked', {});
 export const saveUnlocked = (u: Unlocked) => write('rechenweg-unlocked', u);
+export const loadProfile = (): Profile | null => read<Profile | null>('rechenweg-profile', null);
+export const saveProfile = (p: Profile) => write('rechenweg-profile', p);
