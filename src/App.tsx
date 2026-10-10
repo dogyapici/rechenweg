@@ -3,29 +3,34 @@ import { Home } from './components/Home';
 import { TopicPage } from './components/TopicPage';
 import { Calculator } from './components/Calculator';
 import { Tutor } from './components/Tutor';
+import { Exam } from './components/Exam';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { loadLast, loadStats, saveLast, saveStats, type Stats } from './storage';
+import { loadExams, loadFree, loadStats, saveExams, saveFree, saveLast, saveStats, type Stats } from './storage';
+import type { Exams } from './curriculum';
 import type { TutorContext } from './ai';
 
-export type View = { name: 'home' } | { name: 'topic'; id: string } | { name: 'calc' } | { name: 'tutor' };
+export type View = { name: 'home' } | { name: 'topic'; id: string } | { name: 'exam'; id: string } | { name: 'calc' } | { name: 'tutor' };
 
 const NAV = [['home', '📚', 'Lernen'], ['calc', '🧮', 'Rechner'], ['tutor', '💬', 'Fragen']] as const;
 
 export function App() {
   const [view, setView] = useState<View>({ name: 'home' });
   const [stats, setStats] = useState<Stats>(loadStats);
-  const [last, setLast] = useState(loadLast);
+  const [exams, setExams] = useState<Exams>(loadExams);
+  const [free, setFree] = useState(loadFree);
   const [tutorCtx, setTutorCtx] = useState<TutorContext | null>(null);
 
   const go = useCallback((v: View) => {
-    if (v.name === 'topic') { saveLast(v.id); setLast(v.id); }
+    if (v.name === 'topic') saveLast(v.id);
     setView(v);
     window.scrollTo({ top: 0 });
   }, []);
   const updateStats = useCallback((s: Stats) => { setStats(s); saveStats(s); }, []);
+  const updateExams = useCallback((e: Exams) => { setExams(e); saveExams(e); }, []);
+  const updateFree = useCallback((f: boolean) => { setFree(f); saveFree(f); }, []);
   const askTutor = useCallback((ctx: TutorContext | null) => { setTutorCtx(ctx); go({ name: 'tutor' }); }, [go]);
 
-  const current = view.name === 'topic' ? 'home' : view.name;
+  const current = view.name === 'topic' || view.name === 'exam' ? 'home' : view.name;
   return (
     <>
       <header className="top">
@@ -48,8 +53,9 @@ export function App() {
         </div>
       </header>
       <main>
-        <ErrorBoundary key={view.name === 'topic' ? view.id : view.name}>
-        {view.name === 'home' && <Home stats={stats} last={last} onOpen={id => go({ name: 'topic', id })} />}
+        <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' ? view.id : view.name}>
+        {view.name === 'home' && <Home stats={stats} exams={exams} free={free} onFree={updateFree} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })} />}
+        {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onBack={() => go({ name: 'home' })} onOpenTopic={id => go({ name: 'topic', id })} />}
         {view.name === 'topic' && (
           <TopicPage key={view.id} id={view.id} stats={stats} onStats={updateStats} onBack={() => go({ name: 'home' })} onAskTutor={askTutor} />
         )}
