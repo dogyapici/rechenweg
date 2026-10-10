@@ -4,13 +4,14 @@ import type { Stats } from '../storage';
 import { CHAPTERS, grade, nextNode, pathNodes, type Exams, type PathNode } from '../curriculum';
 import { MAX_LEVEL, STAGES } from '../stages';
 import { look, tone } from '../ui/look';
+import { DAILY_GOAL, isActive, streak, type Activity } from '../progress';
 import { dateH, daysLeft, isoDay, ready, todayItem, type Plan } from '../plan';
 
 const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? id;
 
-interface Props { stats: Stats; exams: Exams; free: boolean; plan: Plan | null; onFree: (f: boolean) => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void }
+interface Props { stats: Stats; exams: Exams; free: boolean; plan: Plan | null; act: Activity; onProgress: () => void; onFree: (f: boolean) => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void }
 
-export function Home({ stats, exams, free, plan, onFree, onOpen, onExam, onPlan, onPlacement }: Props) {
+export function Home({ stats, exams, free, plan, act, onProgress, onFree, onOpen, onExam, onPlan, onPlacement }: Props) {
   const [why, setWhy] = useState<string | null>(null);
   const nodes = pathNodes(stats, exams, free, title, plan?.topics);
   const next = nextNode(nodes);
@@ -27,6 +28,7 @@ export function Home({ stats, exams, free, plan, onFree, onOpen, onExam, onPlan,
         <p className="hello-stars">Du hast schon <b>{done} von {nodes.length}</b> Stationen geschafft.</p>
       </section>
 
+      <DayGoal act={act} onClick={onProgress} />
       <PlanCard plan={plan} stats={stats} onPlan={onPlan} />
       {!Object.keys(stats).length && (
         <button className="card panel promo" onClick={onPlacement}>
@@ -126,6 +128,28 @@ function PlanCard({ plan, stats, onPlan }: { plan: Plan | null; stats: Stats; on
         <small>{left === null ? '' : left > 1 ? `Noch ${left} Tage · ` : left === 1 ? 'Morgen! · ' : left === 0 ? 'Heute! Viel Erfolg 🍀 · ' : 'Vorbei · '}{done} von {plan.topics.length} Themen sitzen · Heute dran: {now.kind === 'topic' ? title(now.id) : 'Probe-Klassenarbeit'}</small>
       </span>
       <span className="continue-go" aria-hidden="true">▶</span>
+    </button>
+  );
+}
+
+/** Tagesziel als Fortschrittsring mit Serie */
+function DayGoal({ act, onClick }: { act: Activity; onClick: () => void }) {
+  const today = isoDay(new Date());
+  const r = Math.min(DAILY_GOAL, act[today]?.right ?? 0);
+  const n = streak(act, today);
+  const lit = isActive(act[today]);
+  const C = 2 * Math.PI * 22;
+  return (
+    <button className={`card panel daygoal${lit ? ' lit' : ''}`} onClick={onClick}>
+      <span className="ring" aria-hidden="true">
+        <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" className="ring-bg" /><circle cx="26" cy="26" r="22" className="ring-fg" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - r / DAILY_GOAL) }} /></svg>
+        <span>{lit ? '🔥' : `${r}/${DAILY_GOAL}`}</span>
+      </span>
+      <span className="dg-t">
+        <b>{lit ? `Tagesziel geschafft! ${n} ${n === 1 ? 'Tag' : 'Tage'} in Folge` : n ? `🔥 ${n} ${n === 1 ? 'Tag' : 'Tage'} in Folge` : 'Starte deine Serie'}</b>
+        <small>{lit ? 'Kalender und Erfolge ansehen' : `Heute noch ${DAILY_GOAL - r} ${DAILY_GOAL - r === 1 ? 'Aufgabe' : 'Aufgaben'} richtig lösen${n ? ', damit die Serie hält' : ''}`}</small>
+      </span>
+      <span className="dg-go" aria-hidden="true">›</span>
     </button>
   );
 }
