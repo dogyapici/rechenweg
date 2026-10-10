@@ -1,11 +1,11 @@
 import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Html } from '../components/Html';
 
-/** Drei Sterne für die drei Stufen eines Themas. */
-export function Stars({ n, label = true }: { n: number; label?: boolean }) {
+/** Sterne für die abgeschlossenen Stufen eines Themas. */
+export function Stars({ n, max = 5, label = true }: { n: number; max?: number; label?: boolean }) {
   return (
-    <span className="stars" role="img" aria-label={label ? `${n} von 3 Sternen` : undefined} aria-hidden={label ? undefined : true}>
-      {[1, 2, 3].map(i => <span key={i} className={i <= n ? 'on' : ''}>★</span>)}
+    <span className="stars" role="img" aria-label={label ? `${n} von ${max} Sternen` : undefined} aria-hidden={label ? undefined : true}>
+      {Array.from({ length: max }, (_, k) => k + 1).map(i => <span key={i} className={i <= n ? 'on' : ''}>★</span>)}
     </span>
   );
 }
@@ -14,11 +14,11 @@ export function Stars({ n, label = true }: { n: number; label?: boolean }) {
  * Rechenweg Schritt für Schritt aufdecken. Der Rechenweg kommt fertig als HTML aus der Engine;
  * hier werden nur seine Schritte (und am Ende das Ergebnis) nacheinander sichtbar gemacht.
  */
-export function StepReveal({ html, all = false }: { html: string; all?: boolean }) {
+export function StepReveal({ html, all = false, start = 1 }: { html: string; all?: boolean; start?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [total, setTotal] = useState(0);
-  const [shown, setShown] = useState(1);
-  useLayoutEffect(() => { setShown(all ? Infinity : 1); }, [html, all]);
+  const [shown, setShown] = useState(start);
+  useLayoutEffect(() => { setShown(all ? Infinity : start); }, [html, all, start]);
   useLayoutEffect(() => {
     const units = stepUnits(ref.current);
     setTotal(units.length);
@@ -28,9 +28,9 @@ export function StepReveal({ html, all = false }: { html: string; all?: boolean 
   return (
     <div className="reveal">
       <Html html={html} ref={ref} />
-      {!done && total > 1 && (
+      {!done && (total > 1 || shown === 0) && (
         <div className="reveal-bar">
-          <button className="btn big" onClick={() => setShown(shown + 1)}>Nächster Schritt 👉</button>
+          <button className="btn big" onClick={() => setShown(shown + 1)}>{shown === 0 ? 'Ersten Schritt zeigen 👉' : shown === total - 1 ? 'Ergebnis zeigen 👉' : 'Nächster Schritt 👉'}</button>
           <button className="btn quiet" onClick={() => setShown(Infinity)}>Alles zeigen</button>
           <span className="reveal-n">{Math.min(shown, total)} von {total}</span>
         </div>

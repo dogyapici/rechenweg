@@ -15,8 +15,8 @@ const LOOKS: Record<string, Look> = {
 const FALLBACK: Look = { icon: '📘', color: '#1d47c9', teaser: '' };
 export const look = (id: string): Look => LOOKS[id] ?? FALLBACK;
 
-/** Sterne: einer pro erreichter Stufe, aber erst nach der ersten richtigen Aufgabe. */
-export const stars = (s?: { level: number; right: number }) => (s && s.right > 0 ? s.level : 0);
+/** Sterne: einer pro abgeschlossener Stufe des Lernpfads. */
+export const stars = (s?: { level: number }) => (s ? s.level - 1 : 0);
 
 /** CSS-Variablen für die Themenfarbe. */
 export const tone = (id: string) => ({ '--tc': look(id).color }) as CSSProperties;
