@@ -17,33 +17,30 @@ export function Home({ stats, exams, free, plan, profile, onProfile, act, onProg
   const nodes = pathNodes(stats, exams, free, title, [...(plan?.topics ?? []), ...reachable(profile)]);
   const next = nextNode(nodes, n => n.kind === 'topic' && !!profile && fitOf(n.id, profile) === 'now');
   const done = nodes.filter(n => n.state === 'done').length;
+  // Nur das Kapitel, in dem es gerade weitergeht, ist aufgeklappt. Der Rest bleibt kurz.
+  const [shown, setShown] = useState<Set<string>>(() => new Set([next?.chapter?.id ?? 'end']));
+  const toggle = (id: string) => setShown(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const open = (n: PathNode) => {
     if (n.state === 'locked') { setWhy(why === n.id ? null : n.id); return; }
     if (n.kind === 'topic') onOpen(n.id); else onExam(n.id);
   };
+  const isNew = !Object.keys(stats).length;
+  const chapters = [
+    ...CHAPTERS.map((ch, ci) => ({ id: ch.id, n: `Kapitel ${ci + 1}`, title: ch.title, why: ch.why, nodes: nodes.filter(x => x.chapter?.id === ch.id) })),
+    { id: 'end', n: 'Zum Schluss', title: 'Prüfungsvorbereitung', why: 'Alles aus allen Kapiteln gemischt, wie in einer großen Arbeit.', nodes: nodes.filter(x => !x.chapter) },
+  ];
 
   return (
     <>
       <section className="hello">
-        <h1>Hallo{profile?.name ? ` ${profile.name}` : ''}! 👋<br />Dein Mathe-Lernpfad</h1>
-        {profile && <p className="hello-who">Klasse {profile.klasse} · {SCHULFORMEN.find(f => f.id === profile.schulform)?.name.split(' (')[0]} · {profile.land} <button className="linkbtn" onClick={onProfile}>ändern</button></p>}
-        <p className="hello-stars">Du hast schon <b>{done} von {nodes.length}</b> Stationen geschafft.</p>
+        <h1>Hallo{profile?.name ? ` ${profile.name}` : ''}! 👋</h1>
+        <div className="chips">
+          <DayGoal act={act} onClick={onProgress} />
+          {profile && <button className="chip" onClick={onProfile} aria-label="Profil ändern">🎒 Kl. {profile.klasse} · {SCHULFORMEN.find(f => f.id === profile.schulform)?.name.split(' (')[0]} · {profile.land}</button>}
+        </div>
       </section>
 
-      {!profile && (
-        <button className="card panel promo" onClick={onProfile}>
-          <span className="ticon" aria-hidden="true">👤</span>
-          <span><b>In welche Klasse gehst du?</b><small>Sag mir Klasse, Schule und Bundesland. Dann passt der Lernpfad zu deinem Unterricht.</small></span>
-        </button>
-      )}
-      <DayGoal act={act} onClick={onProgress} />
-      <PlanCard plan={plan} stats={stats} onPlan={onPlan} />
-      {!Object.keys(stats).length && (
-        <button className="card panel promo" onClick={onPlacement}>
-          <span className="ticon" aria-hidden="true">🎯</span>
-          <span><b>Neu hier? Mach den Einstufungstest</b><small>Ein paar Aufgaben, dann weiß die App, wo du startest.</small></span>
-        </button>
-      )}
+      {(!profile || isNew) && <Setup profile={!!profile} isNew={isNew} onProfile={onProfile} onPlacement={onPlacement} />}
 
       {next && (
         <button className="continue" style={next.kind === 'topic' ? tone(next.id) : { '--tc': '#c2410c' } as React.CSSProperties} onClick={() => open(next)}>
@@ -57,27 +54,65 @@ export function Home({ stats, exams, free, plan, profile, onProfile, act, onProg
         </button>
       )}
 
-      <ol className="map">
-        {CHAPTERS.map((ch, ci) => (
-          <li key={ch.id} className="map-ch">
-            <div className="map-ch-h"><span className="map-ch-n">Kapitel {ci + 1}</span><h2>{ch.title}</h2><p>{ch.why}</p></div>
-            <ol className="map-nodes">
-              {nodes.filter(n => n.chapter?.id === ch.id).map(n => <Node key={n.id} n={n} stats={stats} exams={exams} profile={profile} why={why === n.id} onClick={() => open(n)} />)}
-            </ol>
-          </li>
-        ))}
-        <li className="map-ch">
-          <div className="map-ch-h"><span className="map-ch-n">Zum Schluss</span><h2>Prüfungsvorbereitung</h2><p>Alles aus allen Kapiteln gemischt, wie in einer großen Arbeit.</p></div>
-          <ol className="map-nodes">{nodes.filter(n => !n.chapter).map(n => <Node key={n.id} n={n} stats={stats} exams={exams} profile={profile} why={why === n.id} onClick={() => open(n)} />)}</ol>
-        </li>
-      </ol>
+      <PlanLine plan={plan} stats={stats} onPlan={onPlan} />
 
-      <button className="linkbtn" onClick={onPlacement}>🎯 Einstufungstest machen</button>
-      <label className="free">
-        <input type="checkbox" checked={free} onChange={e => onFree(e.target.checked)} />
-        <span><b>Freies Üben</b><small>Alle Themen sofort öffnen, zum Beispiel wenn du für ein bestimmtes Thema in der Schule übst.</small></span>
-      </label>
+      <section className="path">
+        <div className="path-h"><h2>Dein Lernpfad</h2><span>{done} von {nodes.length} geschafft</span></div>
+        <ol className="map">
+          {chapters.map(ch => {
+            const isOpen = shown.has(ch.id);
+            const ok = ch.nodes.filter(x => x.state === 'done').length;
+            return (
+              <li key={ch.id} className={`map-ch${isOpen ? ' on' : ''}`}>
+                <button className="map-ch-h" onClick={() => toggle(ch.id)} aria-expanded={isOpen} aria-controls={`ch-${ch.id}`}>
+                  <span className="map-ch-t"><span className="map-ch-n">{ch.n}</span><b>{ch.title}</b></span>
+                  <span className="map-ch-p" aria-label={`${ok} von ${ch.nodes.length} geschafft`}>
+                    <span className="map-ch-bar" aria-hidden="true"><i style={{ width: `${ch.nodes.length ? (100 * ok) / ch.nodes.length : 0}%` }} /></span>
+                    {ok}/{ch.nodes.length}
+                  </span>
+                  <span className="map-ch-x" aria-hidden="true">›</span>
+                </button>
+                {isOpen && (
+                  <div id={`ch-${ch.id}`}>
+                    <p className="map-ch-why">{ch.why}</p>
+                    <ol className="map-nodes">
+                      {ch.nodes.map(n => <Node key={n.id} n={n} stats={stats} exams={exams} profile={profile} why={why === n.id} onClick={() => open(n)} />)}
+                    </ol>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
+      <section className="extras">
+        <label className="free">
+          <input type="checkbox" checked={free} onChange={e => onFree(e.target.checked)} />
+          <span><b>Freies Üben</b><small>Alle Themen sofort öffnen, zum Beispiel wenn du für ein bestimmtes Thema in der Schule übst.</small></span>
+        </label>
+        {!isNew && <button className="linkbtn" onClick={onPlacement}>🎯 Einstufungstest nochmal machen</button>}
+      </section>
     </>
+  );
+}
+
+/** Für den Anfang: die zwei Schritte, die noch fehlen, in einer Karte. */
+function Setup({ profile, isNew, onProfile, onPlacement }: { profile: boolean; isNew: boolean; onProfile: () => void; onPlacement: () => void }) {
+  return (
+    <div className="card panel setup">
+      <b>So geht's los</b>
+      <ol>
+        <li className={profile ? 'ok' : ''}>
+          <button onClick={onProfile}><span aria-hidden="true">{profile ? '✓' : '1'}</span><span>Sag mir deine Klasse, Schule und dein Bundesland<small>Dann passt der Lernpfad zu deinem Unterricht.</small></span></button>
+        </li>
+        {isNew && (
+          <li>
+            <button onClick={onPlacement}><span aria-hidden="true">2</span><span>Mach den Einstufungstest<small>Ein paar Aufgaben, dann weiß die App, wo du startest.</small></span></button>
+          </li>
+        )}
+      </ol>
+    </div>
   );
 }
 
@@ -116,49 +151,36 @@ function Node({ n, stats, exams, profile, why, onClick }: { n: PathNode; stats: 
   );
 }
 
-/** Die nächste Klassenarbeit vom Themenzettel, ganz oben auf der Startseite. */
-function PlanCard({ plan, stats, onPlan }: { plan: Plan | null; stats: Stats; onPlan: () => void }) {
-  if (!plan) {
-    return (
-      <button className="card panel promo" onClick={onPlan}>
-        <span className="ticon" aria-hidden="true">📅</span>
-        <span><b>Bald eine Klassenarbeit?</b><small>Trag deinen Themenzettel ein oder fotografier ihn. Dann bekommst du einen Lernplan bis zum Termin.</small></span>
-      </button>
-    );
-  }
+/** Die nächste Klassenarbeit vom Themenzettel als eine schmale Zeile. */
+function PlanLine({ plan, stats, onPlan }: { plan: Plan | null; stats: Stats; onPlan: () => void }) {
+  if (!plan) return <button className="planline" onClick={onPlan}><span aria-hidden="true">📅</span><span>Bald eine Klassenarbeit? <b>Themenzettel eintragen</b></span><span aria-hidden="true">›</span></button>;
   const left = plan.date ? daysLeft(plan.date, isoDay(new Date())) : null;
   const now = todayItem(plan, stats);
   const done = plan.topics.filter(id => ready(stats, id)).length;
+  const when = left === null ? '' : left > 1 ? `noch ${left} Tage` : left === 1 ? 'morgen!' : left === 0 ? 'heute! 🍀' : 'vorbei';
   return (
-    <button className="card panel promo plan-card" onClick={onPlan}>
-      <span className="ticon" aria-hidden="true">📅</span>
-      <span>
-        <b>{plan.title || 'Klassenarbeit'}{plan.date && ` am ${dateH(plan.date)}`}</b>
-        <small>{left === null ? '' : left > 1 ? `Noch ${left} Tage · ` : left === 1 ? 'Morgen! · ' : left === 0 ? 'Heute! Viel Erfolg 🍀 · ' : 'Vorbei · '}{done} von {plan.topics.length} Themen sitzen · Heute dran: {now.kind === 'topic' ? title(now.id) : 'Probe-Klassenarbeit'}</small>
-      </span>
-      <span className="continue-go" aria-hidden="true">▶</span>
+    <button className="planline on" onClick={onPlan}>
+      <span aria-hidden="true">📅</span>
+      <span><b>{plan.title || 'Klassenarbeit'}{plan.date && ` am ${dateH(plan.date)}`}</b>{when && ` · ${when}`} · {done}/{plan.topics.length} Themen sitzen<small>Heute dran: {now.kind === 'topic' ? title(now.id) : 'Probe-Klassenarbeit'}</small></span>
+      <span aria-hidden="true">›</span>
     </button>
   );
 }
 
-/** Tagesziel als Fortschrittsring mit Serie */
+/** Tagesziel als kleiner Ring mit Serie */
 function DayGoal({ act, onClick }: { act: Activity; onClick: () => void }) {
   const today = isoDay(new Date());
   const r = Math.min(DAILY_GOAL, act[today]?.right ?? 0);
   const n = streak(act, today);
   const lit = isActive(act[today]);
   const C = 2 * Math.PI * 22;
+  const label = lit ? `Tagesziel geschafft, ${n} ${n === 1 ? 'Tag' : 'Tage'} in Folge` : `Tagesziel: ${r} von ${DAILY_GOAL} Aufgaben${n ? `, ${n} ${n === 1 ? 'Tag' : 'Tage'} in Folge` : ''}`;
   return (
-    <button className={`card panel daygoal${lit ? ' lit' : ''}`} onClick={onClick}>
+    <button className={`chip daygoal${lit ? ' lit' : ''}`} onClick={onClick} aria-label={`${label}. Kalender und Erfolge ansehen`}>
       <span className="ring" aria-hidden="true">
         <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" className="ring-bg" /><circle cx="26" cy="26" r="22" className="ring-fg" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - r / DAILY_GOAL) }} /></svg>
-        <span>{lit ? '🔥' : `${r}/${DAILY_GOAL}`}</span>
       </span>
-      <span className="dg-t">
-        <b>{lit ? `Tagesziel geschafft! ${n} ${n === 1 ? 'Tag' : 'Tage'} in Folge` : n ? `🔥 ${n} ${n === 1 ? 'Tag' : 'Tage'} in Folge` : 'Starte deine Serie'}</b>
-        <small>{lit ? 'Kalender und Erfolge ansehen' : `Heute noch ${DAILY_GOAL - r} ${DAILY_GOAL - r === 1 ? 'Aufgabe' : 'Aufgaben'} richtig lösen${n ? ', damit die Serie hält' : ''}`}</small>
-      </span>
-      <span className="dg-go" aria-hidden="true">›</span>
+      <span>{lit ? `🔥 ${n} ${n === 1 ? 'Tag' : 'Tage'}` : `Heute ${r}/${DAILY_GOAL}`}{!lit && n > 0 && ` · 🔥 ${n}`}</span>
     </button>
   );
 }
