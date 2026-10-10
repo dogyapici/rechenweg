@@ -29,9 +29,9 @@ function makeExample(t: Topic, i: number, fresh = false): Example {
   return (i === 1 ? t.gen(3) : makeTask(t, 4)) ?? defaultExample(t);
 }
 
-interface Props { id: string; stats: Stats; onStats: (s: Stats) => void; onBack: () => void; onAskTutor: (ctx: TutorContext) => void }
+interface Props { id: string; stats: Stats; onStats: (s: Stats) => void; onBack: () => void; backLabel?: string; onAskTutor: (ctx: TutorContext) => void }
 
-export function TopicPage({ id, stats, onStats, onBack, onAskTutor }: Props) {
+export function TopicPage({ id, stats, onStats, onBack, backLabel = 'Zurück zur Übersicht', onAskTutor }: Props) {
   const t = TOPICS.find(x => x.id === id)!;
   const l = look(t.id);
   const [tab, setTab] = useState<Tab>(() => (stats[t.id]?.total ? 'ueben' : 'theorie'));
@@ -47,7 +47,7 @@ export function TopicPage({ id, stats, onStats, onBack, onAskTutor }: Props) {
   return (
     <div className="topic" style={tone(t.id)}>
       <div className="thead">
-        <button className="back" onClick={onBack} aria-label="Zurück zur Übersicht">←</button>
+        <button className="back" onClick={onBack} aria-label={backLabel}>←</button>
         <span className="ticon" aria-hidden="true">{l.icon}</span>
         <h1>{t.title}</h1>
       </div>
