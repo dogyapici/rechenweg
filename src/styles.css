@@ -221,6 +221,12 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .settings .ansrow { display: flex; gap: 10px; flex-wrap: wrap; }
 .settings input { border: 3px solid var(--line); border-radius: 14px; padding: 10px 16px; background: var(--paper); min-width: 0; flex: 1 1 200px; }
 
+/* Beispiele */
+.exnav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.exnav button { display: grid; gap: 2px; padding: 10px 6px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); cursor: pointer; text-align: center; }
+.exnav button small { color: var(--muted); font-size: 13px; }
+.exnav button[aria-selected="true"] { border-color: var(--tc, var(--blue)); background: color-mix(in srgb, var(--tc, var(--blue)) 10%, var(--card)); }
+
 /* Lernpfad: fünf Stufen */
 .path5 { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; position: relative; }
 .path5::before { content: ""; position: absolute; left: 10%; right: 10%; top: 21px; height: 4px; border-radius: 2px; background: var(--line); }
