@@ -39,3 +39,17 @@ describe('Tutor', () => {
     expect(toolResult.is_error).toBe(true);
   });
 });
+
+describe('Themenzettel', () => {
+  it('übernimmt nur bekannte Themen und gültige Daten', async () => {
+    const { zettel } = await import('./claude.js');
+    create.mockReset().mockResolvedValueOnce({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({
+      titel: '2. Klassenarbeit', datum: '2026-10-20',
+      punkte: [{ text: 'Brüche kürzen und erweitern', thema: 'kuerzen' }, { text: 'Flächeninhalt Rechteck', thema: 'keins' }, { text: 'Erfunden', thema: 'xyz' }, { text: '  ', thema: 'gl' }],
+    }) }] });
+    const r = await zettel({ text: 'Brüche kürzen\nFlächeninhalt' });
+    expect(r.date).toBe('2026-10-20');
+    expect(r.points).toEqual([{ text: 'Brüche kürzen und erweitern', topic: 'kuerzen' }, { text: 'Flächeninhalt Rechteck', topic: null }, { text: 'Erfunden', topic: null }]);
+    expect(create.mock.calls[0][0].output_config.format.type).toBe('json_schema');
+  });
+});

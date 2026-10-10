@@ -21,6 +21,9 @@ describe('Lernpfad-Kapitel', () => {
     n = pathNodes(s, { k1: { best: 0.75, last: 0.75, at: '', tries: 1 } }, false, title);
     expect(nextNode(n)?.id).toBe('kuerzen');
   });
+  it('Zettel-Themen sind offen', () => {
+    expect(pathNodes({}, {}, false, title, ['gl']).find(x => x.id === 'gl')!.state).toBe('open');
+  });
   it('freies Üben öffnet alles', () => {
     expect(pathNodes({}, {}, true, title).every(x => x.state !== 'locked')).toBe(true);
   });
