@@ -15,15 +15,15 @@ export function AiExplain({ req, onAskTutor }: { req: ExplainRequest; onAskTutor
     catch (e) { setState({ status: 'error', text: e instanceof Error ? e.message : String(e), needsCode: e instanceof AiError && e.needsCode }); }
   };
   return (
-    <div className="ai">
+    <div className="ai card">
       <div className="actions">
-        <button className="btn ghost" onClick={run} disabled={state.status === 'loading'}>Erklär es mir anders (KI)</button>
-        <button className="btn quiet" onClick={() => onAskTutor({ title: req.task, topic: req.topic, steps: req.steps })}>Frag den Tutor dazu</button>
+        <button className="btn soft" onClick={run} disabled={state.status === 'loading'}>🤖 Erklär es mir anders</button>
+        <button className="btn quiet" onClick={() => onAskTutor({ title: req.task, topic: req.topic, steps: req.steps })}>💬 Ich habe eine Frage</button>
       </div>
       {state.status === 'loading' && <div className="ai-out"><p className="thinking">Einen Moment, ich überlege mir eine einfache Erklärung …</p></div>}
       {state.status === 'done' && <Html className="ai-out" html={md(state.text || '')} />}
       {state.status === 'error' && <div className="ai-out"><p className="ai-note">{state.text}</p>{state.needsCode && <AccessCode onSaved={run} />}</div>}
-      <p className="ai-note">Die KI erklärt nur den Rechenweg, den die Recheneinheit oben berechnet hat. Sie rechnet nichts selbst aus.</p>
+      <p className="ai-note">Die KI erklärt nur. Gerechnet hat die App selbst, ganz genau.</p>
     </div>
   );
 }
