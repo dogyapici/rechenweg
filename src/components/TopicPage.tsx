@@ -3,11 +3,14 @@ import { htmlToText, solHTML, solveAny } from '../engine/index.js';
 import { M, TOPICS, type Topic } from '../topics';
 import type { Stats } from '../storage';
 import type { TutorContext } from '../ai';
+import { look, tone } from '../ui/look';
+import { StepReveal, useTheoryCards } from '../ui/bits';
 import { AiExplain } from './AiExplain';
 import { Html } from './Html';
 import { Practice } from './Practice';
 
 type Tab = 'theorie' | 'beispiel' | 'ueben';
+const STEPS = [['theorie', 'Verstehen'], ['beispiel', 'Beispiel'], ['ueben', 'Üben']] as const;
 
 function defaultExample(t: Topic) {
   if (t.example) {
@@ -21,26 +24,44 @@ interface Props { id: string; stats: Stats; onStats: (s: Stats) => void; onBack:
 
 export function TopicPage({ id, stats, onStats, onBack, onAskTutor }: Props) {
   const t = TOPICS.find(x => x.id === id)!;
-  const [tab, setTab] = useState<Tab>('theorie');
+  const l = look(t.id);
+  const [tab, setTab] = useState<Tab>(() => (stats[t.id]?.total ? 'ueben' : 'theorie'));
+  const [card, setCard] = useState(0);
+  const cards = useTheoryCards(t.theory);
   const [example, setExample] = useState(() => defaultExample(t));
   const exHTML = useMemo(() => solHTML(example.sol), [example]);
+  const show = (k: Tab) => { setTab(k); window.scrollTo({ top: 0 }); };
 
   return (
-    <>
-      <button className="back" onClick={onBack}>← Lernpfad</button>
-      <div className="thead"><span className="kl">Klasse {t.klasse}</span><h1>{t.title}</h1></div>
-      <div className="subtabs" role="tablist">
-        {([['theorie', 'Verstehen'], ['beispiel', 'Beispiel'], ['ueben', 'Üben']] as const).map(([k, l]) => (
-          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
-        ))}
+    <div className="topic" style={tone(t.id)}>
+      <div className="thead">
+        <button className="back" onClick={onBack} aria-label="Zurück zur Übersicht">←</button>
+        <span className="ticon" aria-hidden="true">{l.icon}</span>
+        <h1>{t.title}</h1>
       </div>
+
+      <ol className="stepper" aria-label="Schritte">
+        {STEPS.map(([k, label], i) => (
+          <li key={k}>
+            <button aria-current={tab === k ? 'step' : undefined} onClick={() => show(k)}>
+              <span className="sn">{i + 1}</span>{label}
+            </button>
+          </li>
+        ))}
+      </ol>
 
       {tab === 'theorie' && (
         <>
-          <Html as="article" className="card prose" html={t.theory} />
+          <article className="card prose bubble" key={card}>
+            <span className="cardno">{card + 1} / {cards.length}</span>
+            <Html html={cards[card]} />
+          </article>
+          <div className="dots" aria-hidden="true">{cards.map((_, i) => <i key={i} className={i === card ? 'on' : i < card ? 'seen' : ''} />)}</div>
           <div className="cta">
-            <button className="btn" onClick={() => setTab('beispiel')}>Weiter zum Beispiel</button>
-            <button className="btn ghost" onClick={() => setTab('ueben')}>Gleich üben</button>
+            {card > 0 && <button className="btn quiet" onClick={() => setCard(card - 1)}>← Zurück</button>}
+            {card < cards.length - 1
+              ? <button className="btn big" onClick={() => setCard(card + 1)}>Weiter 👉</button>
+              : <button className="btn big" onClick={() => show('beispiel')}>Zum Beispiel 👉</button>}
           </div>
         </>
       )}
@@ -48,19 +69,18 @@ export function TopicPage({ id, stats, onStats, onBack, onAskTutor }: Props) {
       {tab === 'beispiel' && (
         <>
           <section className="card panel">
-            <div className="panel-h">
-              <span className="eyebrow">Beispiel, vollständig durchgerechnet</span>
-              <button className="btn quiet" onClick={() => { const k = t.gen(Math.min(2, stats[t.id]?.level ?? 1)); if (k) setExample(k); }}>Anderes Beispiel</button>
-            </div>
             <Html as="p" className="prompt" html={example.prompt} />
-            <Html html={exHTML} />
-            <AiExplain req={{ topic: t.title, task: htmlToText(example.prompt), steps: htmlToText(exHTML) }} onAskTutor={onAskTutor} />
+            <StepReveal html={exHTML} />
           </section>
-          <div className="cta"><button className="btn" onClick={() => setTab('ueben')}>Jetzt selbst üben</button></div>
+          <div className="cta">
+            <button className="btn big" onClick={() => show('ueben')}>Jetzt du! 💪</button>
+            <button className="btn quiet" onClick={() => { const k = t.gen(Math.min(2, stats[t.id]?.level ?? 1)); if (k) setExample(k); }}>🔄 Anderes Beispiel</button>
+          </div>
+          <AiExplain req={{ topic: t.title, task: htmlToText(example.prompt), steps: htmlToText(exHTML) }} onAskTutor={onAskTutor} />
         </>
       )}
 
       {tab === 'ueben' && <Practice topic={t} stats={stats} onStats={onStats} onAskTutor={onAskTutor} />}
-    </>
+    </div>
   );
 }

@@ -35,28 +35,28 @@ export function Tutor({ context, onClearContext }: { context: TutorContext | nul
 
   return (
     <section className="card panel">
-      <div className="panel-h"><h2>Frag den Tutor</h2><span className="eyebrow">KI mit Recheneinheit</span></div>
-      <p className="ai-note" style={{ fontSize: 15 }}>Frag alles, was du nicht verstehst. Der Tutor rechnet nicht im Kopf: Jede Zahl lässt er von der Recheneinheit prüfen. Geprüfte Rechnungen siehst du grün unter der Antwort.</p>
+      <h1 className="h1">💬 Fragen</h1>
+      <p className="lead">Frag einfach, was du nicht verstehst. Es gibt keine dummen Fragen!</p>
       {context && <div className="ctx">Es geht um: <b>{context.title}</b><button onClick={onClearContext}>entfernen</button></div>}
       <div className="chat" aria-live="polite">
-        {!chat.length && <div className="msg assistant"><p>Hallo! Ich bin dein Mathe-Tutor. Was möchtest du verstehen? Du kannst mir auch eine Aufgabe schicken, dann gehen wir sie zusammen durch.</p></div>}
+        {!chat.length && <div className="msg assistant"><p>Hallo! 😊 Ich bin dein Mathe-Helfer. Schick mir eine Frage oder eine Aufgabe, dann gehen wir sie zusammen durch.</p></div>}
         {chat.map((m, i) => m.role === 'user'
           ? <div key={i} className="msg user">{m.content}</div>
           : (
             <div key={i} className="msg assistant">
               {m.error ? <p className="ai-note">{m.content}</p> : <Html html={md(m.content)} />}
-              {!!m.checks?.length && <div className="checks">{m.checks.map((c, j) => <span key={j} className="check">✓ geprüft: {c}</span>)}</div>}
+              {!!m.checks?.length && <div className="checks">{m.checks.map((c, j) => <span key={j} className="check">✓ nachgerechnet: {c}</span>)}</div>}
             </div>
           ))}
-        {busy && <div className="msg assistant"><p className="thinking">Denke nach …</p></div>}
+        {busy && <div className="msg assistant"><p className="thinking">Ich denke nach …</p></div>}
         <div ref={endRef} />
       </div>
       {needsCode && <AccessCode onSaved={() => setNeedsCode(false)} />}
-      {!chat.length && <div className="chips">{SUGGESTIONS.map(s => <button key={s} className="chip" onClick={() => send(s)}>{s}</button>)}</div>}
+      {!chat.length && <div className="try"><span>Zum Beispiel:</span>{SUGGESTIONS.map(s => <button key={s} className="chip" onClick={() => send(s)}>{s}</button>)}</div>}
       <form className="chatform" onSubmit={e => { e.preventDefault(); send(draft); }}>
         <textarea id="chatin" rows={2} value={draft} onChange={e => setDraft(e.target.value)} placeholder="Deine Frage …" aria-label="Deine Frage"
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(draft); } }} />
-        <button className="btn" type="submit" disabled={busy}>Senden</button>
+        <button className="btn big" type="submit" disabled={busy || !draft.trim()}>Senden ➤</button>
       </form>
     </section>
   );

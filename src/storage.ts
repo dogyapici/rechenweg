@@ -13,3 +13,7 @@ export const freshStats = (): TopicStats => ({ level: 1, streak: 0, miss: 0, rig
 
 export const loadCode = (): string => read<string>('rechenweg-code', '');
 export const saveCode = (c: string) => write('rechenweg-code', c);
+
+/** Zuletzt geöffnetes Thema, für „Weiter üben“ auf der Startseite. */
+export const loadLast = (): string | null => read<string | null>('rechenweg-last', null);
+export const saveLast = (id: string) => write('rechenweg-last', id);
