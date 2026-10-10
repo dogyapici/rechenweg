@@ -14,15 +14,20 @@ describe('Lernpfad-Kapitel', () => {
   it('schaltet der Reihe nach frei', () => {
     let n = pathNodes({}, {}, false, title);
     expect(n.filter(x => x.state === 'open').map(x => x.id)).toEqual(['pvs']);
-    const s: Stats = { pvs: st(4) };
+    const s: Stats = { pvs: st(4), teil: st(4) };
     n = pathNodes(s, {}, false, title);
     expect(nextNode(n)?.id).toBe('k1');
-    expect(n.find(x => x.id === 'kuerzen')!.state).toBe('locked');
+    expect(n.find(x => x.id === 'groe')!.state).toBe('locked');
     n = pathNodes(s, { k1: { best: 0.75, last: 0.75, at: '', tries: 1 } }, false, title);
-    expect(nextNode(n)?.id).toBe('kuerzen');
+    expect(nextNode(n)?.id).toBe('groe');
   });
   it('Zettel-Themen sind offen', () => {
     expect(pathNodes({}, {}, false, title, ['gl']).find(x => x.id === 'gl')!.state).toBe('open');
+  });
+  it('bevorzugt Stoff der eigenen Klasse', () => {
+    const n = pathNodes({}, {}, false, title, ['pvs', 'kuerzen', 'bradd']);
+    expect(nextNode(n, x => x.id === 'bradd')?.id).toBe('bradd');
+    expect(nextNode(n, () => false)?.id).toBe('pvs');
   });
   it('freies Üben öffnet alles', () => {
     expect(pathNodes({}, {}, true, title).every(x => x.state !== 'locked')).toBe(true);

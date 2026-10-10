@@ -1,6 +1,7 @@
 /* ===== Textaufgaben für Stufe 4 (zwei Schritte) und Stufe 5 (Profi, mehrere Schritte) ===== */
 import { MathError, q, gcd, lcm, type Q } from './engine/index.js';
-import { wordTask } from './guide.js';
+import { wordTask, type GuideStep } from './guide.js';
+import { ggtTask, kgvTask } from './topics.js';
 
 type Word = ReturnType<typeof wordTask>;
 const R = (a: number, b: number): number => a + Math.floor(Math.random() * (b - a + 1));
@@ -227,6 +228,199 @@ export const TEXT: Record<string, (level: number) => Word | null> = {
       unit: 'Jahre', sentence: v => `Anna ist ${v} alt.`,
     });
   }, nice),
+  teil: level => {
+    for (let i = 0; i < 300; i++) {
+      if (Math.random() < 0.5) {
+        const g = pick([5, 6, 8, 10, 12, 15, 20, 25]), a = g * R(2, 9), b = g * R(2, 9);
+        if (a === b || G(a, b) !== g) continue;
+        const t = ggtTask(a, b), n = a / g + b / g;
+        const guide: GuideStep[] = [...t.guide!];
+        let prompt = `Mia hat zwei Bänder: eins ist ${a} cm lang, das andere ${b} cm. Sie will beide in gleich lange Stücke schneiden, ohne dass etwas übrig bleibt. Die Stücke sollen so lang wie möglich sein. Wie lang wird ein Stück?`;
+        const steps = [{ rule: 'Was ist gesucht?', lines: ['Die Stücklänge muss in beide Bänder genau hineinpassen, also beide Längen teilen. „So lang wie möglich“ heißt: der <b>größte</b> gemeinsame Teiler.'] }, ...(t.sol as { steps: { rule: string; lines: string[] }[] }).steps];
+        let result = q(g), html = `${g} cm`, sentence = `Ein Stück wird ${g} cm lang.`;
+        if (level === 5) {
+          prompt = prompt.replace('Wie lang wird ein Stück?', 'Wie viele Stücke bekommt sie insgesamt?');
+          guide.push({ title: 'Stücke zählen', ask: `Ein Stück ist ${g} cm lang. Wie viele Stücke werden es aus beiden Bändern zusammen?<div class="math big">${a} : ${g} + ${b} : ${g} = ?</div>`, answer: q(n), hint: 'Teile jede Bandlänge durch die Stücklänge und addiere.', explain: `${a / g} + ${b / g} = ${n} Stücke` });
+          steps.push({ rule: 'Stücke zählen', lines: [`${a} : ${g} + ${b} : ${g} = ${a / g} + ${b / g} = ${n}`] });
+          result = q(n); html = `${n} Stücke`; sentence = `Mia bekommt ${n} Stücke, jedes ${g} cm lang.`;
+        }
+        guide[0] = { ...guide[0], choose: { ask: 'Was musst du ausrechnen?', options: [{ html: 'den ggT von ' + a + ' und ' + b, ok: true }, { html: 'das kgV von ' + a + ' und ' + b, ok: false }, { html: `${a} + ${b}`, ok: false }], why: 'Die Stücke müssen in beide Längen passen, also beide teilen: ein gemeinsamer Teiler.' } };
+        return { prompt, plain: prompt, answer: result, guide, word: true as const, needReduced: false, placeholder: level === 5 ? 'Anzahl Stücke' : 'Antwort in cm', sol: { kind: 'list' as const, steps, result, resultHTML: html, extra: [`<b>Antwortsatz:</b> ${sentence}`] } };
+      }
+      const a = pick([6, 8, 10, 12, 15, 20]), b = pick([4, 6, 8, 9, 10, 12, 15]);
+      const l = L(a, b);
+      if (a === b || l === Math.max(a, b) || l / Math.max(a, b) > 6 || l > 90) continue;
+      const t = kgvTask(a, b);
+      const guide: GuideStep[] = [...t.guide!];
+      let prompt = `Um 8 Uhr fahren Bus A und Bus B gleichzeitig ab. Bus A fährt alle ${a} Minuten, Bus B alle ${b} Minuten. Nach wie vielen Minuten fahren sie wieder gleichzeitig ab?`;
+      const steps = [{ rule: 'Was ist gesucht?', lines: [`Bus A fährt nach ${a}, ${2 * a}, ${3 * a}, … Minuten, also bei den Vielfachen von ${a}. Bus B bei den Vielfachen von ${b}. Gesucht ist das <b>kleinste gemeinsame Vielfache</b>.`] }, ...(t.sol as { steps: { rule: string; lines: string[] }[] }).steps];
+      let result = q(l), html = `${l} min`, sentence = `Nach ${l} Minuten fahren beide wieder gleichzeitig ab.`;
+      if (level === 5) {
+        prompt += ` Wie oft ist Bus A bis dahin abgefahren (die Abfahrt um 8 Uhr nicht mitgezählt)?`;
+        guide.push({ title: 'Fahrten von Bus A', ask: `Bus A fährt alle ${a} Minuten. Wie oft fährt er in ${l} Minuten?<div class="math big">${l} : ${a} = ?</div>`, answer: q(l / a), hint: `Teile ${l} durch ${a}.`, explain: `${l} : ${a} = ${l / a}` });
+        steps.push({ rule: 'Fahrten von Bus A', lines: [`${l} : ${a} = ${l / a}`] });
+        result = q(l / a); html = `${l / a}-mal`; sentence = `Nach ${l} Minuten fahren beide wieder zusammen. Bis dahin ist Bus A ${l / a}-mal abgefahren.`;
+      }
+      guide[0] = { ...guide[0], choose: { ask: 'Was musst du ausrechnen?', options: [{ html: 'das kgV von ' + a + ' und ' + b, ok: true }, { html: 'den ggT von ' + a + ' und ' + b, ok: false }, { html: `${a} · ${b}`, ok: false }], why: 'Gesucht ist eine Zeit, die in beiden Fahrplänen vorkommt: ein gemeinsames Vielfaches, und zwar das kleinste.' } };
+      return { prompt, plain: prompt, answer: result, guide, word: true as const, needReduced: false, placeholder: level === 5 ? 'Anzahl' : 'Antwort in min', sol: { kind: 'list' as const, steps, result, resultHTML: html, extra: [`<b>Antwortsatz:</b> ${sentence}`] } };
+    }
+    return null;
+  },
+
+  groe: level => tryGen(() => {
+    if (level === 4) {
+      const k = R(0, 2);
+      if (k === 0) {
+        const km = R(41, 129) / 10, done = R(10, Math.floor(km * 10) - 3) * 100;
+        const all = Math.round(km * 1000);
+        return wordTask({
+          prompt: `Ein Wanderweg ist ${String(km).replace('.', ',')} km lang. Lisa ist schon ${done} m gegangen. Wie viele Meter muss sie noch gehen?`,
+          steps: [
+            { title: 'Gleiche Einheit', ask: `Wie viele Meter sind ${String(km).replace('.', ',')} km?`, calc: `${String(km).replace('.', ',')} · 1000`, wrong: [`${String(km).replace('.', ',')} : 1000`, `${String(km).replace('.', ',')} · 100`], why: 'Erst alles in Meter. 1 km = 1000 m, in die kleinere Einheit also mal.', unit: 'm' },
+            { title: 'Was noch fehlt', ask: 'Wie viele Meter fehlen noch?', calc: `${all} − ${done}`, wrong: [`${all} + ${done}`], why: 'Der Rest vom Weg: ganzer Weg minus geschaffter Weg.', unit: 'm' },
+          ],
+          unit: 'm', sentence: v => `Lisa muss noch ${v} gehen.`,
+        });
+      }
+      if (k === 1) {
+        const n = R(3, 12), g = pick([250, 500]);
+        return wordTask({
+          prompt: `Für ein Schulfest kauft Herr Kaya ${n} Packungen Nudeln. Jede Packung wiegt ${g} g. Wie viel Kilogramm Nudeln sind das?`,
+          steps: [
+            { title: 'Gewicht in Gramm', ask: 'Wie viel Gramm sind alle Packungen zusammen?', calc: `${n} · ${g}`, wrong: [`${n} + ${g}`], why: 'Mehrere gleiche Packungen: Anzahl mal Gewicht.', unit: 'g' },
+            { title: 'In Kilogramm', ask: 'Wie viel Kilogramm sind das?', calc: `${n * g} : 1000`, wrong: [`${n * g} · 1000`, `${n * g} : 100`], why: '1 kg = 1000 g. In die größere Einheit also geteilt durch 1000.', unit: 'kg' },
+          ],
+          unit: 'kg', sentence: v => `Das sind ${v} Nudeln.`,
+        });
+      }
+      const h = pick([1, 2]), m = pick([15, 30, 45]), b = R(10, 40);
+      return wordTask({
+        prompt: `Jonas fährt ${h} h ${m} min mit dem Zug zu seiner Oma und danach noch ${b} min mit dem Bus. Wie viele Minuten ist er insgesamt unterwegs?`,
+        steps: [
+          { title: 'Zugfahrt in Minuten', ask: `Wie viele Minuten sind ${h} h ${m} min?`, calc: `${h} · 60 + ${m}`, wrong: [`${h} · 100 + ${m}`], why: '1 h hat 60 min, nicht 100.', unit: 'min' },
+          { title: 'Alles zusammen', ask: 'Wie viele Minuten ist Jonas insgesamt unterwegs?', calc: `${h * 60 + m} + ${b}`, unit: 'min' },
+        ],
+        unit: 'min', sentence: v => `Jonas ist ${v} unterwegs.`,
+      });
+    }
+    if (Math.random() < 0.5) {
+      const n = R(2, 4), w = pick([350, 450, 650, 850]), sp = R(11, 25) / 10, max = pick([5, 10]);
+      const spH = String(sp).replace('.', ',');
+      return wordTask({
+        prompt: `Ein Paket darf höchstens ${max} kg wiegen. Ella packt ${n} Bücher zu je ${w} g und ein Spiel mit ${spH} kg hinein. Wie viel Gramm darf sie noch einpacken?`,
+        steps: [
+          { title: 'Die Bücher', ask: 'Wie viel Gramm wiegen die Bücher zusammen?', calc: `${n} · ${w}`, wrong: [`${n} + ${w}`], unit: 'g' },
+          { title: 'Das Spiel in Gramm', ask: `Wie viel Gramm sind ${spH} kg?`, calc: `${spH} · 1000`, wrong: [`${spH} : 1000`], why: '1 kg = 1000 g: mal 1000.', unit: 'g' },
+          { title: 'Schon im Paket', ask: 'Wie viel Gramm sind schon im Paket?', calc: `${n * w} + ${Math.round(sp * 1000)}`, unit: 'g' },
+          { title: 'Was noch geht', ask: `${max} kg sind ${max * 1000} g. Wie viel Gramm darf Ella noch einpacken?`, calc: `${max * 1000} − ${n * w + Math.round(sp * 1000)}`, wrong: [`${max * 1000} + ${n * w + Math.round(sp * 1000)}`], why: 'Höchstgewicht minus das, was schon drin ist.', unit: 'g' },
+        ],
+        unit: 'g', sentence: v => `Ella darf noch ${v} einpacken.`,
+      });
+    }
+    const h = pick([1, 2]), m = pick([10, 20, 40, 50]), w = R(5, 25);
+    return wordTask({
+      prompt: `Familie Weber fährt ${h} h ${m} min mit dem Auto in den Urlaub. Unterwegs machen sie ${w} min Pause, dann fahren sie noch 45 min weiter. Wie viele Minuten sind sie insgesamt unterwegs?`,
+      steps: [
+        { title: 'Erste Fahrt in Minuten', ask: `Wie viele Minuten sind ${h} h ${m} min?`, calc: `${h} · 60 + ${m}`, wrong: [`${h} · 100 + ${m}`], why: '1 h = 60 min.', unit: 'min' },
+        { title: 'Pause dazu', ask: 'Wie viele Minuten sind es mit der Pause?', calc: `${h * 60 + m} + ${w}`, unit: 'min' },
+        { title: 'Zweite Fahrt dazu', ask: 'Wie viele Minuten sind sie insgesamt unterwegs?', calc: `${h * 60 + m + w} + 45`, unit: 'min' },
+      ],
+      unit: 'min', sentence: v => `Familie Weber ist ${v} unterwegs.`,
+    });
+  }, t => t.guide.every(s => s.answer.terminating())),
+
+  flae: level => tryGen(() => {
+    if (level === 4) {
+      if (Math.random() < 0.5) {
+        const a = R(5, 20), b = R(3, 15), p = R(3, 12);
+        return wordTask({
+          prompt: `Ein rechteckiger Garten ist ${a} m lang und ${b} m breit. Er bekommt rundherum einen Zaun. Ein Meter Zaun kostet ${p} €. Wie viel kostet der Zaun?`,
+          steps: [
+            { title: 'Länge vom Zaun', ask: 'Wie lang ist der Zaun? (Der Zaun geht einmal außen herum.)', calc: `2 · ${a} + 2 · ${b}`, wrong: [`${a} · ${b}`, `${a} + ${b}`], why: 'Ein Zaun geht außen herum: Das ist der Umfang, 2 · a + 2 · b.', unit: 'm' },
+            { title: 'Preis', ask: 'Wie viel kostet der Zaun?', calc: `${2 * a + 2 * b} · ${p}`, wrong: [`${2 * a + 2 * b} + ${p}`], why: 'Meter mal Preis pro Meter.', unit: '€' },
+          ],
+          unit: '€', sentence: v => `Der Zaun kostet ${v}.`,
+        });
+      }
+      const a = R(2, 9), b = R(2, 6), k = pick([4, 5, 6, 8, 10]);
+      return wordTask({
+        prompt: `Ein rechteckiges Beet ist ${a} m lang und ${b} m breit. Auf jeden Quadratmeter pflanzt Paul ${k} Blumen. Wie viele Blumen braucht er?`,
+        steps: [
+          { title: 'Fläche vom Beet', ask: 'Wie groß ist die Fläche vom Beet?', calc: `${a} · ${b}`, wrong: [`2 · ${a} + 2 · ${b}`], why: 'Die Blumen kommen auf die Fläche: a · b.', unit: 'm²' },
+          { title: 'Blumen', ask: 'Wie viele Blumen braucht Paul?', calc: `${a * b} · ${k}`, wrong: [`${a * b} + ${k}`], why: 'Pro Quadratmeter gleich viele: Fläche mal Blumen pro m².', unit: 'Blumen' },
+        ],
+        unit: 'Blumen', sentence: v => `Paul braucht ${v}.`,
+      });
+    }
+    const a = R(3, 7), b = R(3, 6), c = R(15, 30), per = 2;
+    return wordTask({
+      prompt: `Ein Zimmer ist ${a} m lang und ${b} m breit. Es bekommt neuen Boden. Eine Packung Laminat reicht für ${per} m² und kostet ${c} €. Wie viel kostet der neue Boden?`,
+      steps: [
+        { title: 'Fläche vom Zimmer', ask: 'Wie groß ist die Fläche vom Zimmer?', calc: `${a} · ${b}`, wrong: [`2 · ${a} + 2 · ${b}`], why: 'Boden ist eine Fläche: a · b.', unit: 'm²' },
+        { title: 'Packungen', ask: `Eine Packung reicht für ${per} m². Wie viele Packungen braucht man?`, calc: `${a * b} : ${per}`, wrong: [`${a * b} · ${per}`], why: 'So oft passen 2 m² in die Fläche: geteilt.', unit: 'Packungen' },
+        { title: 'Preis', ask: 'Wie viel kosten alle Packungen?', calc: `${(a * b) / per} · ${c}`, unit: '€' },
+      ],
+      unit: '€', sentence: v => `Der neue Boden kostet ${v}.`,
+    });
+  }, nice),
+
+  neg: level => {
+    for (let i = 0; i < 300; i++) {
+      try {
+        const t = negWord(level);
+        if (t.guide.every(s => s.answer.isInt() && !s.answer.isZero())) return t;
+      } catch (e) { if (!(e instanceof MathError)) throw e; }
+    }
+    return null;
+  },
 };
 
 function nice2(t: Word) { return t.guide.every(s => s.answer.d <= 12n); }
+
+const pn = (v: number) => (v < 0 ? `(−${-v})` : String(v));
+const sg = (v: number) => String(v).replace('-', '−');
+function negWord(level: number): Word {
+  if (level === 4) {
+    if (Math.random() < 0.5) {
+      const a = R(2, 9), b = R(3, 12), c = R(2, 10);
+      return wordTask({
+        prompt: `Am Morgen ist es ${sg(-a)} °C kalt. Bis zum Mittag steigt die Temperatur um ${b} Grad. Bis zum Abend sinkt sie wieder um ${c} Grad. Wie kalt ist es am Abend?`,
+        steps: [
+          { title: 'Mittags', ask: 'Wie warm ist es am Mittag?', calc: `${pn(-a)} + ${b}`, wrong: [`${pn(-a)} − ${b}`], why: 'Die Temperatur steigt: plus, auf dem Thermometer nach oben.', unit: '°C' },
+          { title: 'Abends', ask: 'Wie warm ist es am Abend?', calc: `${pn(b - a)} − ${c}`, wrong: [`${pn(b - a)} + ${c}`], why: 'Die Temperatur sinkt: minus.', unit: '°C' },
+        ],
+        unit: '°C', sentence: v => `Am Abend sind es ${v}.`,
+      });
+    }
+    const a = R(10, 60), b = R(20, 80), c = R(10, 70);
+    return wordTask({
+      prompt: `Auf Toms Konto sind ${sg(-a)} € (er hat also ${a} € Schulden). Er zahlt ${b} € ein und hebt danach ${c} € ab. Wie hoch ist sein Kontostand jetzt?`,
+      steps: [
+        { title: 'Einzahlung', ask: `Wie hoch ist der Kontostand nach dem Einzahlen?`, calc: `${pn(-a)} + ${b}`, wrong: [`${pn(-a)} − ${b}`], why: 'Einzahlen heißt: Es kommt Geld dazu, plus.', unit: '€' },
+        { title: 'Abheben', ask: 'Wie hoch ist der Kontostand nach dem Abheben?', calc: `${pn(b - a)} − ${c}`, wrong: [`${pn(b - a)} + ${c}`], why: 'Abheben heißt: Geld geht weg, minus.', unit: '€' },
+      ],
+      unit: '€', sentence: v => `Toms Kontostand ist jetzt ${v}.`,
+    });
+  }
+  if (Math.random() < 0.5) {
+    const h = pick([4, 5, 6, 8]), r = R(1, 4), a = R(2, 12), b = h * r - a;
+    return wordTask({
+      prompt: `Auf einer Berghütte zeigt das Thermometer um 6 Uhr ${sg(-a)} °C. ${h} Stunden später sind es ${sg(b)} °C. Um wie viel Grad ist es pro Stunde wärmer geworden, wenn es jede Stunde gleich viel war?`,
+      steps: [
+        { title: 'Unterschied', ask: `Um wie viel Grad ist es insgesamt wärmer geworden? Rechne neue Temperatur minus alte Temperatur.`, calc: `${pn(b)} − ${pn(-a)}`, wrong: [`${pn(b)} + ${pn(-a)}`], why: 'Unterschied: neu minus alt. Minus minus wird plus.', unit: 'Grad' },
+        { title: 'Pro Stunde', ask: `Das waren ${h} Stunden. Wie viel Grad pro Stunde?`, calc: `${b + a} : ${h}`, wrong: [`${b + a} · ${h}`], why: 'Gleichmäßig auf die Stunden verteilen: geteilt.', unit: 'Grad' },
+      ],
+      unit: 'Grad', sentence: v => `Es ist jede Stunde um ${v} wärmer geworden.`,
+    });
+  }
+  const a = R(30, 120), k = R(2, 5), b = pick([15, 20, 25, 30]), c = R(10, 60);
+  return wordTask({
+    prompt: `Leas Konto steht bei ${sg(-a)} €. Sie zahlt ${k} Monate lang jeden Monat ${b} € ein. Dann kauft sie ein Buch für ${c} €. Wie hoch ist ihr Kontostand danach?`,
+    steps: [
+      { title: 'Alle Einzahlungen', ask: 'Wie viel zahlt Lea insgesamt ein?', calc: `${k} · ${b}`, wrong: [`${k} + ${b}`], unit: '€' },
+      { title: 'Nach den Einzahlungen', ask: 'Wie hoch ist der Kontostand nach den Einzahlungen?', calc: `${pn(-a)} + ${k * b}`, wrong: [`${pn(-a)} − ${k * b}`], why: 'Einzahlen: plus.', unit: '€' },
+      { title: 'Nach dem Kauf', ask: 'Wie hoch ist der Kontostand nach dem Kauf?', calc: `${pn(k * b - a)} − ${c}`, wrong: [`${pn(k * b - a)} + ${c}`], why: 'Bezahlen: Geld geht weg, minus.', unit: '€' },
+    ],
+    unit: '€', sentence: v => `Leas Kontostand ist danach ${v}.`,
+  });
+}

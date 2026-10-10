@@ -15,7 +15,7 @@ describe('Lernpfad', () => {
           if (level >= 2) expect(g.length, 'Gemeinsam lösen hat Schritte').toBeGreaterThan(0);
           if (g.length) expect(g[g.length - 1].answer.eq(k!.answer), 'letzter Schritt = Ergebnis').toBe(true);
           for (const s of g) {
-            if (k!.word) expect(s.answer.sign()).toBe(1);
+            if (k!.word && t.id !== 'neg') expect(s.answer.sign()).toBe(1);
             if (s.choose) expect(s.choose.options.filter(o => o.ok).length).toBe(1);
             // Die richtige Antwort muss sich auch eintippen lassen.
             const typed = s.answer.d === 1n ? String(s.answer.n) : s.answer.terminating() ? s.answer.toDec() : s.answer.red().txt();

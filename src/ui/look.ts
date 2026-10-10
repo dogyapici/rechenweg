@@ -5,10 +5,14 @@ export interface Look { icon: string; color: string; teaser: string }
 
 const LOOKS: Record<string, Look> = {
   pvs: { icon: '🎯', color: '#e8590c', teaser: 'Was rechne ich zuerst?' },
+  teil: { icon: '🔢', color: '#5c7cfa', teaser: 'Welche Zahl passt hinein?' },
+  groe: { icon: '📏', color: '#f08c00', teaser: 'km, kg und Minuten' },
+  flae: { icon: '🟩', color: '#37b24d', teaser: 'Außen herum und innen drin' },
   kuerzen: { icon: '🍕', color: '#d6336c', teaser: 'Brüche einfacher machen' },
   bradd: { icon: '🍰', color: '#7048e8', teaser: 'Brüche plus und minus' },
   brmul: { icon: '✂️', color: '#1c7ed6', teaser: 'Brüche mal und geteilt' },
   dez: { icon: '🪙', color: '#0c8599', teaser: 'Rechnen mit Komma' },
+  neg: { icon: '🌡️', color: '#1098ad', teaser: 'Zahlen unter null' },
   proz: { icon: '🏷️', color: '#2f9e44', teaser: 'Prozente wie beim Einkaufen' },
   gl: { icon: '⚖️', color: '#c2255c', teaser: 'Finde das x' },
 };

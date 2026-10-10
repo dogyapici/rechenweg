@@ -311,7 +311,7 @@ export interface Answer { v: Q; raw: boolean }
 export function parseAnswer(input: string): Answer {
   const s = String(input || '').trim()
     .replace(/^x\s*=\s*/i, '')
-    .replace(/[%€]|\b(kg|g|m|cm|km|l|ml|euro|eur|stück|schüler|kinder|min|jahre|jahr|liter|personen|stunden|std|seiten|punkte|plätze|gläser|tüten|hefte|stifte)(?![a-zäöüß])\.?/gi, '')
+    .replace(/°\s*c?|[%€]|\b(kg|g|t|mm|dm|cm|km|m|l|ml|ct|cent|euro|eur|stück|stücke|schüler|kinder|min|minuten|h|s|sek|sekunden|jahre|jahr|tage|liter|personen|stunden|std|seiten|punkte|plätze|gläser|tüten|hefte|stifte|pakete|packungen|grad)[²³]?(?![a-zäöüß])\.?/gi, '')
     .trim();
   if (!s) throw new MathError('Gib zuerst eine Antwort ein.');
   let m = s.match(/^(-|−)?\s*(\d+)\s*\/\s*(\d+)$/);

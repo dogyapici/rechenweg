@@ -8,14 +8,16 @@ import { Zettel } from './components/Zettel';
 import { Placement } from './components/Placement';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Progress } from './components/Progress';
+import { ProfilePage } from './components/ProfilePage';
 import { Celebrate, type Party } from './components/Celebrate';
-import { loadActivity, loadExams, loadFree, loadPlan, loadStats, loadUnlocked, saveActivity, saveExams, saveFree, saveLast, savePlan, saveStats, saveUnlocked, type Stats } from './storage';
+import { loadActivity, loadExams, loadFree, loadPlan, loadProfile, loadStats, loadUnlocked, saveActivity, saveExams, saveFree, saveLast, savePlan, saveProfile, saveStats, saveUnlocked, type Stats } from './storage';
 import { isoDay, type Plan } from './plan';
+import { reachable, type Profile } from './profile';
 import { DAILY_GOAL, isActive, logExam, logStats, newAchievements, streak, type Activity, type Unlocked } from './progress';
 import { CHAPTERS, type Exams } from './curriculum';
 import type { TutorContext } from './ai';
 
-export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' } | { name: 'exam'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' };
+export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' } | { name: 'exam'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' };
 
 const ALL = CHAPTERS.flatMap(c => c.topics);
 const NAV = [['home', '📚', 'Lernen'], ['plan', '📅', 'Klassenarbeit'], ['calc', '🧮', 'Rechner'], ['tutor', '💬', 'Fragen']] as const;
@@ -26,6 +28,7 @@ export function App() {
   const [exams, setExams] = useState<Exams>(loadExams);
   const [free, setFree] = useState(loadFree);
   const [plan, setPlan] = useState<Plan | null>(loadPlan);
+  const [profile, setProfile] = useState<Profile | null>(loadProfile);
   const [tutorCtx, setTutorCtx] = useState<TutorContext | null>(null);
 
   const go = useCallback((v: View) => {
@@ -106,8 +109,8 @@ export function App() {
       </header>
       <main>
         <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' ? view.id : view.name}>
-        {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} act={act} onProgress={() => go({ name: 'progress' })} onFree={updateFree} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
-          onPlan={() => go({ name: 'plan' })} onPlacement={() => go({ name: 'placement', topics: ALL, back: 'home' })} />}
+        {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} profile={profile} onProfile={() => go({ name: 'profile' })} act={act} onProgress={() => go({ name: 'progress' })} onFree={updateFree} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
+          onPlan={() => go({ name: 'plan' })} onPlacement={() => go({ name: 'placement', topics: profile && reachable(profile).length ? reachable(profile) : ALL, back: 'home' })} />}
         {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onBack={() => go({ name: view.id === 'plan' ? 'plan' : 'home' })} onOpenTopic={id => go({ name: 'topic', id, from: view.id === 'plan' ? 'plan' : undefined })}
           custom={view.id === 'plan' && plan ? { name: `Probe-Klassenarbeit${plan.title ? ': ' + plan.title : ''}`, topics: plan.topics, back: 'Zurück zum Lernplan' } : undefined} />}
         {view.name === 'plan' && <Zettel plan={plan} stats={stats} exams={exams} onPlan={updatePlan} onOpen={id => go({ name: 'topic', id, from: 'plan' })} onExam={() => go({ name: 'exam', id: 'plan' })}
@@ -116,6 +119,7 @@ export function App() {
         {view.name === 'topic' && (
           <TopicPage key={view.id} id={view.id} stats={stats} onStats={updateStats} onBack={() => go({ name: view.from ?? 'home' })} backLabel={view.from === 'plan' ? 'Zurück zum Lernplan' : undefined} onAskTutor={askTutor} />
         )}
+        {view.name === 'profile' && <ProfilePage profile={profile} onSave={p => { setProfile(p); saveProfile(p); go({ name: 'home' }); }} onBack={() => go({ name: 'home' })} />}
         {view.name === 'progress' && <Progress act={act} unlocked={unlocked} stats={stats} exams={exams} plan={plan} onBack={() => go({ name: 'home' })} />}
         {view.name === 'calc' && <Calculator onAskTutor={askTutor} />}
         {view.name === 'tutor' && <Tutor context={tutorCtx} onClearContext={() => setTutorCtx(null)} />}
