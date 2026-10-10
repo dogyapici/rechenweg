@@ -1,4 +1,5 @@
 import type { Exams } from './curriculum';
+import type { Plan } from './plan';
 
 /** Fortschritt und Zugangscode bleiben nur in diesem Browser gespeichert. */
 /** `intro`: höchste Stufe, deren Einführung schon gezeigt wurde. `atLevel`: erledigte Aufgaben auf der aktuellen Stufe. */
@@ -26,3 +27,6 @@ export const saveExams = (e: Exams) => write('rechenweg-exams', e);
 /** Freies Üben: alle Themen offen, ohne Reihenfolge. */
 export const loadFree = (): boolean => read<boolean>('rechenweg-free', false);
 export const saveFree = (f: boolean) => write('rechenweg-free', f);
+/** Die nächste Klassenarbeit mit den Themen vom Zettel. */
+export const loadPlan = (): Plan | null => read<Plan | null>('rechenweg-plan', null);
+export const savePlan = (p: Plan | null) => write('rechenweg-plan', p);

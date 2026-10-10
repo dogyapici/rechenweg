@@ -4,14 +4,15 @@ import type { Stats } from '../storage';
 import { CHAPTERS, grade, nextNode, pathNodes, type Exams, type PathNode } from '../curriculum';
 import { MAX_LEVEL, STAGES } from '../stages';
 import { look, tone } from '../ui/look';
+import { dateH, daysLeft, isoDay, ready, todayItem, type Plan } from '../plan';
 
 const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? id;
 
-interface Props { stats: Stats; exams: Exams; free: boolean; onFree: (f: boolean) => void; onOpen: (id: string) => void; onExam: (id: string) => void }
+interface Props { stats: Stats; exams: Exams; free: boolean; plan: Plan | null; onFree: (f: boolean) => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void }
 
-export function Home({ stats, exams, free, onFree, onOpen, onExam }: Props) {
+export function Home({ stats, exams, free, plan, onFree, onOpen, onExam, onPlan, onPlacement }: Props) {
   const [why, setWhy] = useState<string | null>(null);
-  const nodes = pathNodes(stats, exams, free, title);
+  const nodes = pathNodes(stats, exams, free, title, plan?.topics);
   const next = nextNode(nodes);
   const done = nodes.filter(n => n.state === 'done').length;
   const open = (n: PathNode) => {
@@ -25,6 +26,14 @@ export function Home({ stats, exams, free, onFree, onOpen, onExam }: Props) {
         <h1>Hallo! 👋<br />Dein Mathe-Lernpfad</h1>
         <p className="hello-stars">Du hast schon <b>{done} von {nodes.length}</b> Stationen geschafft.</p>
       </section>
+
+      <PlanCard plan={plan} stats={stats} onPlan={onPlan} />
+      {!Object.keys(stats).length && (
+        <button className="card panel promo" onClick={onPlacement}>
+          <span className="ticon" aria-hidden="true">🎯</span>
+          <span><b>Neu hier? Mach den Einstufungstest</b><small>Ein paar Aufgaben, dann weiß die App, wo du startest.</small></span>
+        </button>
+      )}
 
       {next && (
         <button className="continue" style={next.kind === 'topic' ? tone(next.id) : { '--tc': '#c2410c' } as React.CSSProperties} onClick={() => open(next)}>
@@ -53,6 +62,7 @@ export function Home({ stats, exams, free, onFree, onOpen, onExam }: Props) {
         </li>
       </ol>
 
+      <button className="linkbtn" onClick={onPlacement}>🎯 Einstufungstest machen</button>
       <label className="free">
         <input type="checkbox" checked={free} onChange={e => onFree(e.target.checked)} />
         <span><b>Freies Üben</b><small>Alle Themen sofort öffnen, zum Beispiel wenn du für ein bestimmtes Thema in der Schule übst.</small></span>
@@ -92,5 +102,30 @@ function Node({ n, stats, exams, why, onClick }: { n: PathNode; stats: Stats; ex
       </button>
       {why && <p className="node-why">🔒 {n.needs}</p>}
     </li>
+  );
+}
+
+/** Die nächste Klassenarbeit vom Themenzettel, ganz oben auf der Startseite. */
+function PlanCard({ plan, stats, onPlan }: { plan: Plan | null; stats: Stats; onPlan: () => void }) {
+  if (!plan) {
+    return (
+      <button className="card panel promo" onClick={onPlan}>
+        <span className="ticon" aria-hidden="true">📅</span>
+        <span><b>Bald eine Klassenarbeit?</b><small>Trag deinen Themenzettel ein oder fotografier ihn. Dann bekommst du einen Lernplan bis zum Termin.</small></span>
+      </button>
+    );
+  }
+  const left = plan.date ? daysLeft(plan.date, isoDay(new Date())) : null;
+  const now = todayItem(plan, stats);
+  const done = plan.topics.filter(id => ready(stats, id)).length;
+  return (
+    <button className="card panel promo plan-card" onClick={onPlan}>
+      <span className="ticon" aria-hidden="true">📅</span>
+      <span>
+        <b>{plan.title || 'Klassenarbeit'}{plan.date && ` am ${dateH(plan.date)}`}</b>
+        <small>{left === null ? '' : left > 1 ? `Noch ${left} Tage · ` : left === 1 ? 'Morgen! · ' : left === 0 ? 'Heute! Viel Erfolg 🍀 · ' : 'Vorbei · '}{done} von {plan.topics.length} Themen sitzen · Heute dran: {now.kind === 'topic' ? title(now.id) : 'Probe-Klassenarbeit'}</small>
+      </span>
+      <span className="continue-go" aria-hidden="true">▶</span>
+    </button>
   );
 }

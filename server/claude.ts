@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { MathError, htmlToText, solHTML, solveAny } from '../src/engine/index.js';
+import { CATALOG, CATALOG_IDS, type ZettelResult } from '../src/catalog.js';
 
 /**
  * KI-Schicht. Die KI rechnet nie selbst: Erklärungen bekommen den fertigen Rechenweg der Engine,
@@ -10,14 +11,14 @@ const client = new Anthropic(); // liest ANTHROPIC_API_KEY
 
 type Msg = Anthropic.Beta.BetaMessageParam;
 
-async function ask(params: { system: string; messages: Msg[]; tools?: Anthropic.Beta.BetaTool[] }) {
+async function ask(params: { system: string; messages: Msg[]; tools?: Anthropic.Beta.BetaTool[]; schema?: Record<string, unknown> }) {
   return client.beta.messages.create({
     model: MODEL,
     max_tokens: 4000,
     system: params.system,
     messages: params.messages,
     tools: params.tools,
-    output_config: { effort: 'low' },
+    output_config: { effort: 'low', ...(params.schema ? { format: { type: 'json_schema' as const, schema: params.schema } } : {}) },
     // Lehnt ein Sicherheitsfilter fälschlich ab, springt automatisch ein anderes Modell ein.
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
@@ -97,4 +98,46 @@ Wenn jemand nur die Lösung seiner Hausaufgabe will, erkläre zuerst den Weg und
     messages.push({ role: 'user', content: results });
   }
   return { text: 'Das war gerade zu viel auf einmal. Stell mir die Frage bitte in kleineren Schritten.', checks };
+}
+
+export interface ZettelInput { text?: string; image?: { data: string; type: string } }
+
+const ZETTEL_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['titel', 'datum', 'punkte'],
+  properties: {
+    titel: { type: 'string', description: 'Überschrift des Zettels, z. B. „2. Klassenarbeit“; leer, wenn keine da ist' },
+    datum: { type: 'string', description: 'Datum der Klassenarbeit als JJJJ-MM-TT, leer, wenn keins dasteht' },
+    punkte: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false, required: ['text', 'thema'],
+        properties: { text: { type: 'string' }, thema: { type: 'string', enum: [...CATALOG_IDS, 'keins'] } },
+      },
+    },
+  },
+};
+
+/** Liest einen Themenzettel (Text oder Foto) und ordnet jeden Punkt einem App-Thema zu. Rechnet nichts. */
+export async function zettel(inp: ZettelInput, today = new Date().toISOString().slice(0, 10)): Promise<ZettelResult> {
+  const list = CATALOG.map(c => `- ${c.id}: ${c.title} (${c.covers})`).join('\n');
+  const system = `Du hilfst einer Mathe-Lern-App für Schüler ab Klasse 5. Ein Schüler zeigt dir seinen Themenzettel für die nächste Mathe-Klassenarbeit.
+Schreibe jeden Punkt vom Zettel einzeln und kurz ab (so wie er dasteht, ohne Aufzählungszeichen). Ordne ihn dem passenden Thema der App zu oder „keins“, wenn keins passt. Rate nicht: Geometrie, Größen, Diagramme, Zahlenstrahl, Teilbarkeit ohne Brüche usw. sind „keins“.
+Heute ist ${today}. Steht ein Datum ohne Jahr da, nimm das nächste passende Datum ab heute.
+Themen der App:
+${list}`;
+  const content: Anthropic.Beta.BetaContentBlockParam[] = [];
+  if (inp.image) content.push({ type: 'image', source: { type: 'base64', media_type: inp.image.type as 'image/jpeg', data: inp.image.data } });
+  content.push({ type: 'text', text: inp.text?.trim() ? `Der Zettel:\n${inp.text}` : 'Das Foto zeigt den Zettel.' });
+  const res = await ask({ system, messages: [{ role: 'user', content }], schema: ZETTEL_SCHEMA });
+  if (res.stop_reason === 'refusal') throw new Error('refusal');
+  const raw = JSON.parse(textOf(res.content)) as { titel?: unknown; datum?: unknown; punkte?: unknown };
+  const points = (Array.isArray(raw.punkte) ? raw.punkte : [])
+    .map(p => ({ text: String((p as { text?: unknown })?.text ?? '').trim().slice(0, 200), topic: String((p as { thema?: unknown })?.thema ?? '') }))
+    .filter(p => p.text)
+    .slice(0, 40)
+    .map(p => ({ text: p.text, topic: CATALOG_IDS.includes(p.topic) ? p.topic : null }));
+  const date = typeof raw.datum === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.datum) ? raw.datum : null;
+  return { title: typeof raw.titel === 'string' ? raw.titel.slice(0, 80) : '', date, points };
 }

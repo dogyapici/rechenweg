@@ -29,13 +29,14 @@ export type PathNode =
   | { kind: 'exam'; id: string; title: string; topics: string[]; state: NodeState; needs?: string; chapter?: Chapter };
 
 /** Alle Stationen des Lernpfads mit ihrem Zustand. Im freien Modus ist alles offen. */
-export function pathNodes(stats: Stats, exams: Exams, free: boolean, titleOf: (id: string) => string): PathNode[] {
+/** `unlocked`: Themen, die zusätzlich offen sind (z. B. vom Themenzettel der nächsten Klassenarbeit). */
+export function pathNodes(stats: Stats, exams: Exams, free: boolean, titleOf: (id: string) => string, unlocked: string[] = []): PathNode[] {
   const out: PathNode[] = [];
   let prevOk = true, prevNeed = '';
   for (const ch of CHAPTERS) {
     for (const id of ch.topics) {
       const done = topicDone(stats, id);
-      out.push({ kind: 'topic', id, chapter: ch, state: done ? 'done' : prevOk || free ? 'open' : 'locked', needs: prevOk ? undefined : prevNeed });
+      out.push({ kind: 'topic', id, chapter: ch, state: done ? 'done' : prevOk || free || unlocked.includes(id) ? 'open' : 'locked', needs: prevOk ? undefined : prevNeed });
       prevOk = done; prevNeed = `Schaffe zuerst die Stufe „Schwieriger“ bei „${titleOf(id)}“.`;
     }
     const passed = examPassed(exams, ch.id);

@@ -7,16 +7,17 @@ import { look } from '../ui/look';
 import { Keypad } from '../ui/bits';
 import { Html } from './Html';
 
-interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void }
+interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void; custom?: { name: string; topics: string[]; back: string } }
 
 const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? id;
 const num = (x: number) => String(Math.round(x * 10) / 10).replace('.', ',');
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function Exam({ id, exams, onExams, onBack, onOpenTopic }: Props) {
+export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom }: Props) {
   const ch = CHAPTERS.find(c => c.id === id);
-  const name = ch ? `Klassenarbeit: ${ch.title}` : FINAL.title;
-  const topics = ch ? ch.topics : FINAL.topics;
+  const name = custom ? custom.name : ch ? `Klassenarbeit: ${ch.title}` : FINAL.title;
+  const topics = custom ? custom.topics : ch ? ch.topics : FINAL.topics;
+  const back = custom?.back ?? 'Zurück zum Lernpfad';
   const [phase, setPhase] = useState<'prep' | 'run' | 'result'>('prep');
   const [tasks, setTasks] = useState<ExamTask[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
@@ -52,7 +53,7 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic }: Props) {
     const n = topics.length > 4 ? 12 : 8;
     return (
       <div className="exam">
-        <div className="thead"><button className="back" onClick={onBack} aria-label="Zurück zum Lernpfad">←</button><span className="ticon" aria-hidden="true">📝</span><h1>{name}</h1></div>
+        <div className="thead"><button className="back" onClick={onBack} aria-label={back}>←</button><span className="ticon" aria-hidden="true">📝</span><h1>{name}</h1></div>
         <section className="card panel">
           <h2 className="h2">Das kommt dran</h2>
           <ul className="exam-topics">{topics.map(t => <li key={t}><span aria-hidden="true">{look(t).icon}</span>{title(t)}</li>)}</ul>
@@ -119,7 +120,7 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic }: Props) {
 
   return (
     <div className="exam">
-      <div className="thead"><button className="back" onClick={onBack} aria-label="Zurück zum Lernpfad">←</button><span className="ticon" aria-hidden="true">📝</span><h1>{name}</h1></div>
+      <div className="thead"><button className="back" onClick={onBack} aria-label={back}>←</button><span className="ticon" aria-hidden="true">📝</span><h1>{name}</h1></div>
       <section className={`card panel exam-grade g${g.note}`}>
         <div className="grade-big" aria-label={`Note ${g.note}`}>{g.note}</div>
         <div>
@@ -159,7 +160,7 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic }: Props) {
       </section>
       <div className="cta">
         <button className="btn big" onClick={start}>Neue Klassenarbeit schreiben</button>
-        <button className="btn quiet" onClick={onBack}>Zurück zum Lernpfad</button>
+        <button className="btn quiet" onClick={onBack}>{back}</button>
       </div>
     </div>
   );
