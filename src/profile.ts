@@ -23,10 +23,14 @@ export interface Profile { name: string; klasse: number; schulform: Schulform; l
  */
 const GRADE: Record<string, { gym: number; other: number }> = {
   pvs: { gym: 5, other: 5 },
+  groe: { gym: 5, other: 5 },
+  flae: { gym: 5, other: 5 },
+  teil: { gym: 6, other: 6 },
   kuerzen: { gym: 6, other: 6 },
   bradd: { gym: 6, other: 6 },
   brmul: { gym: 6, other: 6 },
   dez: { gym: 6, other: 6 },
+  neg: { gym: 6, other: 7 },
   proz: { gym: 7, other: 7 },
   gl: { gym: 7, other: 8 },
 };
@@ -66,11 +70,10 @@ export interface Curriculum {
  */
 const BW_GYM: Curriculum = {
   name: 'Bildungsplan Baden-Württemberg, Gymnasium',
-  band: { pvs: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8' },
-  grade: { pvs: 5, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7 },
+  band: { pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8' },
+  grade: { pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7 },
   missing: {
-    '5/6': ['Große Zahlen und Stellenwerte', 'Teilbarkeit und Primzahlen', 'Negative Zahlen und Zahlenstrahl', 'Runden und Überschlagen', 'Potenzen',
-      'Größen und Einheiten umrechnen', 'Umfang und Flächeninhalt', 'Winkel, Dreiecke und Vierecke', 'Symmetrie und Spiegeln', 'Körper und Netze',
+    '5/6': ['Große Zahlen und Stellenwerte', 'Runden und Überschlagen', 'Potenzen', 'Winkel, Dreiecke und Vierecke', 'Symmetrie und Spiegeln', 'Körper und Netze',
       'Koordinatensystem', 'Proportional und antiproportional', 'Maßstab', 'Daten, Diagramme und Mittelwert'],
     '7/8': ['Zinsrechnung', 'Terme mit Variablen und Klammern', 'Binomische Formeln', 'Wurzeln und reelle Zahlen', 'Lineare Gleichungssysteme',
       'Quadratische Gleichungen', 'Lineare und quadratische Funktionen'],

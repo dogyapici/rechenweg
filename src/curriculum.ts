@@ -5,9 +5,11 @@ export interface Chapter { id: string; title: string; why: string; topics: strin
 
 /** Reihenfolge wie im Schulbuch: Jedes Kapitel braucht, was davor kam. */
 export const CHAPTERS: Chapter[] = [
-  { id: 'k1', title: 'Rechnen mit Plan', why: 'Die Rechenregeln brauchst du in jedem späteren Thema.', topics: ['pvs'] },
+  { id: 'k1', title: 'Rechnen mit Plan', why: 'Die Rechenregeln und Teiler brauchst du in jedem späteren Thema, vor allem bei den Brüchen.', topics: ['pvs', 'teil'] },
+  { id: 'k5', title: 'Größen und Flächen', why: 'Mit Einheiten rechnen und Flächen ausmessen, so wie im Alltag.', topics: ['groe', 'flae'] },
   { id: 'k2', title: 'Brüche', why: 'Erst verstehen, was ein Bruch ist und wie man kürzt, dann damit rechnen.', topics: ['kuerzen', 'bradd', 'brmul'] },
   { id: 'k3', title: 'Kommazahlen und Prozent', why: 'Kommazahlen sind eine andere Schreibweise für Brüche. Prozent baut auf beidem auf.', topics: ['dez', 'proz'] },
+  { id: 'k6', title: 'Negative Zahlen', why: 'Zahlen unter null. Die brauchst du für Gleichungen und später für Funktionen.', topics: ['neg'] },
   { id: 'k4', title: 'Gleichungen', why: 'Hier kommt alles zusammen: Rechenregeln, Brüche und Gegenrechnungen.', topics: ['gl'] },
 ];
 export const FINAL = { id: 'final', title: 'Große Abschlussprüfung', topics: CHAPTERS.flatMap(c => c.topics) };
