@@ -212,6 +212,8 @@ export function heftDiv(aS: string, bS: string, maxDigits = 12): Heft | null {
     hb.snap(`Durch eine Kommazahl teilst du nicht direkt. Verschiebe das Komma bei <b>beiden</b> Zahlen um ${s} ${s === 1 ? 'Stelle' : 'Stellen'} nach rechts, bis die zweite Zahl keine Kommastellen mehr hat. Das Ergebnis bleibt gleich.`);
     A = { digits: nA.digits.replace(/^0+(?=\d)/, '') || '0', k: nA.k }; B = nB;
   }
+  // 0,06 hat die Ziffern 006: Die führenden Nullen vor und nach dem Komma gehören ins Heft.
+  if (A.digits.length < A.k + 1) A = { digits: A.digits.padStart(A.k + 1, '0'), k: A.k };
   const b = BigInt(B.digits);
   const aT = withComma(A.digits, A.k);
   const g = hb.grid();

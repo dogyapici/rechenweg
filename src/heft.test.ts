@@ -29,6 +29,13 @@ describe('Heft', () => {
     const p = heftDiv('5', '7')!;
     expect(heftText(p)[0]).toContain('=0,714285');
   });
+  it('teilt Kommazahlen mit Nullen nach dem Komma', () => {
+    for (const [a, b, q] of [['0,06', '7', '=0,00857142'], ['0,6', '7', '=0,0857142'], ['0,05', '4', '=0,0125'], ['0,6', '3', '=0,2']]) {
+      const top = heftText(heftDiv(a, b)!).find(z => z.includes('='))!;
+      expect(top.replace(/\s/g, ''), `${a}:${b}`).toContain(q.replace(/\s/g, ''));
+      expect(top.replace(/\s/g, '').startsWith(a), `${a}:${b} beginnt mit der Aufgabe`).toBe(true);
+    }
+  });
   it('stimmt bei zufälligen Zahlen mit der exakten Rechnung überein', () => {
     const r = (n: number) => Math.floor(Math.random() * n);
     const dec = () => { const k = r(3); const v = String(r(9000) + 1); return k ? (v.padStart(k + 1, '0').slice(0, -k) + ',' + v.padStart(k + 1, '0').slice(-k)) : v; };
@@ -45,7 +52,11 @@ describe('Heft', () => {
       const qv = top.slice(top.lastIndexOf('=') + 1).trim();
       const exact = val(`${a} : ${d}`);
       if (exact.terminating()) expect(val(qv).eq(exact), `${a}:${d} -> ${qv}`).toBe(true);
-      else expect(exact.toDec().replace(/[^0-9,]/g, '').startsWith(qv.slice(0, 4)), `${a}:${d} -> ${qv}`).toBe(true);
+      else {
+        // Periodisch: Die geschriebenen Ziffern sind der abgeschnittene exakte Wert.
+        const m = BigInt(qv.split(',')[1]?.length ?? 0);
+        expect(qv.replace(',', '').replace(/^0+(?=\d)/, ''), `${a}:${d} -> ${qv}`).toBe(String((exact.n * 10n ** m) / exact.d));
+      }
     }
   });
   it('rechnet Brüche', () => {
