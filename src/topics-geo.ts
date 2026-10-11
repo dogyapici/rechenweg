@@ -698,7 +698,8 @@ const KOORD: Topic = {
         const [A, B] = horiz ? [{ x: x1, y: y1 }, { x: x2, y: y1 }] : [{ x: y1, y: x1 }, { x: y1, y: x2 }];
         const ans = horiz ? { x: mx, y: y1 } : { x: y1, y: mx };
         const same = horiz ? 'y' : 'x', moving = horiz ? 'x' : 'y';
-        return word(pointTask(ans.x, ans.y, { kind: 'point', min: 0, max: 8, pts: [{ ...A, label: name[0] }, { ...B, label: other[0] === name[0] ? other.slice(0, 2) : other[0] }], label: 'Treffpunkt' }, `${name} wohnt bei ${M(`${name[0]}${pointH(A.x, A.y)}`)}, ${other} wohnt bei ${M(`${other[0] === name[0] ? other.slice(0, 2) : other[0]}${pointH(B.x, B.y)}`)}. Die beiden treffen sich genau in der Mitte zwischen ihren Häusern. Markiere den Treffpunkt.`,
+        const sameL = other[0] === name[0];
+        return word(pointTask(ans.x, ans.y, { kind: 'point', min: 0, max: 8, pts: [{ ...A, label: sameL ? 'A' : name[0] }, { ...B, label: sameL ? 'B' : other[0] }], label: 'Treffpunkt' }, `${name} wohnt bei ${M(`${sameL ? 'A' : name[0]}${pointH(A.x, A.y)}`)}, ${other} wohnt bei ${M(`${sameL ? 'B' : other[0]}${pointH(B.x, B.y)}`)}. Die beiden treffen sich genau in der Mitte zwischen ihren Häusern. Markiere den Treffpunkt.`,
           [{ title: 'Abstand', ask: `<p>Wie viele Kästchen liegen die beiden Häuser auseinander?</p><div class="math big">${x2} − ${x1} = ?</div>`, answer: q(x2 - x1), hint: `Rechne mit den ${moving}-Koordinaten.`, explain: `${x2 - x1} Kästchen` },
            { title: 'Die Mitte', ask: `<p>Die Mitte ist halb so weit: ${(x2 - x1) / 2} Kästchen von ${name}. Welche ${moving}-Koordinate hat der Treffpunkt?</p><div class="math big">${x1} + ${(x2 - x1) / 2} = ?</div>`, answer: q(mx), hint: 'Halber Abstand, vom ersten Haus aus.', explain: `${moving} = ${mx}. Die ${same}-Koordinate bleibt ${y1}. Jetzt markiere den Treffpunkt!` }], `Treffpunkt${pointH(ans.x, ans.y)}`));
       }

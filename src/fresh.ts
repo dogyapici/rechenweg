@@ -4,8 +4,13 @@ import { makeTask } from './stages';
 
 /** Gleiche Aufgabe: gleicher Text, gleiche Zeichnung, gleiche Lösung. */
 export const taskKey = (t: Task) => t.prompt.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim() + '|' + (t.widget ? JSON.stringify(t.widget) : '') + '|' + t.answer.toString();
-/** Gleiche Geschichte mit anderen Zahlen: Text ohne Zahlen. */
-export const storyKey = (t: Task) => (t.word ? 'w:' : 'r:') + t.prompt.replace(/<[^>]*>/g, '').replace(/[\d.,]+/g, '#').replace(/\s+/g, ' ').trim();
+/** Namen und Fürwörter wechseln von Aufgabe zu Aufgabe, die Geschichte bleibt dieselbe. */
+const NAMES = new Set(('Mia Ben Lena Tim Emre Sofia Noah Lea Jonas Aylin Paul Hanna Luca Elif Finn Ida Emma Zeynep Elias Lukas Mehmet Mila Ole Lina Emil Sara Leon Jakob ' +
+  'Anna Max Yilmaz Müller Schneider Nowak Novak Weber Becker Berger Schmidt Huber Kaya Herr Frau ' +
+  'er sie es ihm ihr sein seine seinem seinen seiner seines ihre ihrem ihren ihrer ihres Er Sie Es Sein Seine Ihr Ihre Bruder Schwester').split(' '));
+/** Gleiche Geschichte mit anderen Zahlen oder Namen: Anfang des Textes ohne Zahlen, Namen und Fürwörter. */
+export const storyKey = (t: Task) => (t.word ? 'w:' : 'r:') + t.prompt.replace(/<[^>]*>/g, ' ').replace(/[\d.,:|()−+\-]+/g, ' ')
+  .split(/\s+/).filter(w => w && !NAMES.has(w.replace(/[’']s?$/, ''))).join(' ').slice(0, 50);
 
 export interface SeenTopic { k: string[]; s: string[] }
 export type Seen = Record<string, SeenTopic>;
