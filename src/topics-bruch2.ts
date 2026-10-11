@@ -55,6 +55,15 @@ function pieSVG(n: number, d: number): string {
 }
 const pic = (n: number, d: number, circle: boolean) => (circle ? pieSVG(n, d) : stripSVG(n, d));
 
+/* Namen und Hilfen für Textaufgaben */
+const KIDS: [string, string][] = [['Mia', 'sie'], ['Ben', 'er'], ['Lena', 'sie'], ['Tim', 'er'], ['Emre', 'er'], ['Sofia', 'sie'], ['Noah', 'er'], ['Lea', 'sie'], ['Jonas', 'er'], ['Aylin', 'sie']];
+const kid = () => pick(KIDS);
+const kids = (n: number) => shuffle(KIDS).slice(0, n);
+const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+/** Genitiv eines Namens: Lena → Lenas, Jonas → Jonas' */
+const gen2 = (name: string) => (/s$/.test(name) ? `${name}'` : `${name}s`);
+type Story = () => Task | null;
+
 /** Primfaktoren als Liste */
 function factors(n: number): number[] { const f: number[] = []; for (let p = 2; n > 1; p++) while (n % p === 0) { f.push(p); n /= p; } return f; }
 /** Schriftliches Teilen n : d (n < d): Ziffern nach dem Komma, Reste, Vorperiode und Periode. */
@@ -83,7 +92,7 @@ const DEN = [2, 3, 4, 5, 6, 8, 10, 12];
 const properFrac = (ds = DEN): [number, number] => { for (;;) { const d = pick(ds), n = R(1, d - 1); if (q(n, d).isRed()) return [n, d]; } };
 
 function readTask(): Task {
-  const circle = Math.random() < 0.4, d = circle ? pick([3, 4, 5, 6, 8]) : R(3, 10), n = R(1, d - 1);
+  const circle = Math.random() < 0.4, d = circle ? pick([3, 4, 5, 6, 8, 10, 12]) : R(3, 12), n = R(1, d - 1);
   return task(`Welcher Bruch ist gefärbt? Schreib ihn als Bruch.${pic(n, d, circle)}`, q(n, d), fr(n, d),
     [{ rule: 'Nenner', lines: [`Das Ganze ist in ${d} gleich große Teile geteilt. Das ist der Nenner.`] }, { rule: 'Zähler', lines: [`${n} Teile sind gefärbt. Das ist der Zähler.`, `Der Bruch heißt ${M(fr(n, d))}.`] }],
     [{ title: 'Nenner', ask: '<p>In wie viele gleich große Teile ist das Ganze geteilt?</p>', answer: q(d), hint: 'Zähle alle Teile, auch die weißen.', explain: `${d} Teile: Der Nenner ist ${d}.`, placeholder: 'Anzahl' },
@@ -92,7 +101,7 @@ function readTask(): Task {
     { form: 'frac', placeholder: 'z. B. 3/5', diag: v => (v.eq(q(d, n)) ? 'Zähler und Nenner sind vertauscht. Unten steht, in wie viele Teile das Ganze geteilt ist.' : v.eq(q(d - n, d)) ? 'Das ist der weiße Teil. Gefragt ist der gefärbte Teil.' : v.eq(q(n, d - n)) ? 'Du hast gefärbte durch weiße Teile gerechnet. Unten steht die Anzahl <b>aller</b> Teile.' : null) });
 }
 function erwTask(level: number): Task {
-  const [a, b] = properFrac([2, 3, 4, 5, 6, 8, 10]), k = R(2, level === 1 ? 5 : 9), c = b * k;
+  const [a, b] = properFrac(level === 1 ? [2, 3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5, 6, 8, 10]), k = R(2, level === 1 ? 6 : 9), c = b * k;
   return task(`Erweitere: ${M(`${fr(a, b)} = ${fracH('?', c)}`)}. Welche Zahl gehört in den Zähler?`, q(a * k), String(a * k),
     [{ rule: 'Erweiterungszahl', lines: [`Der Nenner wird von ${b} zu ${c}. Also wird mit ${c} : ${b} = ${k} erweitert.`] }, { rule: 'Zähler', lines: [`Der Zähler wird genauso mit ${k} malgenommen: ${a} · ${k} = ${a * k}.`, M(`${fr(a, b)} = ${fracH(`${a} · ${k}`, `${b} · ${k}`)} = ${fr(a * k, c)}`)] }],
     [{ title: 'Erweiterungszahl', ask: `<p>Mit welcher Zahl musst du den Nenner ${b} malnehmen, damit ${c} herauskommt?</p><div class="math big">${b} · ? = ${c}</div>`, answer: q(k), hint: `Rechne ${c} : ${b}.`, explain: `${b} · ${k} = ${c}. Du erweiterst mit ${k}.`, placeholder: 'Zahl' },
@@ -101,7 +110,7 @@ function erwTask(level: number): Task {
 }
 function bildPick(): Task {
   for (;;) {
-    const d = R(3, 8), n = R(1, d - 1);
+    const d = R(3, 10), n = R(1, d - 1);
     if (2 * n === d || !q(n, d).isRed()) continue;
     const circle = Math.random() < 0.35;
     const wrongF: [number, number][] = [[d - n, d], [n, d + 1], [n, n + d], [n + 1, d]].filter(([a, b]) => a < b) as [number, number][];
@@ -116,6 +125,23 @@ function bildPick(): Task {
   }
 }
 
+/** Gleicher Nenner oder gleicher Zähler: vergleichen ohne Hauptnenner. */
+function vglEasy(): Task {
+  for (;;) {
+    const sameD = Math.random() < 0.5;
+    let a: number, b: number, c: number, d: number;
+    if (sameD) { b = d = R(3, 12); a = R(1, b - 1); c = R(1, b - 1); if (a === c) continue; }
+    else { a = c = R(1, 6); b = R(a + 1, 12); d = R(a + 1, 12); if (b === d) continue; }
+    const ok = q(a, b).lt(q(c, d)) ? 0 : 1, sym = ['&lt;', '&gt;'][ok];
+    const steps: ListSolution['steps'] = sameD
+      ? [{ rule: 'Gleicher Nenner', lines: [`Beide Brüche haben den Nenner ${b}. Die Teile sind gleich groß.`, `Mehr Teile sind mehr: ${a} ${sym} ${c}, also ${M(`${fr(a, b)} ${sym} ${fr(c, d)}`)}.`] }]
+      : [{ rule: 'Gleicher Zähler', lines: [`Beide Brüche haben den Zähler ${a}. Du hast gleich viele Teile.`, `Je kleiner der Nenner, desto größer die Teile. Also ${M(`${fr(a, b)} ${sym} ${fr(c, d)}`)}.`] }];
+    const g: GuideStep[] = sameD
+      ? [{ title: 'Gleicher Nenner', ask: `<p>Beide Brüche haben den Nenner ${b}. Die Teile sind also gleich groß. Welcher Zähler ist größer?</p>`, answer: q(Math.max(a, c)), hint: 'Mehr gleich große Teile sind mehr.', explain: `${Math.max(a, c)} Teile sind mehr als ${Math.min(a, c)} Teile.`, placeholder: 'Zähler' }]
+      : [{ title: 'Gleicher Zähler', ask: `<p>Beide Brüche haben den Zähler ${a}. Welcher Nenner ist kleiner? Bei ihm sind die Teile größer.</p>`, answer: q(Math.min(b, d)), hint: 'Ein Ganzes in wenige Teile geteilt gibt große Stücke.', explain: `${M(fr(1, Math.min(b, d)))} ist größer als ${M(fr(1, Math.max(b, d)))}. Gleich viele große Teile sind mehr.`, placeholder: 'Nenner' }];
+    return pickFrom(`Welches Zeichen gehört in die Lücke?<div class="math big">${fr(a, b)} &#9633; ${fr(c, d)}</div>`, SIGNS, ok, steps, g, { label: sym });
+  }
+}
 /** Zwei Brüche vergleichen über den Hauptnenner. */
 function vglTask(level: number): Task {
   let a: number, b: number, c: number, d: number;
@@ -347,6 +373,210 @@ function lineNot(level: number): Task | null {
   }, () => true);
 }
 
+/* ---------- Textaufgaben: Brüche vergleichen ---------- */
+const mixQ = (v: Q) => mixedH(v) ?? qH(v.red());
+const mehlStory: Story = () => {
+  const [n1, d1] = properFrac([2, 4, 3]), [n2, d2] = properFrac([2, 3, 4]), w1 = R(1, 3), w2 = R(1, 2), A = q(w1 * d1 + n1, d1), Bv = q(w2 * d2 + n2, d2);
+  if (d1 === d2) return null;
+  const [who, pr] = pick([['Oma', 'sie'], ['Opa', 'er'], ['Mama', 'sie'], ['Papa', 'er']]);
+  return wordTask({
+    prompt: `Für ein Brot braucht ${who} ${mixedH(A)} kg Mehl, für einen Kuchen ${mixedH(Bv)} kg Mehl. Wie viel Mehl braucht ${pr} zusammen?`,
+    steps: [
+      { title: 'Brot', ask: `Schreibe ${mixedH(A)} als unechten Bruch.`, calc: `${w1} + ${n1}/${d1}`, unit: 'kg' },
+      { title: 'Kuchen', ask: `Schreibe ${mixedH(Bv)} als unechten Bruch.`, calc: `${w2} + ${n2}/${d2}`, unit: 'kg' },
+      { title: 'Zusammen', ask: 'Wie viel Mehl ist das zusammen? Mach erst gleiche Nenner.', calc: `${A.n}/${A.d} + ${Bv.n}/${Bv.d}`, wrong: [`${A.n}/${A.d} − ${Bv.n}/${Bv.d}`], why: 'Zusammen heißt plus.', unit: 'kg' },
+    ],
+    unit: 'kg', sentence: () => `${who} braucht zusammen ${mixQ(A.add(Bv))} kg Mehl.`,
+  });
+};
+const laufStory: Story = () => {
+  const [a, b] = properFrac([3, 4, 5, 6, 8]), [c, d] = properFrac([3, 4, 5, 6, 8]), x = q(a, b), y = q(c, d);
+  if (b === d || x.eq(y)) return null;
+  const [[p1], [p2]] = kids(2);
+  const P: [string, number, number][] = [[p1, a, b], [p2, c, d]], [lo, hi] = x.lt(y) ? P : [P[1], P[0]];
+  const H = Number(lcm(BigInt(b), BigInt(d)));
+  const t = wordTask({
+    prompt: `${p1} läuft ${fr(a, b)} km, ${p2} läuft ${fr(c, d)} km. Wer läuft weiter? Um wie viele Kilometer?`,
+    steps: [
+      { title: 'Hauptnenner', ask: `Welcher ist der Hauptnenner von ${b} und ${d}?`, calc: String(H), explain: `Hauptnenner ${H}.` },
+      { title: p1, ask: `Erweitere ${gen2(p1)} Strecke auf ${H}. Wie heißt der Zähler?`, calc: `${a} · ${H / b}`, explain: M(`${fr(a, b)} = ${fr((a * H) / b, H)}`) },
+      { title: p2, ask: `Erweitere ${gen2(p2)} Strecke auf ${H}. Wie heißt der Zähler?`, calc: `${c} · ${H / d}`, explain: M(`${fr(c, d)} = ${fr((c * H) / d, H)}`) },
+      { title: 'Unterschied', ask: `Um wie viele Kilometer läuft ${hi[0]} weiter?`, calc: `${hi[1]}/${hi[2]} − ${lo[1]}/${lo[2]}`, wrong: [`${hi[1]}/${hi[2]} + ${lo[1]}/${lo[2]}`], why: 'Um wie viel weiter: größere minus kleinere Strecke.', unit: 'km' },
+    ],
+    unit: 'km', sentence: v => `${hi[0]} läuft weiter, und zwar ${v} mehr.`,
+  });
+  t.guide[3].choose = { ask: 'Wer läuft weiter?', options: shuffle(opts(hi[0], [lo[0]])), why: `${M(fr((hi[1] * H) / hi[2], H))} ist mehr als ${M(fr((lo[1] * H) / lo[2], H))}.` };
+  return t;
+};
+const pizza2Story: Story = () => {
+  const [a, b] = properFrac([3, 4, 6, 8]), [c, d] = properFrac([3, 4, 6, 8]);
+  if (b === d || !q(a, b).lt(q(c, d)) || !q(a, b).add(q(c, d)).lt(q(1))) return null;
+  const [[p1], [p2]] = kids(2), s = q(a, b).add(q(c, d)).red();
+  return wordTask({
+    prompt: `${p1} isst ${fr(a, b)} einer Pizza, ${p2} isst ${fr(c, d)} derselben Pizza. ${p2} hat mehr gegessen. Wie viel mehr? Wie viel von der Pizza bleibt übrig?`,
+    steps: [
+      { title: 'Wie viel mehr', ask: `Wie viel mehr hat ${p2} gegessen?`, calc: `${c}/${d} − ${a}/${b}`, wrong: [`${c}/${d} + ${a}/${b}`], why: 'Wie viel mehr: Unterschied, also minus.' },
+      { title: 'Zusammen gegessen', ask: 'Wie viel haben beide zusammen gegessen?', calc: `${a}/${b} + ${c}/${d}`, wrong: [`${c}/${d} − ${a}/${b}`], why: 'Zusammen heißt plus.' },
+      { title: 'Rest', ask: 'Wie viel bleibt übrig? Die ganze Pizza ist 1.', calc: `1 − ${s.txt()}`, wrong: [`1 + ${s.txt()}`], why: 'Vom Ganzen wird das Gegessene abgezogen.' },
+    ],
+    sentence: v => `${p2} hat ${qH(q(c, d).sub(q(a, b)))} der Pizza mehr gegessen. Übrig bleibt ${v} der Pizza.`,
+  });
+};
+const bandStory: Story = () => {
+  const [who, pr] = kid(), [n, d] = properFrac([2, 3, 4, 5]), w = R(1, 3), [c, e] = properFrac([2, 3, 4, 5, 6, 8]);
+  if (d === e) return null;
+  const A = q(w * d + n, d), rest = A.sub(q(c, e));
+  const [thing, use] = pick([['Geschenkband', 'ein Paket'], ['Schnur', 'einen Drachen'], ['Wolle', 'einen Freundschaftsschal'], ['Stoff', 'eine Tasche']]);
+  return wordTask({
+    prompt: `${who} hat ${mixedH(A)} m ${thing}. Für ${use} schneidet ${pr} ${fr(c, e)} m ab. Wie viele Meter ${thing} bleiben übrig?`,
+    steps: [
+      { title: 'Unechter Bruch', ask: `Schreibe ${mixedH(A)} als unechten Bruch.`, calc: `${w} + ${n}/${d}`, unit: 'm' },
+      { title: 'Rest', ask: 'Wie viel bleibt übrig? Mach erst gleiche Nenner.', calc: `${A.n}/${A.d} − ${c}/${e}`, wrong: [`${A.n}/${A.d} + ${c}/${e}`], why: 'Abschneiden heißt wegnehmen, also minus.', unit: 'm' },
+    ],
+    unit: 'm', sentence: () => `Es bleiben ${mixQ(rest)} m ${thing} übrig.`,
+  });
+};
+const SUBJ = ['Mathe', 'Englisch', 'Deutsch', 'Bio', 'Erdkunde'];
+const hausiStory: Story = () => {
+  const [who, pr] = kid(), [s1, s2] = shuffle(SUBJ), [a, b] = properFrac([2, 3, 4, 5, 6, 10, 12]), [c, d] = properFrac([2, 3, 4, 5, 6, 10, 12]);
+  const m1 = (a * 60) / b, m2 = (c * 60) / d;
+  if (m1 === m2 || b === d) return null;
+  const [hs, hm, ls, lm] = m1 > m2 ? [s1, m1, s2, m2] : [s2, m2, s1, m1];
+  const t = wordTask({
+    prompt: `${who} macht Hausaufgaben. Für ${s1} braucht ${pr} ${fr(a, b)} Stunde, für ${s2} ${fr(c, d)} Stunde. Für welches Fach braucht ${pr} länger? Wie viele Minuten länger?`,
+    steps: [
+      { title: s1, ask: `Wie viele Minuten sind ${fr(a, b)} Stunde? Eine Stunde hat 60 Minuten.`, calc: `${a}/${b} · 60`, wrong: [`${a}/${b} + 60`, `60 : ${a}`], why: 'Ein Bruchteil von 60 Minuten: mal 60.', unit: 'Minuten' },
+      { title: s2, ask: `Wie viele Minuten sind ${fr(c, d)} Stunde?`, calc: `${c}/${d} · 60`, unit: 'Minuten' },
+      { title: 'Unterschied', ask: `Wie viele Minuten länger braucht ${pr} für ${hs}?`, calc: `${hm} − ${lm}`, unit: 'Minuten' },
+    ],
+    unit: 'Minuten', sentence: v => `Für ${hs} braucht ${who} länger, und zwar ${v}.`,
+  });
+  t.guide[2].choose = { ask: `Für welches Fach braucht ${who} länger?`, options: shuffle(opts(hs, [ls])), why: `${s1}: ${m1} Minuten, ${s2}: ${m2} Minuten.` };
+  return t;
+};
+const TUN2: [string, string][] = [['kommen', 'mit dem Rad zur Schule'], ['spielen', 'ein Instrument'], ['singen', 'im Schulchor'], ['haben', 'ein Haustier']];
+const anteilStory: Story = () => {
+  const [A, B] = shuffle(pick([[20, 25], [24, 30], [25, 30], [20, 24], [28, 24], [30, 32], [20, 30]])), a = R(4, A - 4), b = R(4, B - 4);
+  const fa = q(a, A).red(), fb = q(b, B).red();
+  if (fa.d === BigInt(A) || fb.d === BigInt(B) || fa.eq(fb) || fa.d === fb.d || lcm(fa.d, fb.d) > 60n) return null;
+  const [c1, c2] = pick([['6a', '6b'], ['6c', '6d'], ['5a', '5b']]), [verb, rest] = pick(TUN2);
+  const [hi, lo, big, small] = fb.lt(fa) ? [c1, c2, fa, fb] : [c2, c1, fb, fa];
+  const t = wordTask({
+    prompt: `In der ${c1} ${verb} ${a} von ${A} Kindern ${rest}, in der ${c2} ${b} von ${B} Kindern. In welcher Klasse ist der Anteil größer? Um wie viel ist er größer? Gib den Unterschied als Bruch an.`,
+    steps: [
+      { title: `Anteil ${c1}`, ask: `Schreibe den Anteil der ${c1} als vollständig gekürzten Bruch.`, calc: `${a}/${A}`, needReduced: true, explain: M(`${fr(a, A)} = ${qH(fa)}`) },
+      { title: `Anteil ${c2}`, ask: `Schreibe den Anteil der ${c2} als vollständig gekürzten Bruch.`, calc: `${b}/${B}`, needReduced: true, explain: M(`${fr(b, B)} = ${qH(fb)}`) },
+      { title: 'Unterschied', ask: 'Um wie viel ist der größere Anteil größer? Mach erst gleiche Nenner.', calc: `${big.txt()} − ${small.txt()}`, wrong: [`${big.txt()} + ${small.txt()}`], why: 'Unterschied: größerer minus kleinerer Anteil.' },
+    ],
+    sentence: v => `In der ${hi} ist der Anteil größer, und zwar um ${v}.`,
+  });
+  t.guide[1].choose = { ask: 'In welcher Klasse ist der Anteil größer?', options: shuffle(opts(hi, [lo])), why: `Mit gleichem Nenner siehst du es: ${M(qH(big))} ist mehr als ${M(qH(small))}.` };
+  return t;
+};
+const pizza3Story: Story = () => {
+  const ds = shuffle([3, 4, 6, 8, 12]).slice(0, 3), fs = ds.map(d => { let n: number; do n = R(1, d - 1); while (!q(n, d).isRed()); return q(n, d); });
+  const sum = fs.reduce((x, y) => x.add(y), q(0));
+  if (!sum.lt(q(1)) || new Set(fs.map(f => f.txt())).size < 3) return null;
+  const names = kids(3).map(k => k[0]), max = fs.reduce((m, f, i) => (fs[m].lt(f) ? i : m), 0);
+  const t = wordTask({
+    prompt: `${names[0]}, ${names[1]} und ${names[2]} teilen sich ein Blech Pizza. ${names[0]} isst ${qH(fs[0])}, ${names[1]} ${qH(fs[1])} und ${names[2]} ${qH(fs[2])} vom Blech. Wer isst am meisten? Wie viel bleibt übrig?`,
+    steps: [
+      { title: 'Hauptnenner', ask: `Welcher ist der Hauptnenner von ${ds.join(', ')}?`, calc: String(ds.reduce((m, d) => Number(lcm(BigInt(m), BigInt(d))), 1)) },
+      { title: 'Zusammen gegessen', ask: 'Wie viel haben alle drei zusammen gegessen?', calc: fs.map(f => f.txt()).join(' + '), wrong: [`1 − ${fs[0].txt()}`], why: 'Zusammen heißt plus.' },
+      { title: 'Rest', ask: 'Wie viel vom Blech bleibt übrig?', calc: `1 − ${sum.red().txt()}`, wrong: [`${sum.red().txt()} − 1`], why: 'Das ganze Blech ist 1. Davon ziehst du ab, was gegessen wurde.' },
+    ],
+    sentence: v => `${names[max]} isst am meisten. Übrig bleibt ${v} vom Blech.`,
+  });
+  t.guide[1].choose = { ask: 'Wer isst am meisten?', options: shuffle(opts(names[max], names.filter((_, i) => i !== max))), why: `Mit dem Hauptnenner siehst du es: ${fs.map((f, i) => `${names[i]} ${qH(f)}`).join(', ')}. ${names[max]} hat den größten Anteil.` };
+  return t;
+};
+const lisaStory: Story = () => {
+  const [n0, d0] = properFrac([2, 4]), [n1, d1] = properFrac([2, 3, 4]), [n2, d2] = properFrac([2, 3, 4]), w0 = R(3, 5), w1 = R(1, 2);
+  const T = q(w0 * d0 + n0, d0), A = q(w1 * d1 + n1, d1), Bv = q(n2, d2), used = A.add(Bv).red();
+  if (!used.lt(T) || T.sub(used).isZero()) return null;
+  const [who, pr] = kid();
+  return wordTask({
+    prompt: `${who} hat ${mixedH(T)} kg Mehl. Für ein Brot braucht ${pr} ${mixedH(A)} kg, für Waffeln ${qH(Bv)} kg. Wie viel Mehl bleibt übrig?`,
+    steps: [
+      { title: 'Verbraucht', ask: `Wie viel Mehl braucht ${pr} zusammen?`, calc: `${A.n}/${A.d} + ${Bv.n}/${Bv.d}`, wrong: [`${A.n}/${A.d} − ${Bv.n}/${Bv.d}`], why: 'Brot und Waffeln zusammen: plus.', unit: 'kg' },
+      { title: 'Übrig', ask: 'Wie viel Mehl bleibt übrig?', calc: `${T.n}/${T.d} − ${used.n}/${used.d}`, wrong: [`${T.n}/${T.d} + ${used.n}/${used.d}`], why: 'Was übrig bleibt: alles minus verbraucht.', unit: 'kg' },
+    ],
+    unit: 'kg', sentence: () => `Es bleiben ${mixQ(T.sub(used))} kg Mehl übrig.`,
+  });
+};
+const tageStory: Story = () => {
+  const days = Array.from({ length: 3 }, () => { const [n, d] = properFrac([2, 3, 4]); return q(R(1, 2) * d + n, d); });
+  const sum = days.reduce((x, y) => x.add(y), q(0)).red(), ben = q(R(4, 7));
+  if (sum.eq(ben)) return null;
+  const [[p1], [p2]] = kids(2), oneMore = ben.lt(sum), diff = oneMore ? sum.sub(ben) : ben.sub(sum);
+  const t = wordTask({
+    prompt: `${p1} läuft an drei Tagen ${days.map(x => mixedH(x)).join(' km, ')} km. ${p2} läuft an diesen Tagen zusammen ${ben.n} km. Wer ist insgesamt weiter gelaufen? Um wie viele Kilometer?`,
+    steps: [
+      { title: `${p1} zusammen`, ask: `Wie viele Kilometer läuft ${p1} zusammen? Rechne mit unechten Brüchen.`, calc: days.map(x => x.txt()).join(' + '), unit: 'km' },
+      { title: 'Unterschied', ask: 'Um wie viele Kilometer ist der eine weiter gelaufen als der andere?', calc: oneMore ? `${sum.txt()} − ${ben.n}` : `${ben.n} − ${sum.txt()}`, wrong: [oneMore ? `${ben.n} − ${sum.txt()}` : `${sum.txt()} − ${ben.n}`], why: 'Größere minus kleinere Strecke, damit es positiv bleibt.', unit: 'km' },
+    ],
+    unit: 'km', sentence: () => `${oneMore ? p1 : p2} ist weiter gelaufen, und zwar ${mixQ(diff)} km.`,
+  });
+  t.guide[1].choose = { ask: 'Wer ist weiter gelaufen?', options: shuffle(opts(oneMore ? p1 : p2, [oneMore ? p2 : p1])), why: `${p1}: ${mixQ(sum)} km, ${p2}: ${ben.n} km.` };
+  return t;
+};
+const FAMS = ['Berger', 'Yilmaz', 'Schmidt', 'Novak', 'Weber'];
+const gartenStory: Story = () => {
+  const [a, b] = properFrac([2, 3, 4, 5, 6, 8]), [c, d] = properFrac([2, 3, 4, 5, 6, 8]);
+  if (b === d) return null;
+  const s = q(a, b).add(q(c, d)).red();
+  if (!s.lt(q(1))) return null;
+  const rest = q(1).sub(s).red(), H = Number(lcm(BigInt(b), BigInt(d))), lo = Math.ceil(60 / H), hiK = Math.floor(480 / H);
+  if (lo > hiK) return null;
+  const G = H * R(lo, hiK), [what1, what2] = shuffle([['Gemüse', 'wächst Gemüse'], ['Blumen', 'wachsen Blumen'], ['Beeren', 'wachsen Beeren']]).slice(0, 2);
+  return wordTask({
+    prompt: `Familie ${pick(FAMS)} hat einen Garten mit ${G} m². Auf ${fr(a, b)} der Fläche ${what1[1]}, auf ${fr(c, d)} ${what2[1]}. Der Rest ist Rasen. Wie viele m² sind Rasen?`,
+    steps: [
+      { title: `${what1[0]} und ${what2[0]}`, ask: `Welcher Teil des Gartens ist für ${what1[0]} und ${what2[0]} zusammen?`, calc: `${a}/${b} + ${c}/${d}`, wrong: [`${a + c}/${b + d}`], why: 'Nenner werden nie addiert. Mach erst gleiche Nenner.' },
+      { title: 'Rasen als Bruch', ask: 'Welcher Teil des Gartens ist Rasen? Der ganze Garten ist 1.', calc: `1 − ${s.txt()}`, wrong: [`1 + ${s.txt()}`], why: 'Der Rest: das Ganze minus die Beete.' },
+      { title: 'Rasen in m²', ask: `Wie viele m² sind ${qH(rest)} von ${G} m²?`, calc: `${rest.txt()} · ${G}`, wrong: [`${rest.txt()} + ${G}`], why: 'Bruchteil von einer Größe: mal.', unit: 'm²' },
+    ],
+    unit: 'm²', sentence: v => `${v} des Gartens sind Rasen.`,
+  });
+};
+const fassStory: Story = () => {
+  const [n0, d0] = pick([[5, 6], [3, 4], [7, 8], [2, 3], [4, 5], [9, 10], [5, 8]]), [a, b] = properFrac([4, 6, 8, 12]), [c, d] = properFrac([3, 4, 6, 8]), [e, f] = properFrac([2, 3, 4, 6]);
+  const start = q(n0, d0), used = q(a, b).add(q(c, d)).red(), left = start.sub(used).red(), end = left.add(q(e, f)).red();
+  if (b === d || left.sign() <= 0 || !end.lt(q(1))) return null;
+  if ([d0, b, d, f].reduce((m, x) => lcm(m, BigInt(x)), 1n) > 40n) return null;
+  return wordTask({
+    prompt: `Das Regenfass im Schulgarten ist zu ${fr(n0, d0)} voll. Am Montag braucht die Garten-AG zum Gießen ${fr(a, b)} des Fasses, am Dienstag ${fr(c, d)}. In der Nacht zum Mittwoch regnet es, und das Fass wird um ${fr(e, f)} voller. Wie voll ist das Fass am Mittwochmorgen?`,
+    steps: [
+      { title: 'Verbraucht', ask: 'Wie viel vom Fass wurde am Montag und Dienstag zusammen verbraucht?', calc: `${a}/${b} + ${c}/${d}`, wrong: [`${a + c}/${b + d}`], why: 'Nenner werden nie addiert. Mach erst gleiche Nenner.' },
+      { title: 'Nach Dienstag', ask: 'Wie voll ist das Fass am Dienstagabend?', calc: `${n0}/${d0} − ${used.txt()}`, wrong: [`${n0}/${d0} + ${used.txt()}`], why: 'Verbrauchtes Wasser wird abgezogen.' },
+      { title: 'Nach dem Regen', ask: 'Wie voll ist das Fass nach dem Regen?', calc: `${left.txt()} + ${e}/${f}`, wrong: [`${left.txt()} − ${e}/${f}`], why: 'Der Regen füllt das Fass: plus.' },
+    ],
+    sentence: v => `Am Mittwochmorgen ist das Fass zu ${v} voll.`,
+  });
+};
+const SPRUNG: [number, number][] = [[1, 2], [1, 4], [3, 4], [1, 5], [2, 5], [3, 5], [4, 5], [1, 10], [3, 10], [7, 10], [9, 10]];
+const sprungStory: Story = () => {
+  const ns = kids(3).map(k => k[0]), w = pick([2, 3]), fs = shuffle(SPRUNG).slice(0, 3), vs = fs.map(([n, d]) => q(w * d + n, d));
+  const ds = [...new Set(fs.map(f => f[1]))];
+  if (ds.length < 2) return null;
+  const H = Number(ds.reduce((m, x) => lcm(m, BigInt(x)), 1n));
+  const iMax = vs.reduce((m, v, i) => (vs[m].lt(v) ? i : m), 0), iMin = vs.reduce((m, v, i) => (v.lt(vs[m]) ? i : m), 0), diff = vs[iMax].sub(vs[iMin]).red();
+  const conv = fs.map(([n, d], i) => `${ns[i]}: ${M(`${mixedH(vs[i])} = ${w}&#8202;${fr((n * H) / d, H)}`)} m`).join(', ');
+  const t = wordTask({
+    prompt: `Beim Sportfest springen ${ns[0]} ${mixedH(vs[0])} m, ${ns[1]} ${mixedH(vs[1])} m und ${ns[2]} ${mixedH(vs[2])} m weit. Wer springt am weitesten? Wie viele Zentimeter ist der weiteste Sprung länger als der kürzeste?`,
+    steps: [
+      { title: 'Hauptnenner', ask: `Welcher ist der Hauptnenner von ${ds.join(', ')}?`, calc: String(H), explain: `Hauptnenner ${H}. ${conv}` },
+      { title: 'Unterschied in m', ask: `Um wie viele Meter ist der Sprung von ${ns[iMax]} länger als der von ${ns[iMin]}?`, calc: `${vs[iMax].txt()} − ${vs[iMin].txt()}`, unit: 'm' },
+      { title: 'In Zentimetern', ask: 'Wie viele Zentimeter sind das? 1 m sind 100 cm.', calc: `${diff.txt()} · 100`, wrong: [`${diff.txt()} : 100`], why: 'Von Meter in Zentimeter: mal 100.', unit: 'cm' },
+    ],
+    unit: 'cm', sentence: v => `${ns[iMax]} springt am weitesten, ${v} weiter als ${ns[iMin]}.`,
+  });
+  t.guide[1].choose = { ask: 'Wer springt am weitesten?', options: shuffle(opts(ns[iMax], ns.filter((_, i) => i !== iMax))), why: `Mit dem Hauptnenner siehst du es: ${conv}.` };
+  return t;
+};
+const BRVGL_T4: Story[] = [mehlStory, laufStory, pizza2Story, bandStory, hausiStory, anteilStory];
+const BRVGL_T5: Story[] = [pizza3Story, lisaStory, tageStory, gartenStory, fassStory, sprungStory];
+
 const BRVGL: Topic = {
   id: 'brvgl', klasse: 6, title: 'Brüche vergleichen und ordnen', short: 'Brüche erweitern, vergleichen, ordnen und auf der Zahlengeraden und im Koordinatensystem finden.',
   exampleSol: () => { const t = vglTask(2); return { prompt: t.prompt, sol: t.sol }; },
@@ -361,112 +591,25 @@ const BRVGL: Topic = {
     <p><b>Brüche im Koordinatensystem:</b> Ist jede Einheit in gleiche Teile geteilt, kannst du auch Brüche ablesen. Erst nach rechts (x), dann nach oben (y). Hier ist jede Einheit in 4 Teile geteilt. Ein Kästchen ist ${M(fr(1, 4))}. Punkt A liegt bei ${M(ptH(q(3, 4), q(5, 4)))}.${coordFracSVG(4, 2, [{ x: q(3, 4), y: q(5, 4), label: 'A' }])}</p>
     <div class="merke"><span class="merke-l">Merke</span><ol><li>Erweitern: Zähler und Nenner mit derselben Zahl mal.</li><li>Vergleichen: erst gleiche Nenner, dann die Zähler vergleichen.</li><li>Gemischte Zahl in unechten Bruch: Ganze mal Nenner, plus Zähler.</li><li>Nenner werden nie addiert.</li></ol></div>`,
   gen(level) {
-    if (level === 1) return pick([readTask, () => erwTask(1), bildPick])();
+    if (level === 1) return pick([readTask, () => erwTask(1), bildPick, vglEasy])();
     if (level === 2) return pick([() => vglTask(2), bruchLine, () => toImproper(2), () => toMixed(2), () => erwTask(2), () => coordRead(2), () => coordWhich(2), () => lineNot(2)])();
     return pick([ordTask, zwischenTask, mixAddTask, () => vglTask(3), () => coordWhich(3), () => coordRead(3), coordPickCoords, () => lineNot(3)])();
   },
-  text: level => genFrom(() => {
-    if (level === 4) {
-      const k = R(0, 2);
-      if (k === 0) {
-        const [n1, d1] = properFrac([2, 4, 3]), [n2, d2] = properFrac([2, 3, 4]), w1 = R(1, 3), w2 = R(1, 2), A = q(w1 * d1 + n1, d1), Bv = q(w2 * d2 + n2, d2);
-        if (d1 === d2) return null;
-        const t = wordTask({
-          prompt: `Für ein Brot braucht Oma ${mixedH(A)} kg Mehl, für einen Kuchen ${mixedH(Bv)} kg Mehl. Wie viel Mehl braucht sie zusammen?`,
-          steps: [
-            { title: 'Brot', ask: `Schreibe ${mixedH(A)} als unechten Bruch.`, calc: `${w1} + ${n1}/${d1}`, unit: 'kg' },
-            { title: 'Kuchen', ask: `Schreibe ${mixedH(Bv)} als unechten Bruch.`, calc: `${w2} + ${n2}/${d2}`, unit: 'kg' },
-            { title: 'Zusammen', ask: 'Wie viel Mehl ist das zusammen? Mach erst gleiche Nenner.', calc: `${A.n}/${A.d} + ${Bv.n}/${Bv.d}`, wrong: [`${A.n}/${A.d} − ${Bv.n}/${Bv.d}`], why: 'Zusammen heißt plus.', unit: 'kg' },
-          ],
-          unit: 'kg', sentence: () => `Oma braucht zusammen ${mixedH(A.add(Bv)) ?? qH(A.add(Bv))} kg Mehl.`,
-        });
-        return t;
-      }
-      if (k === 1) {
-        const [a, b] = properFrac([3, 4, 5, 6, 8]), [c, d] = properFrac([3, 4, 5, 6, 8]), x = q(a, b), y = q(c, d);
-        if (b === d || x.eq(y)) return null;
-        const P: [string, number, number][] = [['Mia', a, b], ['Ben', c, d]], [lo, hi] = x.lt(y) ? P : [P[1], P[0]];
-        const H = Number(lcm(BigInt(b), BigInt(d)));
-        const t = wordTask({
-          prompt: `Mia läuft ${fr(a, b)} km, Ben läuft ${fr(c, d)} km. Wer läuft weiter? Um wie viele Kilometer?`,
-          steps: [
-            { title: 'Hauptnenner', ask: `Welcher ist der Hauptnenner von ${b} und ${d}?`, calc: String(H), explain: `Hauptnenner ${H}.` },
-            { title: 'Mia', ask: `Erweitere Mias Strecke auf ${H}. Wie heißt der Zähler?`, calc: `${a} · ${H / b}`, explain: M(`${fr(a, b)} = ${fr((a * H) / b, H)}`) },
-            { title: 'Ben', ask: `Erweitere Bens Strecke auf ${H}. Wie heißt der Zähler?`, calc: `${c} · ${H / d}`, explain: M(`${fr(c, d)} = ${fr((c * H) / d, H)}`) },
-            { title: 'Unterschied', ask: `Um wie viele Kilometer läuft ${hi[0]} weiter?`, calc: `${hi[1]}/${hi[2]} − ${lo[1]}/${lo[2]}`, wrong: [`${hi[1]}/${hi[2]} + ${lo[1]}/${lo[2]}`], why: 'Um wie viel weiter: größere minus kleinere Strecke.', unit: 'km' },
-          ],
-          unit: 'km', sentence: v => `${hi[0]} läuft weiter, und zwar ${v} mehr.`,
-        });
-        t.guide[3].choose = { ask: 'Wer läuft weiter?', options: shuffle(opts(hi[0], [lo[0]])), why: `${M(fr((hi[1] * H) / hi[2], H))} ist mehr als ${M(fr((lo[1] * H) / lo[2], H))}.` };
-        return t;
-      }
-      const [a, b] = properFrac([3, 4, 6, 8]), [c, d] = properFrac([3, 4, 6, 8]);
-      if (b === d || !q(a, b).lt(q(c, d)) || !q(a, b).add(q(c, d)).lt(q(1))) return null;
-      const t = wordTask({
-        prompt: `Lena isst ${fr(a, b)} einer Pizza, Tom isst ${fr(c, d)} derselben Pizza. Tom hat mehr gegessen. Wie viel mehr? Wie viel von der Pizza bleibt übrig?`,
-        steps: [
-          { title: 'Wie viel mehr', ask: 'Wie viel mehr hat Tom gegessen?', calc: `${c}/${d} − ${a}/${b}`, wrong: [`${c}/${d} + ${a}/${b}`], why: 'Wie viel mehr: Unterschied, also minus.' },
-          { title: 'Zusammen gegessen', ask: 'Wie viel haben beide zusammen gegessen?', calc: `${a}/${b} + ${c}/${d}`, wrong: [`${c}/${d} − ${a}/${b}`], why: 'Zusammen heißt plus.' },
-          { title: 'Rest', ask: 'Wie viel bleibt übrig? Die ganze Pizza ist 1.', calc: `1 − ${q(a, b).add(q(c, d)).n}/${q(a, b).add(q(c, d)).d}`, wrong: [`1 + ${q(a, b).add(q(c, d)).n}/${q(a, b).add(q(c, d)).d}`], why: 'Vom Ganzen wird das Gegessene abgezogen.' },
-        ],
-        sentence: v => `Tom hat ${qH(q(c, d).sub(q(a, b)))} der Pizza mehr gegessen. Übrig bleibt ${v} der Pizza.`,
-      });
-      return t;
-    }
-    const k = R(0, 2);
-    if (k === 0) {
-      const ds = shuffle([3, 4, 6, 8, 12]).slice(0, 3), fs = ds.map(d => { let n: number; do n = R(1, d - 1); while (!q(n, d).isRed()); return q(n, d); });
-      const sum = fs.reduce((x, y) => x.add(y), q(0));
-      if (!sum.lt(q(1)) || new Set(fs.map(f => f.txt())).size < 3) return null;
-      const names = ['Anna', 'Jonas', 'Ella'], max = fs.reduce((m, f, i) => (fs[m].lt(f) ? i : m), 0);
-      const t = wordTask({
-        prompt: `Anna, Jonas und Ella teilen sich ein Blech Pizza. Anna isst ${qH(fs[0])}, Jonas ${qH(fs[1])} und Ella ${qH(fs[2])} vom Blech. Wer isst am meisten? Wie viel bleibt übrig?`,
-        steps: [
-          { title: 'Hauptnenner', ask: `Welcher ist der Hauptnenner von ${ds.join(', ')}?`, calc: String(ds.reduce((m, d) => Number(lcm(BigInt(m), BigInt(d))), 1)) },
-          { title: 'Zusammen gegessen', ask: 'Wie viel haben alle drei zusammen gegessen?', calc: fs.map(f => f.txt()).join(' + '), wrong: [`1 − ${fs[0].txt()}`], why: 'Zusammen heißt plus.' },
-          { title: 'Rest', ask: 'Wie viel vom Blech bleibt übrig?', calc: `1 − ${sum.txt()}`, wrong: [`${sum.txt()} − 1`], why: 'Das ganze Blech ist 1. Davon ziehst du ab, was gegessen wurde.' },
-        ],
-        sentence: v => `${names[max]} isst am meisten. Übrig bleibt ${v} vom Blech.`,
-      });
-      t.guide[1].choose = { ask: 'Wer isst am meisten?', options: shuffle(opts(names[max], names.filter((_, i) => i !== max))), why: `Mit dem Hauptnenner siehst du es: ${fs.map((f, i) => `${names[i]} ${qH(f)}`).join(', ')}. ${names[max]} hat den größten Anteil.` };
-      return t;
-    }
-    if (k === 1) {
-      const [n0, d0] = properFrac([2, 4]), [n1, d1] = properFrac([2, 3, 4]), [n2, d2] = properFrac([2, 3, 4]), w0 = R(3, 5), w1 = R(1, 2);
-      const T = q(w0 * d0 + n0, d0), A = q(w1 * d1 + n1, d1), Bv = q(n2, d2), used = A.add(Bv);
-      if (!used.lt(T) || T.sub(used).isZero()) return null;
-      return wordTask({
-        prompt: `Lisa hat ${mixedH(T)} kg Mehl. Für ein Brot braucht sie ${mixedH(A)} kg, für Waffeln ${qH(Bv)} kg. Wie viel Mehl bleibt übrig?`,
-        steps: [
-          { title: 'Verbraucht', ask: 'Wie viel Mehl braucht sie zusammen?', calc: `${A.n}/${A.d} + ${Bv.n}/${Bv.d}`, wrong: [`${A.n}/${A.d} − ${Bv.n}/${Bv.d}`], why: 'Brot und Waffeln zusammen: plus.', unit: 'kg' },
-          { title: 'Übrig', ask: 'Wie viel Mehl bleibt übrig?', calc: `${T.n}/${T.d} − ${used.n}/${used.d}`, wrong: [`${T.n}/${T.d} + ${used.n}/${used.d}`], why: 'Was übrig bleibt: alles minus verbraucht.', unit: 'kg' },
-        ],
-        unit: 'kg', sentence: () => `Es bleiben ${mixedH(T.sub(used)) ?? qH(T.sub(used))} kg Mehl übrig.`,
-      });
-    }
-    const days = Array.from({ length: 3 }, () => { const [n, d] = properFrac([2, 3, 4]); return q(R(1, 2) * d + n, d); });
-    const sum = days.reduce((x, y) => x.add(y), q(0)), ben = q(R(4, 7));
-    if (sum.eq(ben)) return null;
-    const miaMore = ben.lt(sum), diff = miaMore ? sum.sub(ben) : ben.sub(sum);
-    const t = wordTask({
-      prompt: `Mia läuft an drei Tagen ${days.map(x => mixedH(x)).join(' km, ')} km. Ben läuft an diesen Tagen zusammen ${ben.n} km. Wer ist insgesamt weiter gelaufen? Um wie viele Kilometer?`,
-      steps: [
-        { title: 'Mia zusammen', ask: 'Wie viele Kilometer läuft Mia zusammen? Rechne mit unechten Brüchen.', calc: days.map(x => x.txt()).join(' + '), unit: 'km' },
-        { title: 'Unterschied', ask: 'Um wie viele Kilometer ist der eine weiter gelaufen als der andere?', calc: miaMore ? `${sum.txt()} − ${ben.n}` : `${ben.n} − ${sum.txt()}`, wrong: [miaMore ? `${ben.n} − ${sum.txt()}` : `${sum.txt()} − ${ben.n}`], why: 'Größere minus kleinere Strecke, damit es positiv bleibt.', unit: 'km' },
-      ],
-      unit: 'km', sentence: () => `${miaMore ? 'Mia' : 'Ben'} ist weiter gelaufen, und zwar ${mixedH(diff) ?? qH(diff)} km.`,
-    });
-    t.guide[1].choose = { ask: 'Wer ist weiter gelaufen?', options: shuffle(opts(miaMore ? 'Mia' : 'Ben', [miaMore ? 'Ben' : 'Mia'])), why: `Mia: ${mixedH(sum) ?? qH(sum)} km, Ben: ${ben.n} km.` };
-    return t;
-  }, t => t.guide.every(s => s.answer.sign() > 0)),
+  text: level => genFrom(() => pick(level === 4 ? BRVGL_T4 : BRVGL_T5)(), t => !!t && t.guide!.every(s => s.answer.sign() > 0)),
 };
 
 /* ======================================================================
    2. Bruch, Dezimalzahl und Prozent
    ====================================================================== */
 const HUND: [number, number][] = [[1, 2], [1, 4], [3, 4], [1, 5], [2, 5], [3, 5], [4, 5], [3, 10], [7, 10], [9, 10], [1, 20], [3, 20], [7, 20], [9, 20], [11, 20], [13, 20], [1, 25], [4, 25], [6, 25], [12, 25], [7, 50], [3, 50], [21, 50]];
-const TERM: [number, number][] = [...HUND, [1, 8], [3, 8], [5, 8], [7, 8], [3, 40], [9, 40], [1, 16], [3, 16], [3, 125]];
 const tenPow = (d: number) => { let T = 1; while (T % d) T *= 10; return T; };
+/** Zufälliger gekürzter Bruch n/d mit einem Nenner aus ds; manchmal größer als 1. */
+const randFrac = (ds: number[], big = false): [number, number] => {
+  for (;;) {
+    const d = pick(ds), n = big && d <= 25 && Math.random() < 0.2 ? R(d + 1, 3 * d - 1) : R(1, Math.min(d - 1, 49));
+    if (q(n, d).isRed()) return [n, d];
+  }
+};
 const zeros = (T: number) => String(T).length - 1;
 
 function zehnerToDec(): Task {
@@ -501,7 +644,7 @@ function prozHund(): Task {
     [{ title: 'Prozent', ask: `<p>1 Hundertstel ist 1 %. Wie viel Prozent sind ${p} Hundertstel?</p>`, answer: q(p), hint: 'Der Zähler ist die Prozentzahl.', explain: M(`${fr(p, 100)} = ${p} %`), placeholder: 'Antwort in %' }], { placeholder: 'Antwort in %' });
 }
 function erwDec(): Task {
-  const [n, d] = pick(TERM.filter(([, d]) => d !== 10)), T = tenPow(d), k = T / d, v = q(n, d);
+  const [n, d] = randFrac([2, 4, 5, 8, 8, 20, 25, 40, 50, 125, 200, 250], true), T = tenPow(d), k = T / d, v = q(n, d);
   return task(`Schreibe ${M(fr(n, d))} als Dezimalzahl. Erweitere dafür auf 10, 100 oder 1000.`, v, dH(v),
     [{ rule: 'Zehnernenner suchen', lines: [`${d} · ${k} = ${T}`] }, { rule: 'Erweitern', lines: [M(`${fr(n, d)} = ${fracH(`${n} · ${k}`, `${d} · ${k}`)} = ${fr(n * k, T)}`)] }, { rule: 'Dezimalzahl', lines: [M(`${fr(n * k, T)} = ${dH(v)}`)] }],
     [{ title: 'Zehnernenner', ask: `<p>Welcher Nenner 10, 100 oder 1000 ist der kleinste, in dem ${d} aufgeht?</p>`, answer: q(T), hint: `Probiere: Geht ${d} in 10? In 100? In 1000?`, explain: `${d} geht in ${T}.`, placeholder: '10, 100 oder 1000' },
@@ -511,7 +654,7 @@ function erwDec(): Task {
     { form: 'dec', placeholder: 'z. B. 0,75', diag: x => (x.eq(q(n * 10 ** String(d).length + d, 10 ** String(d).length)) ? 'Ein Bruch ist nicht „Zähler Komma Nenner“. Erweitere auf 10, 100 oder 1000.' : null) });
 }
 function decToRed(): Task {
-  const [n, d] = pick(TERM.filter(([, d]) => d !== 10 && d !== 125)), T = tenPow(d), N = (n * T) / d, g = T / d, v = q(n, d);
+  const [n, d] = randFrac([2, 4, 5, 8, 20, 25, 40, 50, 200]), T = tenPow(d), N = (n * T) / d, g = T / d, v = q(n, d);
   return task(`Schreibe ${M(dH(v))} als <b>vollständig gekürzten</b> Bruch.`, v, fr(n, d),
     [{ rule: 'Zehnerbruch', lines: [M(`${dH(v)} = ${fr(N, T)}`)] }, { rule: 'Kürzen', lines: [`Der ggT von ${N} und ${T} ist ${g}.`, M(`${fr(N, T)} = ${fracH(`${N} : ${g}`, `${T} : ${g}`)} = ${fr(n, d)}`)] }],
     [{ title: 'Zehnerbruch', ask: `<p>Schreibe ${M(dH(v))} zuerst als Zehnerbruch mit dem Nenner ${T}. Wie heißt der Zähler?</p>`, answer: q(N), hint: 'Lass das Komma weg.', explain: M(`${dH(v)} = ${fr(N, T)}`), placeholder: 'Zähler' },
@@ -520,7 +663,7 @@ function decToRed(): Task {
     { form: 'frac', needReduced: true, placeholder: 'z. B. 3/4' });
 }
 function bruchProz(): Task {
-  const [n, d] = pick(HUND), k = 100 / d, p = n * k, v = q(n, d);
+  const [n, d] = randFrac([2, 4, 5, 10, 20, 25, 50]), k = 100 / d, p = n * k, v = q(n, d);
   if (Math.random() < 0.5) return task(`Wie viel Prozent sind ${M(fr(n, d))}?`, q(p), `${p} %`,
     [{ rule: 'Auf Hundertstel erweitern', lines: [M(`${fr(n, d)} = ${fracH(`${n} · ${k}`, `${d} · ${k}`)} = ${fr(p, 100)}`)] }, { rule: 'Prozent', lines: [M(`${fr(p, 100)} = ${p} %`)] }],
     [...(k > 1 ? [{ title: 'Erweiterungszahl', ask: `<p>Mit welcher Zahl erweiterst du ${M(fr(n, d))}, damit der Nenner 100 wird?</p>`, answer: q(k), hint: `100 : ${d}`, explain: `${d} · ${k} = 100`, placeholder: 'Zahl' }] : []),
@@ -608,6 +751,192 @@ function divDec(): Task {
     { form: 'dec', placeholder: 'z. B. 0,375', heft: heftDiv(String(n), String(d)) });
 }
 
+/* ---------- Textaufgaben: Bruch, Dezimalzahl, Prozent ---------- */
+const THINGS = [['ein Haustier', 'haben'], ['ein Fahrrad', 'haben'], ['ein Instrument', 'spielen'], ['im Sportverein', 'sind']] as const;
+const pctStr = (v: number) => String(v).replace('.', ',');
+const gruppeStory: Story = () => {
+  const G = pick([20, 25, 50]), W = R(2, G - 2), k = 100 / G, [what, verb] = pick([...THINGS]);
+  return wordTask({
+    prompt: `In einer Gruppe sind ${G} Kinder. ${W} von ihnen ${verb} ${what}. Wie viel Prozent der Kinder sind das?`,
+    steps: [
+      { title: 'Erweiterungszahl', ask: `Der Anteil ist ${fr(W, G)}. Mit welcher Zahl erweiterst du, damit der Nenner 100 wird?`, calc: `100 : ${G}`, wrong: [`100 − ${G}`], why: 'Erweitern heißt malnehmen. Wie oft passt der Nenner in 100?' },
+      { title: 'Prozent', ask: 'Wie viel Prozent sind das?', calc: `${W} · ${k}`, wrong: [`${W} + ${k}`], why: 'Den Zähler mit derselben Zahl malnehmen.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} der Kinder ${verb} ${what}.`,
+  });
+};
+const tombolaStory: Story = () => {
+  const G = 40, W = 2 * R(2, 18);
+  return wordTask({
+    prompt: `Bei einer Tombola gibt es ${G} Lose. ${W} davon sind Gewinne. Wie viel Prozent der Lose gewinnen?`,
+    steps: [
+      { title: 'Anteil als Dezimalzahl', ask: `Rechne den Anteil ${fr(W, G)} als Dezimalzahl aus.`, calc: `${W} : ${G}`, wrong: [`${G} : ${W}`], why: 'Anteil: Teil geteilt durch das Ganze.' },
+      { title: 'Prozent', ask: 'Wie viel Prozent sind das?', calc: `${decS(W * 25, 3)} · 100`, wrong: [`${decS(W * 25, 3)} : 100`], why: 'Dezimalzahl in Prozent: mal 100.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} der Lose gewinnen.`,
+  });
+};
+const RABATT: [number, number, number][] = [[10, 1, 10], [20, 1, 5], [25, 1, 4], [50, 1, 2], [30, 3, 10], [40, 2, 5]];
+const WARE: [string, string, string, number[]][] = [
+  ['Ein Brettspiel kostet', 'das Brettspiel', 'kostet', [20, 24, 30, 32, 40]],
+  ['Ein Rucksack kostet', 'der Rucksack', 'kostet', [30, 40, 48, 60]],
+  ['Turnschuhe kosten', 'die Turnschuhe', 'kosten', [40, 50, 60, 80]],
+  ['Ein Fahrradhelm kostet', 'der Fahrradhelm', 'kostet', [30, 40, 50, 60]],
+];
+const rabattStory: Story = () => {
+  const [p, n, d] = pick(RABATT), [pre, def, verb, ps] = pick(WARE), P = pick(ps);
+  if (P % d) return null;
+  const r = (P * n) / d;
+  return wordTask({
+    prompt: `${pre} ${P} €. Im Angebot gibt es ${p} % Rabatt. Wie viel ${verb} ${def} im Angebot?`,
+    steps: [
+      { title: 'Rabatt', ask: `${p} % sind ${fr(n, d)}. Wie viel Euro sind ${fr(n, d)} von ${P} €?`, calc: `${n}/${d} · ${P}`, wrong: [`${n}/${d} + ${P}`], why: 'Bruchteil von einem Betrag: mal.', unit: '€' },
+      { title: 'Neuer Preis', ask: `Wie viel ${verb} ${def} im Angebot?`, calc: `${P} − ${r}`, wrong: [`${P} + ${r}`], why: 'Rabatt heißt: Der Preis wird kleiner. Also minus.', unit: '€' },
+    ],
+    unit: '€', sentence: v => `Im Angebot ${verb} ${def} ${v}.`,
+  });
+};
+const WEGFR: [number, number][] = [[1, 2], [3, 4], [1, 4], [2, 5], [3, 5], [4, 5], [3, 8], [5, 8], [7, 8], [7, 20], [9, 20], [3, 2], [5, 4], [7, 4], [6, 5], [9, 8]];
+const wegStory: Story = () => {
+  const [[a], [b]] = kids(2), [n, d] = pick(WEGFR), fT = (n * 1000) / d, xT = R(15, 180) * 10;
+  if (Math.abs(xT - fT) < 50) return null;
+  const [hi, lo, hT, lT] = xT > fT ? [a, b, xT, fT] : [b, a, fT, xT];
+  const t = wordTask({
+    prompt: `${a} wohnt ${decS(xT, 3)} km von der Schule entfernt. Der Schulweg von ${b} ist ${fr(n, d)} km lang. Wer hat den längeren Schulweg? Um wie viele Kilometer ist er länger?`,
+    steps: [
+      { title: 'Bruch als Dezimalzahl', ask: `Schreibe ${fr(n, d)} als Dezimalzahl. Rechne ${n} : ${d}.`, calc: `${n} : ${d}`, unit: 'km' },
+      { title: 'Unterschied', ask: 'Um wie viele Kilometer ist der längere Weg länger?', calc: `${decS(hT, 3)} − ${decS(lT, 3)}`, unit: 'km' },
+    ],
+    unit: 'km', sentence: v => `${hi} hat den längeren Schulweg, er ist ${v} länger.`,
+  });
+  t.guide[1].choose = { ask: 'Wer hat den längeren Schulweg?', options: shuffle(opts(hi, [lo])), why: `${a}: ${decS(xT, 3)} km, ${b}: ${decS(fT, 3)} km.` };
+  return t;
+};
+const AKKU: [number, number][] = [[1, 2], [3, 4], [4, 5], [3, 5], [7, 10], [9, 10], [17, 20], [13, 20], [11, 20], [19, 20], [2, 5]];
+const akkuStory: Story = () => {
+  const [who] = kid(), [n, d] = pick(AKKU), p0 = (n * 100) / d, f = R(2, (p0 - 10) / 5) * 5, dev = pick(['Tablet', 'Handy', 'Laptop']);
+  return wordTask({
+    prompt: `Der Akku von ${gen2(who)} ${dev} ist zu ${fr(n, d)} geladen. Ein Film verbraucht ${f} % des Akkus. Wie viel Prozent zeigt der Akku nach dem Film an?`,
+    steps: [
+      { title: 'In Prozent', ask: `Wie viel Prozent sind ${fr(n, d)}? Erweitere auf Hundertstel.`, calc: `${n} · ${100 / d}`, explain: `${M(`${fr(n, d)} = ${fr(p0, 100)}`)} = ${p0} %`, unit: '%' },
+      { title: 'Nach dem Film', ask: 'Wie viel Prozent zeigt der Akku danach an?', calc: `${p0} − ${f}`, wrong: [`${p0} + ${f}`], why: 'Der Film verbraucht Strom: minus.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `Nach dem Film zeigt der Akku ${v} an.`,
+  });
+};
+const torteStory: Story = () => {
+  const [who] = kid(), e = pick([1, 2, 3, 5, 6, 7]), pct = e * 12.5, rest = 100 - pct, T = (8 - e) * 125, [gen, nom] = pick([['der Torte', 'der Torte'], ['der Pizza', 'der Pizza'], ['des Kuchens', 'vom Kuchen']]);
+  return wordTask({
+    prompt: `Auf ${gen2(who)} Geburtstag wurden ${pctStr(pct)} % ${gen} gegessen. Welcher Bruchteil ${gen} ist noch übrig? Gib ihn als gekürzten Bruch an.`,
+    steps: [
+      { title: 'Rest in Prozent', ask: 'Wie viel Prozent sind noch übrig? Das Ganze sind 100 %.', calc: `100 − ${pctStr(pct)}`, wrong: [`100 + ${pctStr(pct)}`], why: 'Übrig: alles minus gegessen.', unit: '%' },
+      { title: 'Als Dezimalzahl', ask: `Schreibe ${pctStr(rest)} % als Dezimalzahl.`, calc: `${pctStr(rest)} : 100`, wrong: [`${pctStr(rest)} · 100`], why: 'Prozent heißt Hundertstel: durch 100 teilen.' },
+      { title: 'Als Bruch', ask: `Schreibe ${decS(T, 3)} als vollständig gekürzten Bruch.`, calc: `${8 - e}/8`, needReduced: true, explain: M(`${decS(T, 3)} = ${fr(T, 1000)} = ${qH(q(8 - e, 8))}`) },
+    ],
+    sentence: v => `Es ist noch ${v} ${nom} übrig.`,
+  });
+};
+const klassenStory: Story = () => {
+  const [Ga, Gb] = shuffle([20, 25]), Wa = R(4, Ga - 3), Wb = R(4, Gb - 3), pa = (Wa * 100) / Ga, pb = (Wb * 100) / Gb, [what, verb] = pick([...THINGS]);
+  if (pa === pb) return null;
+  const [hi, lo] = pa > pb ? ['6a', '6b'] : ['6b', '6a'];
+  const t = wordTask({
+    prompt: `In der 6a ${verb} ${Wa} von ${Ga} Kindern ${what}, in der 6b ${Wb} von ${Gb} Kindern. In welcher Klasse ist der Anteil größer? Um wie viele Prozentpunkte?`,
+    steps: [
+      { title: '6a in Prozent', ask: `Wie viel Prozent sind ${fr(Wa, Ga)}?`, calc: `${Wa} · ${100 / Ga}`, explain: `${fr(Wa, Ga)} = ${fr(pa, 100)} = ${pa} %`, unit: '%' },
+      { title: '6b in Prozent', ask: `Wie viel Prozent sind ${fr(Wb, Gb)}?`, calc: `${Wb} · ${100 / Gb}`, explain: `${fr(Wb, Gb)} = ${fr(pb, 100)} = ${pb} %`, unit: '%' },
+      { title: 'Unterschied', ask: 'Um wie viele Prozentpunkte ist der Anteil größer? (Gib nur die Zahl ein.)', calc: `${Math.max(pa, pb)} − ${Math.min(pa, pb)}`, wrong: [`${Math.min(pa, pb)} − ${Math.max(pa, pb)}`], why: 'Größerer minus kleinerer Prozentsatz.' },
+    ],
+    sentence: v => `In der ${hi} ist der Anteil größer, und zwar um ${v} Prozentpunkte.`,
+  });
+  t.guide[2].choose = { ask: 'In welcher Klasse ist der Anteil größer?', options: shuffle(opts(hi, [lo])), why: `6a: ${pa} %, 6b: ${pb} %. Nur die Anzahl der Kinder zu vergleichen reicht nicht, weil die Klassen verschieden groß sind.` };
+  t.placeholder = 'Prozentpunkte';
+  return t;
+};
+const radBusStory: Story = () => {
+  const G = 40, rad = pick([1, 3, 5, 7]), radN = (rad * G) / 8, bus = pick([10, 15, 20, 25, 30]), busN = (bus * G) / 100, fuss = G - radN - busN;
+  if (fuss <= 0 || !Number.isInteger(busN)) return null;
+  return wordTask({
+    prompt: `Von den ${G} Kindern der Klasse 6c kommen ${fr(rad, 8)} mit dem Rad und ${bus} % mit dem Bus. Die anderen kommen zu Fuß. Wie viel Prozent der Klasse kommen zu Fuß?`,
+    steps: [
+      { title: 'Mit dem Rad', ask: 'Wie viele Kinder kommen mit dem Rad?', calc: `${rad}/8 · ${G}`, wrong: [`${rad}/8 + ${G}`], why: 'Bruchteil von einer Anzahl: mal.', unit: 'Kinder' },
+      { title: 'Mit dem Bus', ask: 'Wie viele Kinder kommen mit dem Bus?', calc: `${bus} : 100 · ${G}`, wrong: [`${bus} · ${G}`], why: 'Erst 1 % (durch 100), dann mal die Prozentzahl.', unit: 'Kinder' },
+      { title: 'Zu Fuß', ask: 'Wie viele Kinder kommen zu Fuß?', calc: `${G} − ${radN} − ${busN}`, unit: 'Kinder' },
+      { title: 'In Prozent', ask: 'Wie viel Prozent der Klasse sind das?', calc: `${fuss} : ${G} · 100`, wrong: [`${G} : ${fuss} · 100`], why: 'Teil geteilt durch das Ganze, dann mal 100.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} der Klasse kommen zu Fuß.`,
+  });
+};
+const QUIZFR: [number, number][] = [[3, 4], [4, 5], [3, 5], [7, 10], [17, 20], [13, 20], [18, 25], [21, 25], [16, 25], [2, 5], [9, 10], [11, 20]];
+const quizStory: Story = () => {
+  const ns = kids(3).map(k => k[0]), [n, d] = pick(QUIZFR), pf = (n * 100) / d, pd = R(40, 95), pp = R(40, 95);
+  const ps = [pf, pd, pp];
+  if (new Set(ps).size < 3 || pd % 10 === 0) return null;
+  const iMax = ps.indexOf(Math.max(...ps)), iMin = ps.indexOf(Math.min(...ps)), dd = decS(pd, 2);
+  const t = wordTask({
+    prompt: `Beim Mathe-Quiz hat ${ns[0]} ${fr(n, d)} der Aufgaben richtig. Bei ${ns[1]} ist der Anteil der richtigen Aufgaben ${dd}, bei ${ns[2]} sind es ${pp} %. Wer war am besten? Um wie viele Prozentpunkte liegt das beste Ergebnis vor dem schlechtesten?`,
+    steps: [
+      { title: ns[0], ask: `Wie viel Prozent sind ${fr(n, d)}?`, calc: `${n} : ${d} · 100`, wrong: [`${n} · ${d}`], why: 'Bruch in Prozent: Zähler durch Nenner, dann mal 100.', unit: '%' },
+      { title: ns[1], ask: `Wie viel Prozent sind ${dd}?`, calc: `${dd} · 100`, wrong: [`${dd} : 100`], why: 'Dezimalzahl in Prozent: mal 100.', unit: '%' },
+      { title: 'Unterschied', ask: 'Um wie viele Prozentpunkte liegt das beste Ergebnis vor dem schlechtesten? (Gib nur die Zahl ein.)', calc: `${ps[iMax]} − ${ps[iMin]}` },
+    ],
+    sentence: v => `${ns[iMax]} war am besten, ${v} Prozentpunkte vor ${ns[iMin]}.`,
+  });
+  t.guide[2].choose = { ask: 'Wer war am besten?', options: shuffle(opts(ns[iMax], ns.filter((_, i) => i !== iMax))), why: `${ns.map((x, i) => `${x}: ${ps[i]} %`).join(', ')}.` };
+  t.placeholder = 'Prozentpunkte';
+  return t;
+};
+const geldStory: Story = () => {
+  const [who, pr] = kid(), T = pick([20, 30, 40, 50]), [kn, kd] = pick([[1, 4], [1, 5], [1, 10], [2, 5], [1, 2]]), sd = pick([1, 2, 3]), sp = pick([10, 15, 20, 25]);
+  const kino = (T * kn) / kd, suess = (T * sd) / 10, spar = (T * sp) / 100, rest = T - kino - suess - spar;
+  if (![kino, suess, spar].every(Number.isInteger) || rest < 1) return null;
+  return wordTask({
+    prompt: `${who} bekommt im Monat ${T} € Taschengeld. ${cap(pr)} gibt ${fr(kn, kd)} davon für das Kino aus und 0,${sd} des Geldes für Süßigkeiten. ${sp} % legt ${pr} in die Spardose. Wie viel Euro bleiben übrig?`,
+    steps: [
+      { title: 'Kino', ask: `Wie viel Euro sind ${fr(kn, kd)} von ${T} €?`, calc: `${kn}/${kd} · ${T}`, wrong: [`${T} : ${kn}`], why: 'Bruchteil von einem Betrag: mal.', unit: '€' },
+      { title: 'Süßigkeiten', ask: `Wie viel Euro sind 0,${sd} von ${T} €?`, calc: `0,${sd} · ${T}`, unit: '€' },
+      { title: 'Spardose', ask: `Wie viel Euro sind ${sp} % von ${T} €?`, calc: `${T} : 100 · ${sp}`, wrong: [`${T} · ${sp}`], why: 'Erst 1 % (durch 100), dann mal die Prozentzahl.', unit: '€' },
+      { title: 'Übrig', ask: 'Wie viel Euro bleiben übrig?', calc: `${T} − ${kino} − ${suess} − ${spar}`, wrong: [`${T} − ${kino}`], why: 'Alle drei Beträge werden abgezogen.', unit: '€' },
+    ],
+    unit: '€', sentence: v => `Es bleiben ${v} übrig.`,
+  });
+};
+const saftStory: Story = () => {
+  const [who] = kid(), aT = R(2, 18) * 100, wT = 2000 - aT, shT = wT / 2, juice = pick(['Apfelsaft', 'Orangensaft', 'Kirschsaft', 'Johannisbeersaft']);
+  if (aT === 1000) return null;
+  return wordTask({
+    prompt: `${who} mischt 2 l Saftschorle. Darin sind ${decS(aT, 3)} l ${juice}, der Rest ist Wasser. Wie viel Prozent der Schorle sind Wasser?`,
+    steps: [
+      { title: 'Wasser', ask: 'Wie viele Liter Wasser sind in der Schorle?', calc: `2 − ${decS(aT, 3)}`, wrong: [`2 + ${decS(aT, 3)}`], why: 'Wasser ist der Rest: alles minus Saft.', unit: 'l' },
+      { title: 'Anteil', ask: 'Welcher Anteil der Schorle ist Wasser? Rechne als Dezimalzahl.', calc: `${decS(wT, 3)} : 2`, wrong: [`2 : ${decS(wT, 3)}`], why: 'Anteil: Teil geteilt durch das Ganze.' },
+      { title: 'In Prozent', ask: 'Wie viel Prozent sind das?', calc: `${decS(shT, 3)} · 100`, wrong: [`${decS(shT, 3)} : 100`], why: 'Dezimalzahl in Prozent: mal 100.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} der Schorle sind Wasser.`,
+  });
+};
+const LADEN: [string, string, string][] = [['Dieselbe Jacke', 'sie', 'die Jacke'], ['Denselben Rucksack', 'er', 'der Rucksack'], ['Dasselbe Brettspiel', 'es', 'das Brettspiel']];
+const preisStory: Story = () => {
+  const [X, pron, def] = pick(LADEN), P1 = pick([40, 48, 60, 80]), [n, d] = pick([[1, 4], [1, 5], [1, 10], [1, 2]]), P2 = pick([40, 45, 50, 55, 60, 70, 80]), p = pick([10, 20, 30]);
+  const rA = (P1 * n) / d, rB = (P2 * p) / 100, A = P1 - rA, Bp = P2 - rB;
+  if (!Number.isInteger(rA) || !Number.isInteger(rB) || A === Bp || Math.abs(A - Bp) > 25) return null;
+  const [cheap, dear] = A < Bp ? ['Laden A', 'Laden B'] : ['Laden B', 'Laden A'];
+  const t = wordTask({
+    prompt: `${X} gibt es in zwei Läden. Im Laden A kostet ${pron} ${P1} €, und es gibt ${fr(n, d)} Rabatt. Im Laden B kostet ${pron} ${P2} €, und es gibt ${p} % Rabatt. In welchem Laden ist ${def} billiger? Um wie viel Euro?`,
+    steps: [
+      { title: 'Rabatt A', ask: `Wie viel Euro sind ${fr(n, d)} von ${P1} €?`, calc: `${n}/${d} · ${P1}`, wrong: [`${n}/${d} + ${P1}`], why: 'Bruchteil von einem Betrag: mal.', unit: '€' },
+      { title: 'Preis A', ask: `Wie viel kostet ${pron} im Laden A?`, calc: `${P1} − ${rA}`, unit: '€' },
+      { title: 'Rabatt B', ask: `Wie viel Euro sind ${p} % von ${P2} €?`, calc: `${P2} : 100 · ${p}`, wrong: [`${P2} · ${p}`], why: 'Erst 1 % (durch 100), dann mal die Prozentzahl.', unit: '€' },
+      { title: 'Preis B', ask: `Wie viel kostet ${pron} im Laden B?`, calc: `${P2} − ${rB}`, unit: '€' },
+      { title: 'Unterschied', ask: 'Um wie viel Euro ist der billigere Laden günstiger?', calc: `${Math.max(A, Bp)} − ${Math.min(A, Bp)}`, unit: '€' },
+    ],
+    unit: '€', sentence: v => `Im ${cheap} ist ${def} billiger, und zwar um ${v}.`,
+  });
+  t.guide[4].choose = { ask: 'In welchem Laden ist es billiger?', options: shuffle(opts(cheap, [dear])), why: `Laden A: ${A} €, Laden B: ${Bp} €.` };
+  return t;
+};
+const UMW_T4: Story[] = [gruppeStory, tombolaStory, rabattStory, wegStory, akkuStory, torteStory];
+const UMW_T5: Story[] = [klassenStory, radBusStory, quizStory, geldStory, saftStory, preisStory];
+
 const UMW: Topic = {
   id: 'umw', klasse: 6, title: 'Bruch, Dezimalzahl und Prozent', short: 'Dieselbe Zahl in drei Schreibweisen: 3/4 = 0,75 = 75 %.',
   exampleSol: () => { const t = erwDec(); return { prompt: t.prompt, sol: t.sol }; },
@@ -624,60 +953,7 @@ const UMW: Topic = {
     if (level === 2) return pick([erwDec, decToRed, bruchProz])();
     return pick([periodPick, abbrPick, mixOrder, divDec])();
   },
-  text: level => genFrom(() => {
-    const things = [['ein Haustier', 'haben'], ['ein Fahrrad', 'haben'], ['ein Instrument', 'spielen'], ['im Sportverein', 'sind']] as const;
-    if (level === 4) {
-      if (Math.random() < 0.65) {
-        const G = pick([20, 25, 50]), W = R(2, G - 2), k = 100 / G, [what, verb] = pick([...things]);
-        return wordTask({
-          prompt: `In einer Gruppe sind ${G} Kinder. ${W} von ihnen ${verb} ${what}. Wie viel Prozent der Kinder sind das?`,
-          steps: [
-            { title: 'Erweiterungszahl', ask: `Der Anteil ist ${fr(W, G)}. Mit welcher Zahl erweiterst du, damit der Nenner 100 wird?`, calc: `100 : ${G}`, wrong: [`100 − ${G}`], why: 'Erweitern heißt malnehmen. Wie oft passt der Nenner in 100?' },
-            { title: 'Prozent', ask: 'Wie viel Prozent sind das?', calc: `${W} · ${k}`, wrong: [`${W} + ${k}`], why: 'Den Zähler mit derselben Zahl malnehmen.', unit: '%' },
-          ],
-          unit: '%', sentence: v => `${v} der Kinder ${verb} ${what}.`,
-        });
-      }
-      const G = 40, W = 2 * R(2, 18);
-      return wordTask({
-        prompt: `Bei einer Tombola gibt es ${G} Lose. ${W} davon sind Gewinne. Wie viel Prozent der Lose gewinnen?`,
-        steps: [
-          { title: 'Anteil als Dezimalzahl', ask: `Rechne den Anteil ${fr(W, G)} als Dezimalzahl aus.`, calc: `${W} : ${G}`, wrong: [`${G} : ${W}`], why: 'Anteil: Teil geteilt durch das Ganze.' },
-          { title: 'Prozent', ask: 'Wie viel Prozent sind das?', calc: `${decS(W * 25, 3)} · 100`, wrong: [`${decS(W * 25, 3)} : 100`], why: 'Dezimalzahl in Prozent: mal 100.', unit: '%' },
-        ],
-        unit: '%', sentence: v => `${v} der Lose gewinnen.`,
-      });
-    }
-    if (Math.random() < 0.6) {
-      const [Ga, Gb] = shuffle([20, 25]), Wa = R(4, Ga - 3), Wb = R(4, Gb - 3), pa = (Wa * 100) / Ga, pb = (Wb * 100) / Gb, [what, verb] = pick([...things]);
-      if (pa === pb) return null;
-      const [hi, lo] = pa > pb ? ['6a', '6b'] : ['6b', '6a'];
-      const t = wordTask({
-        prompt: `In der 6a ${verb} ${Wa} von ${Ga} Kindern ${what}, in der 6b ${Wb} von ${Gb} Kindern. In welcher Klasse ist der Anteil größer? Um wie viele Prozentpunkte?`,
-        steps: [
-          { title: '6a in Prozent', ask: `Wie viel Prozent sind ${fr(Wa, Ga)}?`, calc: `${Wa} · ${100 / Ga}`, explain: `${fr(Wa, Ga)} = ${fr(pa, 100)} = ${pa} %`, unit: '%' },
-          { title: '6b in Prozent', ask: `Wie viel Prozent sind ${fr(Wb, Gb)}?`, calc: `${Wb} · ${100 / Gb}`, explain: `${fr(Wb, Gb)} = ${fr(pb, 100)} = ${pb} %`, unit: '%' },
-          { title: 'Unterschied', ask: 'Um wie viele Prozentpunkte ist der Anteil größer? (Gib nur die Zahl ein.)', calc: `${Math.max(pa, pb)} − ${Math.min(pa, pb)}`, wrong: [`${Math.min(pa, pb)} − ${Math.max(pa, pb)}`], why: 'Größerer minus kleinerer Prozentsatz.' },
-        ],
-        sentence: v => `In der ${hi} ist der Anteil größer, und zwar um ${v} Prozentpunkte.`,
-      });
-      t.guide[2].choose = { ask: 'In welcher Klasse ist der Anteil größer?', options: shuffle(opts(hi, [lo])), why: `6a: ${pa} %, 6b: ${pb} %. Nur die Anzahl der Kinder zu vergleichen reicht nicht, weil die Klassen verschieden groß sind.` };
-      t.placeholder = 'Prozentpunkte';
-      return t;
-    }
-    const G = 40, rad = pick([1, 3, 5, 7]), radN = (rad * G) / 8, bus = pick([10, 15, 20, 25, 30]), busN = (bus * G) / 100, fuss = G - radN - busN;
-    if (fuss <= 0 || !Number.isInteger(busN)) return null;
-    return wordTask({
-      prompt: `Von den ${G} Kindern der Klasse 6c kommen ${fr(rad, 8)} mit dem Rad und ${bus} % mit dem Bus. Die anderen kommen zu Fuß. Wie viel Prozent der Klasse kommen zu Fuß?`,
-      steps: [
-        { title: 'Mit dem Rad', ask: 'Wie viele Kinder kommen mit dem Rad?', calc: `${rad}/8 · ${G}`, wrong: [`${rad}/8 + ${G}`], why: 'Bruchteil von einer Anzahl: mal.', unit: 'Kinder' },
-        { title: 'Mit dem Bus', ask: 'Wie viele Kinder kommen mit dem Bus?', calc: `${bus} : 100 · ${G}`, wrong: [`${bus} · ${G}`], why: 'Erst 1 % (durch 100), dann mal die Prozentzahl.', unit: 'Kinder' },
-        { title: 'Zu Fuß', ask: 'Wie viele Kinder kommen zu Fuß?', calc: `${G} − ${radN} − ${busN}`, unit: 'Kinder' },
-        { title: 'In Prozent', ask: 'Wie viel Prozent der Klasse sind das?', calc: `${fuss} : ${G} · 100`, wrong: [`${G} : ${fuss} · 100`], why: 'Teil geteilt durch das Ganze, dann mal 100.', unit: '%' },
-      ],
-      unit: '%', sentence: v => `${v} der Klasse kommen zu Fuß.`,
-    });
-  }, t => t.guide.every(s => s.answer.sign() > 0)),
+  text: level => genFrom(() => pick(level === 4 ? UMW_T4 : UMW_T5)(), t => !!t && t.guide!.every(s => s.answer.sign() > 0)),
 };
 
 /* ======================================================================
@@ -871,6 +1147,168 @@ function ganzNichtNat(): Task {
     { label: `−${fr(n, d)}` });
 }
 
+/* ---------- Textaufgaben: rationale Zahlen ---------- */
+const fe = (x: number) => (x / 10).toFixed(2).replace('.', ',');
+const thermoStory: Story = () => {
+  const a = R(11, 89), b = R(11, 99);
+  if (a % 10 === 0 || b % 10 === 0) return null;
+  return wordTask({
+    prompt: `Am Morgen zeigt das Thermometer ${decS(-a, 1)} °C. Am Mittag sind es ${decS(b, 1)} °C. Um wie viel Grad ist es wärmer geworden?`,
+    steps: [
+      { title: 'Bis zur Null', ask: `Um wie viel Grad steigt die Temperatur von ${decS(-a, 1)} °C bis 0 °C?`, calc: `0 − (${decS(-a, 1)})`, wrong: [`0 + (${decS(-a, 1)})`], why: 'Unterschied: neu minus alt. Minus minus wird plus.', unit: 'Grad' },
+      { title: 'Ab der Null', ask: `Und dann noch von 0 °C bis ${decS(b, 1)} °C. Wie viel Grad sind es zusammen?`, calc: `${decS(a, 1)} + ${decS(b, 1)}`, wrong: [`${decS(b, 1)} − ${decS(a, 1)}`], why: 'Beide Teilstücke zusammenzählen.', unit: 'Grad' },
+    ],
+    unit: 'Grad', term: `${decS(b, 1)} − (${decS(-a, 1)})`, sentence: v => `Es ist um ${v} wärmer geworden.`,
+  });
+};
+const kontoStory: Story = () => {
+  const a = R(105, 899), b = R(10, 15) * 10, c = R(150, 2990), after = b * 10 - a, end = after - c;
+  if (end <= 0 || a % 10 === 0 || c % 10 === 0) return null;
+  const [who, pr] = kid(), thing = pick(['ein Buch', 'ein Spiel', 'eine Trinkflasche', 'ein Puzzle']);
+  return wordTask({
+    prompt: `Auf ${gen2(who)} Konto sind −${fe(a)} €. ${cap(pr)} hat also ${fe(a)} € Schulden. ${cap(pr)} zahlt ${b} € ein und kauft danach ${thing} für ${fe(c)} €. Wie viel Guthaben hat ${pr} am Ende?`,
+    steps: [
+      { title: 'Einzahlung', ask: 'Wie hoch ist der Kontostand nach dem Einzahlen?', calc: `(${decS(-a, 1)}) + ${b}`, wrong: [`(${decS(-a, 1)}) − ${b}`], why: 'Einzahlen: Es kommt Geld dazu, also plus.', unit: '€' },
+      { title: 'Einkauf', ask: 'Wie viel Guthaben bleibt nach dem Kauf?', calc: `${decS(after, 1)} − ${decS(c, 1)}`, wrong: [`${decS(after, 1)} + ${decS(c, 1)}`], why: 'Kaufen: Geld geht weg, also minus.', unit: '€' },
+    ],
+    unit: '€', sentence: () => `${who} hat am Ende ${fe(end)} € Guthaben.`,
+  });
+};
+const moeweStory: Story = () => {
+  const a = R(15, 189), b = R(11, 99);
+  if (a % 10 === 0 || b % 10 === 0) return null;
+  return wordTask({
+    prompt: `Eine Taucherin ist ${decS(a, 1)} m unter der Wasseroberfläche, also bei ${decS(-a, 1)} m. Über ihr fliegt eine Möwe in ${decS(b, 1)} m Höhe. Wie weit sind die beiden voneinander entfernt?`,
+    steps: [
+      { title: 'Abstand', ask: 'Rechne obere Höhe minus untere Höhe.', calc: `${decS(b, 1)} − (${decS(-a, 1)})`, wrong: [`${decS(b, 1)} + (${decS(-a, 1)})`], why: 'Abstand: oben minus unten. Minus minus wird plus.', unit: 'm' },
+    ],
+    unit: 'm', sentence: v => `Die beiden sind ${v} voneinander entfernt.`,
+  });
+};
+const pegelStory: Story = () => {
+  const a = R(2, 9), b = R(a + 3, 25), after = b - a, c = R(1, after - 1);
+  const river = pick(['des Neckars', 'der Donau', 'des Rheins', 'der Murr']);
+  return wordTask({
+    prompt: `Am Montag liegt der Wasserstand ${river} ${decS(a, 1)} m unter dem normalen Stand, also bei ${decS(-a, 1)} m. Nach einem Gewitter steigt das Wasser um ${decS(b, 1)} m. Bis Mittwoch sinkt es wieder um ${decS(c, 1)} m. Wie viele Meter liegt der Wasserstand jetzt über dem normalen Stand?`,
+    steps: [
+      { title: 'Nach dem Gewitter', ask: 'Wo steht das Wasser nach dem Gewitter?', calc: `(${decS(-a, 1)}) + ${decS(b, 1)}`, wrong: [`(${decS(-a, 1)}) − ${decS(b, 1)}`], why: 'Das Wasser steigt: plus.', unit: 'm' },
+      { title: 'Am Mittwoch', ask: 'Wo steht das Wasser am Mittwoch?', calc: `${decS(after, 1)} − ${decS(c, 1)}`, wrong: [`${decS(after, 1)} + ${decS(c, 1)}`], why: 'Das Wasser sinkt: minus.', unit: 'm' },
+    ],
+    unit: 'm', sentence: v => `Der Wasserstand liegt jetzt ${v} über dem normalen Stand.`,
+  });
+};
+const frostStory: Story = () => {
+  const r = pick([5, 15, 20, 25]), h = R(2, 6), T = r * h, start = pick([5, 6, 7]);
+  return wordTask({
+    prompt: `Um ${start} Uhr morgens zeigt das Thermometer ${decS(-T, 1)} °C. Danach wird es jede Stunde um ${decS(r, 1)} Grad wärmer. Nach wie vielen Stunden zeigt das Thermometer 0 °C?`,
+    steps: [
+      { title: 'Bis zur Null', ask: `Um wie viel Grad muss es von ${decS(-T, 1)} °C bis 0 °C wärmer werden?`, calc: `0 − (${decS(-T, 1)})`, wrong: [`0 + (${decS(-T, 1)})`], why: 'Unterschied: neu minus alt. Minus minus wird plus.', unit: 'Grad' },
+      { title: 'Stunden', ask: `Jede Stunde wird es ${decS(r, 1)} Grad wärmer. Wie viele Stunden dauert es?`, calc: `${decS(T, 1)} : ${decS(r, 1)}`, wrong: [`${decS(T, 1)} · ${decS(r, 1)}`], why: 'Wie oft passt der Schritt in den Unterschied? Das ist eine Division.', unit: 'Stunden' },
+    ],
+    unit: 'Stunden', sentence: v => `Nach ${v} zeigt das Thermometer 0 °C, also um ${start + h} Uhr.`,
+  });
+};
+const quizPunkteStory: Story = () => {
+  const [who, pr] = kid(), s0 = R(5, 45), p = pick([15, 20, 25, 30]), k = R(2, 5), end = k * p - s0;
+  if (end <= 0) return null;
+  return wordTask({
+    prompt: `Beim Klassenquiz hat ${who} nach der ersten Runde ${decS(-s0, 1)} Punkte. In der zweiten Runde beantwortet ${pr} ${k} Fragen richtig. Jede richtige Antwort bringt ${decS(p, 1)} Punkte. Wie viele Punkte hat ${pr} jetzt?`,
+    steps: [
+      { title: 'Neue Punkte', ask: `Wie viele Punkte bekommt ${pr} in der zweiten Runde?`, calc: `${k} · ${decS(p, 1)}`, wrong: [`${k} + ${decS(p, 1)}`], why: `${k}-mal gleich viele Punkte: mal.`, unit: 'Punkte' },
+      { title: 'Punktestand', ask: 'Wie viele Punkte sind es jetzt?', calc: `(${decS(-s0, 1)}) + ${decS(k * p, 1)}`, wrong: [`(${decS(-s0, 1)}) − ${decS(k * p, 1)}`], why: 'Punkte kommen dazu: plus.', unit: 'Punkte' },
+    ],
+    unit: 'Punkte', sentence: v => `${who} hat jetzt ${v}.`,
+  });
+};
+const eisStory: Story = () => {
+  const rate = pick([15, 20, 25, 30]), h = R(4, 9), kuehl = R(30, 70), truhe = kuehl - rate * h;
+  if (truhe > -140 || truhe < -260 || truhe % 10 === 0) return null;
+  return wordTask({
+    prompt: `In der Tiefkühltruhe hat ein Eis ${decS(truhe, 1)} °C. Im Kühlschrank sind es ${decS(kuehl, 1)} °C. Um wie viel Grad ist es im Kühlschrank wärmer? Das Eis wird in den Kühlschrank gestellt und erwärmt sich jede Stunde um ${decS(rate, 1)} Grad. Nach wie vielen Stunden hat es die Temperatur im Kühlschrank erreicht?`,
+    steps: [
+      { title: 'Unterschied', ask: 'Um wie viel Grad ist es im Kühlschrank wärmer als in der Truhe?', calc: `${decS(kuehl, 1)} − (${decS(truhe, 1)})`, wrong: [`${decS(kuehl, 1)} + (${decS(truhe, 1)})`], why: 'Unterschied: wärmer minus kälter. Minus minus wird plus.', unit: 'Grad' },
+      { title: 'Stunden', ask: `Jede Stunde wird es ${decS(rate, 1)} Grad wärmer. Wie viele Stunden dauert es?`, calc: `${decS(kuehl - truhe, 1)} : ${decS(rate, 1)}`, wrong: [`${decS(kuehl - truhe, 1)} · ${decS(rate, 1)}`], why: 'Wie oft passt der Schritt in den Unterschied: geteilt.', unit: 'Stunden' },
+    ],
+    unit: 'Stunden', sentence: v => `Nach ${v} hat das Eis die Temperatur im Kühlschrank erreicht.`,
+  });
+};
+const sparKontoStory: Story = () => {
+  const a = R(205, 895), k = R(3, 5), e = pick([20, 25, 30]), c = R(105, 2490);
+  const after = k * e * 10 - a, end = after - c;
+  if (a % 10 === 0 || c % 10 === 0 || after <= 0 || end <= 0) return null;
+  const [who, pr] = kid(), thing = pick(['Schuhe', 'Kopfhörer', 'Inliner', 'Bücher']);
+  return wordTask({
+    prompt: `${gen2(who)} Konto steht bei −${fe(a)} €. ${cap(pr)} zahlt ${k}-mal je ${e} € ein. Dann kauft ${pr} ${thing} für ${fe(c)} €. Wie viel Guthaben hat ${pr} danach?`,
+    steps: [
+      { title: 'Alle Einzahlungen', ask: `Wie viel zahlt ${who} insgesamt ein?`, calc: `${k} · ${e}`, wrong: [`${k} + ${e}`], why: 'Mehrmals gleich viel: mal.', unit: '€' },
+      { title: 'Nach dem Einzahlen', ask: 'Wie hoch ist der Kontostand nach dem Einzahlen?', calc: `(${decS(-a, 1)}) + ${k * e}`, wrong: [`(${decS(-a, 1)}) − ${k * e}`], why: 'Einzahlen: plus.', unit: '€' },
+      { title: 'Nach dem Kauf', ask: 'Wie viel Guthaben bleibt nach dem Kauf?', calc: `${decS(after, 1)} − ${decS(c, 1)}`, wrong: [`${decS(after, 1)} + ${decS(c, 1)}`], why: 'Kaufen: minus.', unit: '€' },
+    ],
+    unit: '€', sentence: () => `${who} hat danach ${fe(end)} € Guthaben.`,
+  });
+};
+const TAGE4 = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag'];
+const wetterStory: Story = () => {
+  const vals = TAGE4.map(() => R(-65, 15)), mn = Math.min(...vals), mx = Math.max(...vals);
+  if (vals.filter(v => v === mn).length > 1 || vals.filter(v => v === mx).length > 1 || mn >= 0) return null;
+  const w = mx - mn + R(10, 60), mid = mn + w, cold = TAGE4[vals.indexOf(mn)];
+  if (mid <= 0) return null;
+  return wordTask({
+    prompt: `Die Klasse 6b misst im Januar jede Nacht die Temperatur: ${TAGE4.map((d, i) => `${d} ${decS(vals[i], 1)} °C`).join(', ')}. Um wie viel Grad war die wärmste Nacht wärmer als die kälteste? Am ${cold}mittag war es ${decS(w, 1)} Grad wärmer als in der Nacht davor. Um wie viel Grad war es an diesem Mittag wärmer als in der wärmsten Nacht?`,
+    steps: [
+      { title: 'Wärmste und kälteste Nacht', ask: `Die wärmste Nacht hatte ${decS(mx, 1)} °C, die kälteste ${decS(mn, 1)} °C. Wie groß ist der Unterschied?`, calc: `${pS(mx, 1)} − (${decS(mn, 1)})`, wrong: [`${pS(mx, 1)} + (${decS(mn, 1)})`], why: 'Unterschied: wärmer minus kälter. Minus minus wird plus.', unit: 'Grad' },
+      { title: 'Kälteste Nacht', ask: `Die kälteste Nacht war am ${cold}. Wie warm war es am ${cold}mittag?`, calc: `(${decS(mn, 1)}) + ${decS(w, 1)}`, wrong: [`(${decS(mn, 1)}) − ${decS(w, 1)}`], why: 'Wärmer werden heißt: plus.', unit: '°C' },
+      { title: 'Vergleich', ask: `Die wärmste Nacht hatte ${decS(mx, 1)} °C. Um wie viel Grad war der Mittag wärmer?`, calc: `${decS(mid, 1)} − ${pS(mx, 1)}`, wrong: [`${decS(mid, 1)} + ${pS(mx, 1)}`], why: 'Unterschied: wärmer minus kälter.', unit: 'Grad' },
+    ],
+    unit: 'Grad', sentence: v => `Die wärmste Nacht war ${decS(mx - mn, 1)} Grad wärmer als die kälteste. Am ${cold}mittag war es ${v} wärmer als in der wärmsten Nacht.`,
+  });
+};
+const parkStory: Story = () => {
+  const h = pick([25, 28, 30, 32]), u = R(2, 4), o = R(2, 6), bottom = u * h, top = o * h;
+  return wordTask({
+    prompt: `Im Parkhaus am Bahnhof ist jedes Stockwerk ${decS(h, 1)} m hoch. Die Straße liegt bei 0 m. Das unterste Parkdeck liegt ${u} Stockwerke unter der Straße, das Dach ${o} Stockwerke über der Straße. Wie viele Meter liegen zwischen dem untersten Parkdeck und dem Dach?`,
+    steps: [
+      { title: 'Unterstes Deck', ask: 'Wie viele Meter liegt das unterste Deck unter der Straße?', calc: `${u} · ${decS(h, 1)}`, wrong: [`${u} + ${decS(h, 1)}`], why: `${u} Stockwerke zu je ${decS(h, 1)} m: mal.`, unit: 'm' },
+      { title: 'Dach', ask: 'Wie viele Meter liegt das Dach über der Straße?', calc: `${o} · ${decS(h, 1)}`, unit: 'm' },
+      { title: 'Abstand', ask: `Das unterste Deck liegt bei ${decS(-bottom, 1)} m, das Dach bei ${decS(top, 1)} m. Wie groß ist der Abstand?`, calc: `${decS(top, 1)} − (${decS(-bottom, 1)})`, wrong: [`${decS(top, 1)} + (${decS(-bottom, 1)})`], why: 'Abstand: oben minus unten. Minus minus wird plus.', unit: 'm' },
+    ],
+    unit: 'm', sentence: v => `Zwischen dem untersten Parkdeck und dem Dach liegen ${v}.`,
+  });
+};
+const taucherStory: Story = () => {
+  const t = pick([15, 20, 25, 30]), m = R(2, 5), rest = t * m, k = R(2, 4), s = pick([25, 30, 35, 40, 45]), up = k * s, D = rest + up;
+  return wordTask({
+    prompt: `Ein Taucher ist bei ${decS(-D, 1)} m. Er steigt ${k}-mal um je ${decS(s, 1)} m auf und macht dann eine Pause. Danach steigt er in kleinen Stufen von je ${decS(t, 1)} m bis zur Wasseroberfläche. Wie viele kleine Stufen braucht er?`,
+    steps: [
+      { title: 'Aufgestiegen', ask: `Wie viele Meter steigt er vor der Pause auf?`, calc: `${k} · ${decS(s, 1)}`, wrong: [`${k} + ${decS(s, 1)}`], why: `${k}-mal gleich viel: mal.`, unit: 'm' },
+      { title: 'Bei der Pause', ask: `Wie viele Meter ist er bei der Pause noch unter der Oberfläche? Rechne mit dem Betrag von ${decS(-D, 1)}.`, calc: `${decS(D, 1)} − ${decS(up, 1)}`, explain: `${decS(D, 1)} − ${decS(up, 1)} = ${decS(rest, 1)}. Er ist also bei ${decS(-rest, 1)} m.`, unit: 'm' },
+      { title: 'Stufen', ask: `Wie viele Stufen von je ${decS(t, 1)} m sind das?`, calc: `${decS(rest, 1)} : ${decS(t, 1)}`, wrong: [`${decS(rest, 1)} · ${decS(t, 1)}`], why: 'Wie oft passt eine Stufe in die Strecke? Das ist eine Division.' },
+    ],
+    sentence: v => `Er braucht ${v} kleine Stufen.`,
+  });
+};
+const teamPts = () => [0, 1, 2].map(() => pick([-1, 1]) * pick([5, 15, 20, 25, 30, 35, 40, 45, 50]));
+const teamStory: Story = () => {
+  const r = teamPts(), b = teamPts(), sr = r.reduce((x, y) => x + y, 0), sb = b.reduce((x, y) => x + y, 0);
+  if (sr <= 0 || sb <= 0 || sr === sb || !r.some(x => x < 0) || !b.some(x => x < 0)) return null;
+  const sh = (v: number[]) => `${v.slice(0, 2).map(x => decS(x, 1)).join(' Punkte, ')} Punkte und ${decS(v[2], 1)} Punkte`;
+  const ex = (v: number[]) => v.map(x => pS(x, 1)).join(' + ');
+  const [hi, lo] = sr > sb ? ['Rot', 'Blau'] : ['Blau', 'Rot'];
+  const t = wordTask({
+    prompt: `Beim Quiz gibt es für falsche Antworten Minuspunkte. Team Rot bekommt in den drei Runden ${sh(r)}. Team Blau bekommt ${sh(b)}. Welches Team liegt vorne? Mit wie vielen Punkten Vorsprung?`,
+    steps: [
+      { title: 'Team Rot', ask: 'Wie viele Punkte hat Team Rot insgesamt?', calc: ex(r), unit: 'Punkte' },
+      { title: 'Team Blau', ask: 'Wie viele Punkte hat Team Blau insgesamt?', calc: ex(b), unit: 'Punkte' },
+      { title: 'Vorsprung', ask: 'Wie viele Punkte Vorsprung hat das bessere Team?', calc: `${decS(Math.max(sr, sb), 1)} − ${decS(Math.min(sr, sb), 1)}`, unit: 'Punkte' },
+    ],
+    unit: 'Punkte', sentence: v => `Team ${hi} liegt vorne. Der Vorsprung beträgt ${v}.`,
+  });
+  t.guide[2].choose = { ask: 'Welches Team liegt vorne?', options: shuffle(opts(`Team ${hi}`, [`Team ${lo}`])), why: `Rot: ${decS(sr, 1)} Punkte, Blau: ${decS(sb, 1)} Punkte.` };
+  return t;
+};
+const RAT_T4: Story[] = [thermoStory, kontoStory, moeweStory, pegelStory, frostStory, quizPunkteStory];
+const RAT_T5: Story[] = [eisStory, sparKontoStory, wetterStory, parkStory, taucherStory, teamStory];
+
 const RAT: Topic = {
   id: 'rat', klasse: 6, title: 'Rationale Zahlen', short: 'Negative Kommazahlen und Brüche vergleichen, ordnen und damit rechnen.',
   example: '(−2,5) + 1,7',
@@ -892,70 +1330,7 @@ const RAT: Topic = {
     if (level === 2) return pick([ratLine, ratOrd, ratAdd, ratAdd, () => mengeTask(2), () => wfMenge(2), ganzNichtNat])();
     return pick([ratFrac, ratFrac, ratMulDec])();
   },
-  text: level => genFrom(() => {
-    if (level === 4) {
-      const k = R(0, 2);
-      if (k === 0) {
-        const a = R(11, 89), b = R(11, 99);
-        if (a % 10 === 0 || b % 10 === 0) return null;
-        return wordTask({
-          prompt: `Am Morgen zeigt das Thermometer ${decS(-a, 1)} °C. Am Mittag sind es ${decS(b, 1)} °C. Um wie viel Grad ist es wärmer geworden?`,
-          steps: [
-            { title: 'Bis zur Null', ask: `Um wie viel Grad steigt die Temperatur von ${decS(-a, 1)} °C bis 0 °C?`, calc: `0 − (${decS(-a, 1)})`, wrong: [`0 + (${decS(-a, 1)})`], why: 'Unterschied: neu minus alt. Minus minus wird plus.', unit: 'Grad' },
-            { title: 'Ab der Null', ask: `Und dann noch von 0 °C bis ${decS(b, 1)} °C. Wie viel Grad sind es zusammen?`, calc: `${decS(a, 1)} + ${decS(b, 1)}`, wrong: [`${decS(b, 1)} − ${decS(a, 1)}`], why: 'Beide Teilstücke zusammenzählen.', unit: 'Grad' },
-          ],
-          unit: 'Grad', term: `${decS(b, 1)} − (${decS(-a, 1)})`, sentence: v => `Es ist um ${v} wärmer geworden.`,
-        });
-      }
-      if (k === 1) {
-        const a = R(105, 899), b = R(10, 15) * 10, c = R(150, 2990), after = b * 10 - a, end = after - c;
-        if (end <= 0 || a % 10 === 0 || c % 10 === 0) return null;
-        const fe = (x: number) => (x / 10).toFixed(2).replace('.', ',');
-        return wordTask({
-          prompt: `Auf Jonas' Konto sind −${fe(a)} €. Er hat also ${fe(a)} € Schulden. Er zahlt ${b} € ein und kauft danach ein Buch für ${fe(c)} €. Wie viel Guthaben hat er am Ende?`,
-          steps: [
-            { title: 'Einzahlung', ask: 'Wie hoch ist der Kontostand nach dem Einzahlen?', calc: `(${decS(-a, 1)}) + ${b}`, wrong: [`(${decS(-a, 1)}) − ${b}`], why: 'Einzahlen: Es kommt Geld dazu, also plus.', unit: '€' },
-            { title: 'Buch', ask: 'Wie viel Guthaben bleibt nach dem Kauf?', calc: `${decS(after, 1)} − ${decS(c, 1)}`, wrong: [`${decS(after, 1)} + ${decS(c, 1)}`], why: 'Kaufen: Geld geht weg, also minus.', unit: '€' },
-          ],
-          unit: '€', sentence: () => `Jonas hat am Ende ${fe(end)} € Guthaben.`,
-        });
-      }
-      const a = R(15, 189), b = R(11, 99);
-      if (a % 10 === 0 || b % 10 === 0) return null;
-      return wordTask({
-        prompt: `Eine Taucherin ist ${decS(a, 1)} m unter der Wasseroberfläche, also bei ${decS(-a, 1)} m. Über ihr fliegt eine Möwe in ${decS(b, 1)} m Höhe. Wie weit sind die beiden voneinander entfernt?`,
-        steps: [
-          { title: 'Abstand', ask: 'Rechne obere Höhe minus untere Höhe.', calc: `${decS(b, 1)} − (${decS(-a, 1)})`, wrong: [`${decS(b, 1)} + (${decS(-a, 1)})`], why: 'Abstand: oben minus unten. Minus minus wird plus.', unit: 'm' },
-        ],
-        unit: 'm', sentence: v => `Die beiden sind ${v} voneinander entfernt.`,
-      });
-    }
-    if (Math.random() < 0.5) {
-      const rate = pick([15, 20, 25, 30]), h = R(4, 9), kuehl = R(30, 70), truhe = kuehl - rate * h;
-      if (truhe > -140 || truhe < -260 || truhe % 10 === 0) return null;
-      return wordTask({
-        prompt: `In der Tiefkühltruhe hat ein Eis ${decS(truhe, 1)} °C. Im Kühlschrank sind es ${decS(kuehl, 1)} °C. Um wie viel Grad ist es im Kühlschrank wärmer? Das Eis wird in den Kühlschrank gestellt und erwärmt sich jede Stunde um ${decS(rate, 1)} Grad. Nach wie vielen Stunden hat es die Temperatur im Kühlschrank erreicht?`,
-        steps: [
-          { title: 'Unterschied', ask: 'Um wie viel Grad ist es im Kühlschrank wärmer als in der Truhe?', calc: `${decS(kuehl, 1)} − (${decS(truhe, 1)})`, wrong: [`${decS(kuehl, 1)} + (${decS(truhe, 1)})`], why: 'Unterschied: wärmer minus kälter. Minus minus wird plus.', unit: 'Grad' },
-          { title: 'Stunden', ask: `Jede Stunde wird es ${decS(rate, 1)} Grad wärmer. Wie viele Stunden dauert es?`, calc: `${decS(kuehl - truhe, 1)} : ${decS(rate, 1)}`, wrong: [`${decS(kuehl - truhe, 1)} · ${decS(rate, 1)}`], why: 'Wie oft passt der Schritt in den Unterschied: geteilt.', unit: 'Stunden' },
-        ],
-        unit: 'Stunden', sentence: v => `Nach ${v} hat das Eis die Temperatur im Kühlschrank erreicht.`,
-      });
-    }
-    const a = R(205, 895), k = R(3, 5), e = pick([20, 25, 30]), c = R(105, 2490);
-    const after = k * e * 10 - a, end = after - c;
-    if (a % 10 === 0 || c % 10 === 0 || after <= 0 || end <= 0) return null;
-    const fe = (x: number) => (x / 10).toFixed(2).replace('.', ',');
-    return wordTask({
-      prompt: `Leas Konto steht bei −${fe(a)} €. Sie zahlt ${k}-mal je ${e} € ein. Dann kauft sie Schuhe für ${fe(c)} €. Wie viel Guthaben hat sie danach?`,
-      steps: [
-        { title: 'Alle Einzahlungen', ask: 'Wie viel zahlt Lea insgesamt ein?', calc: `${k} · ${e}`, wrong: [`${k} + ${e}`], why: 'Mehrmals gleich viel: mal.', unit: '€' },
-        { title: 'Nach dem Einzahlen', ask: 'Wie hoch ist der Kontostand nach dem Einzahlen?', calc: `(${decS(-a, 1)}) + ${k * e}`, wrong: [`(${decS(-a, 1)}) − ${k * e}`], why: 'Einzahlen: plus.', unit: '€' },
-        { title: 'Nach dem Kauf', ask: 'Wie viel Guthaben bleibt nach dem Kauf?', calc: `${decS(after, 1)} − ${decS(c, 1)}`, wrong: [`${decS(after, 1)} + ${decS(c, 1)}`], why: 'Kaufen: minus.', unit: '€' },
-      ],
-      unit: '€', sentence: () => `Lea hat danach ${fe(end)} € Guthaben.`,
-    });
-  }, t => t.guide.every(s => s.answer.sign() > 0)),
+  text: level => genFrom(() => pick(level === 4 ? RAT_T4 : RAT_T5)(), t => !!t && t.guide!.every(s => s.answer.sign() > 0)),
 };
 
 export const BRUCH2_TOPICS: Topic[] = [BRVGL, UMW, RAT];
