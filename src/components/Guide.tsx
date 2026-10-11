@@ -53,7 +53,7 @@ export function Guide({ steps, onDone }: { steps: GuideStep[]; onDone: () => voi
     <div className="guide">
       <ol className="guide-done">
         {steps.slice(0, i).map((s, k) => (
-          <li key={k}><span className="gd-ok" aria-hidden="true">✓</span><span><b>{s.title}</b><Html as="span" className="gd-ex" html={s.explain} /></span></li>
+          <li key={k}><span className="gd-ok" aria-hidden="true">✓</span><span><Html as="b" html={s.title} /><Html as="span" className="gd-ex" html={s.explain} /></span></li>
         ))}
       </ol>
       <section className="guide-step">
@@ -61,7 +61,7 @@ export function Guide({ steps, onDone }: { steps: GuideStep[]; onDone: () => voi
           <span className="gs-n">Schritt {i + 1} von {steps.length}</span>
           <div className="gs-bar" aria-hidden="true">{steps.map((_, k) => <i key={k} className={k < i ? 'done' : k === i ? 'on' : ''} />)}</div>
         </div>
-        <h3>{step.title}</h3>
+        <Html as="h3" html={step.title} />
         {choosing ? (
           <>
             <p>{step.choose!.ask}</p>

@@ -35,6 +35,7 @@ const LOOKS: Record<string, Look> = {
   prim: { icon: '🧩', color: '#3b5bdb', teaser: 'Zahlen in Bausteine zerlegen' },
   haeuf: { icon: '📈', color: '#1c7ed6', teaser: 'Umfragen auswerten' },
   raetsel: { icon: '🔍', color: '#862e9c', teaser: 'Knobeln und rückwärts rechnen' },
+  anteil: { icon: '🧃', color: '#d9480f', teaser: 'Anteile berechnen und Verhältnisse' },
 };
 const FALLBACK: Look = { icon: '📘', color: '#1d47c9', teaser: '' };
 export const look = (id: string): Look => LOOKS[id] ?? FALLBACK;

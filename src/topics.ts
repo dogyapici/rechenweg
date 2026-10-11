@@ -2,6 +2,7 @@
 import { autoGuide, type GuideChoice, type GuideStep } from './guide.js';
 import { B, M, R, divisors, exprTask, genFrom, list, pick, type Task, type Topic } from './gen.js';
 import { MORE } from './topics-more.js';
+import { LETTERS } from './widgets.js';
 export { M, R, pick, type Task, type Topic };
 import { MathError, Q, q, dp, gcd, lcm, qH, fracH, evalExpr, solveEq, tokenize, type Solution, type ExprSolution, type ListSolution } from './engine/index.js';
 
@@ -233,6 +234,270 @@ function sideTask(): Task {
   return withChoose(t, { ask: 'Welche Rechnung passt?', options: opts(`(${U} − 2 · ${a}) : 2`, [`${U} − ${a}`, `${U} : ${a}`]), why: 'u = 2 · a + 2 · b. Zieh die beiden a-Seiten ab, dann bleiben zwei b-Seiten. Die teilst du durch 2.' });
 }
 
+/* ---------- Kürzen und Erweitern: Bausteine ---------- */
+const shufK = <T,>(a: T[]): T[] => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+const fq = (n: number, d: number) => qH(q(n, d));
+/** Gleichheitszeichen mit Rechenzahl: Kürzungszahl steht darunter, Erweiterungszahl darüber (wie im Heft). */
+export function eqK(k: number, op: ':' | '·'): string {
+  const z = `<small style="font-size:.7em">${op === ':' ? ':' : '·'}${k}</small>`, e = `<small aria-hidden="true" style="font-size:.7em;visibility:hidden">${op}${k}</small>`;
+  return `<span style="display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.05;margin:0 .25em">${op === '·' ? z : e}<span>=</span>${op === ':' ? z : e}</span>`;
+}
+const PART: Record<number, string> = { 2: 'Halbe', 3: 'Drittel', 4: 'Viertel', 5: 'Fünftel', 6: 'Sechstel', 8: 'Achtel', 9: 'Neuntel', 10: 'Zehntel', 12: 'Zwölftel', 15: 'Fünfzehntel', 18: 'Achtzehntel' };
+const primeFactors = (n: number): number[] => { const f: number[] = []; for (let p = 2; n > 1; p++) while (n % p === 0) { f.push(p); n /= p; } return f; };
+/** Auswahl-Aufgabe (Antwort = Nummer der Option). Der Guide bekommt die gemischte Reihenfolge. */
+function kPick(prompt: string, right: string, wrong: string[], steps: ListSolution['steps'], guide: (o: string[]) => GuideStep[], label?: string): Task {
+  const all = shufK([right, ...[...new Set(wrong)].filter(w => w !== right).slice(0, 3)]), ok = all.indexOf(right);
+  return { prompt, answer: q(ok + 1), sol: list(steps, q(ok + 1), `${LETTERS[ok]}: ${label ?? right}`), guide: guide(all), widget: { kind: 'pick', options: all }, placeholder: 'Auswahl' };
+}
+
+/** Grundaufgabe: vollständig kürzen mit dem ggT. */
+function kBasic(level: number): Task {
+  const [n0, d0] = coprimeFrac([6, 9, 12][level - 1]);
+  const k = pick([[2, 3], [2, 3, 4, 5], [4, 6, 7, 8, 9, 12]][level - 1]);
+  const n = n0 * k, d = d0 * k;
+  const g = Number(gcd(BigInt(n), BigInt(d)));
+  const guide: GuideStep[] = [
+    { title: 'ggT finden', ask: `Was ist die größte Zahl, durch die ${n} und ${d} beide teilbar sind?`, answer: q(g), hint: `Schreibe die Teiler von ${n} und von ${d} auf und suche die größte Zahl, die in beiden Listen vorkommt.`, explain: `Der ggT von ${n} und ${d} ist ${g}.` },
+    { title: 'Kürzen', ask: `Teile Zähler und Nenner von ${M(qH(q(n, d)))} durch ${g}. Welcher Bruch kommt heraus?`, answer: q(n0, d0), needReduced: true, hint: `${n} : ${g} und ${d} : ${g}`, explain: `${M(`${qH(q(n, d))} ${eqK(g, ':')} ${qH(q(n0, d0))}`)}`, placeholder: 'z. B. 3/4' },
+  ];
+  return { guide, prompt: `Kürze den Bruch vollständig: ${M(qH(q(n, d)))}`, plain: `${n}/${d} vollständig kürzen`, answer: q(n0, d0), sol: kuerzenSol(n, d), needReduced: true, placeholder: 'z. B. 3/4',
+    diag: v => (v.eq(q(n, d)) ? 'Das ist noch der Ausgangsbruch. Teile Zähler und Nenner durch dieselbe Zahl.' : 'Prüfe: Hast du Zähler und Nenner durch <b>dieselbe</b> Zahl geteilt?') };
+}
+/** Erweitere a/b auf den Nenner c: der neue Zähler ist gesucht. */
+function kErwAuf(level: number): Task {
+  const [a, b] = coprimeFrac(level === 1 ? 6 : 10), k = R(2, level === 1 ? 5 : 9), c = b * k;
+  return { prompt: `Erweitere ${M(fq(a, b))} auf den Nenner ${c}: ${M(`${fq(a, b)} = ${fracH('?', c)}`)}. Welche Zahl gehört in den Zähler?`, plain: `${a}/${b} auf Nenner ${c} erweitern`, answer: q(a * k), placeholder: 'Zähler',
+    sol: list([{ rule: 'Erweiterungszahl', lines: [`Der Nenner wird von ${b} zu ${c}. Also wird mit ${c} : ${b} = ${k} erweitert.`] },
+      { rule: 'Zähler', lines: [`Der Zähler wird mit derselben Zahl malgenommen: ${a} · ${k} = ${a * k}.`, M(`${fq(a, b)} ${eqK(k, '·')} ${fq(a * k, c)}`), 'Im Heft schreibst du die Erweiterungszahl über das Gleichheitszeichen.'] }], q(a * k), String(a * k)),
+    guide: [
+      { title: 'Erweiterungszahl', ask: `<p>Mit welcher Zahl musst du den Nenner ${b} malnehmen, damit ${c} herauskommt?</p><div class="math big">${b} · ? = ${c}</div>`, answer: q(k), hint: `Rechne ${c} : ${b}.`, explain: `${b} · ${k} = ${c}. Du erweiterst mit ${k}.`, placeholder: 'Zahl' },
+      { title: 'Zähler', ask: `<p>Nimm den Zähler ${a} mit derselben Zahl mal.</p><div class="math big">${a} · ${k} = ?</div>`, answer: q(a * k), hint: 'Beim Erweitern nimmst du Zähler und Nenner mit derselben Zahl mal.', explain: M(`${fq(a, b)} ${eqK(k, '·')} ${fq(a * k, c)}`), placeholder: 'Zähler' },
+    ],
+    diag: v => (v.eq(q(a + c - b)) ? 'Beim Erweitern wird nicht addiert, sondern <b>malgenommen</b>. Zähler und Nenner mit derselben Zahl mal.' : v.eq(q(k)) && k !== a * k ? 'Das ist die Erweiterungszahl. Nimm jetzt noch den Zähler damit mal.' : null) };
+}
+/** Kürze a/b auf den Nenner c: der neue Zähler ist gesucht. */
+function kAufNenner(level: number): Task {
+  const [n0, d0] = coprimeFrac(level === 2 ? 6 : 9), a = pick(level === 2 ? [1, 2] : [2, 3]), b = R(2, level === 2 ? 4 : 6);
+  const t = d0 * a, z = n0 * a, N = z * b, D = t * b;
+  return { prompt: `Kürze ${M(fq(N, D))} auf den Nenner ${t}: ${M(`${fq(N, D)} = ${fracH('?', t)}`)}. Welche Zahl gehört in den Zähler?`, plain: `${N}/${D} auf Nenner ${t} kürzen`, answer: q(z), placeholder: 'Zähler',
+    sol: list([{ rule: 'Kürzungszahl', lines: [`Der Nenner wird von ${D} zu ${t}. Also wird durch ${D} : ${t} = ${b} gekürzt.`] },
+      { rule: 'Zähler', lines: [`Den Zähler teilst du durch dieselbe Zahl: ${N} : ${b} = ${z}.`, M(`${fq(N, D)} ${eqK(b, ':')} ${fq(z, t)}`), 'Im Heft schreibst du die Kürzungszahl unter das Gleichheitszeichen.'] }], q(z), String(z)),
+    guide: [
+      { title: 'Kürzungszahl', ask: `<p>Durch welche Zahl musst du den Nenner ${D} teilen, damit ${t} herauskommt?</p><div class="math big">${D} : ? = ${t}</div>`, answer: q(b), hint: `Rechne ${D} : ${t}.`, explain: `${D} : ${b} = ${t}. Du kürzt durch ${b}.`, placeholder: 'Zahl' },
+      { title: 'Zähler', ask: `<p>Teile den Zähler ${N} durch dieselbe Zahl.</p><div class="math big">${N} : ${b} = ?</div>`, answer: q(z), hint: 'Beim Kürzen teilst du Zähler und Nenner durch dieselbe Zahl.', explain: M(`${fq(N, D)} ${eqK(b, ':')} ${fq(z, t)}`), placeholder: 'Zähler' },
+    ],
+    diag: v => (v.eq(q(N - (D - t))) ? 'Beim Kürzen wird nicht subtrahiert, sondern <b>geteilt</b>. Zähler und Nenner durch dieselbe Zahl.' : v.eq(q(b)) && b !== z ? 'Das ist die Kürzungszahl. Teile jetzt noch den Zähler dadurch.' : null) };
+}
+/** Mit welcher Zahl wurde erweitert oder gekürzt? */
+function kWelcheZahl(level: number): Task {
+  const [n, d] = coprimeFrac(level === 1 ? 5 : 8), k = R(2, level === 1 ? 5 : 9), N = n * k, D = d * k, kurz = Math.random() < 0.5;
+  const eq = kurz ? `${fq(N, D)} = ${fq(n, d)}` : `${fq(n, d)} = ${fq(N, D)}`, verb = kurz ? 'gekürzt' : 'erweitert';
+  const shown = kurz ? `${fq(N, D)} ${eqK(k, ':')} ${fq(n, d)}` : `${fq(n, d)} ${eqK(k, '·')} ${fq(N, D)}`;
+  return { prompt: `${M(eq)}<br>Mit welcher Zahl wurde ${verb}?`, plain: `${kurz ? `${N}/${D} = ${n}/${d}` : `${n}/${d} = ${N}/${D}`}, mit welcher Zahl ${verb}?`, answer: q(k), placeholder: 'Zahl',
+    sol: list([{ rule: 'Nenner vergleichen', lines: [kurz ? `${D} : ${d} = ${k}` : `${d} · ${k} = ${D}`] }, { rule: 'Mit dem Zähler prüfen', lines: [kurz ? `${N} : ${k} = ${n}` : `${n} · ${k} = ${N}`, `Es wurde mit ${k} ${verb}: ${M(shown)}`] }], q(k), String(k)),
+    guide: [
+      { title: 'Nenner vergleichen', ask: `<p>Wie oft passt der kleine Nenner ${d} in den großen Nenner ${D}?</p><div class="math big">${D} : ${d} = ?</div>`, answer: q(k), hint: `Geh die Reihe von ${d} durch: ${d}, ${2 * d}, ${3 * d}, …`, explain: `${D} : ${d} = ${k}`, placeholder: 'Zahl' },
+      { title: 'Mit dem Zähler prüfen', ask: `<p>Prüfe mit den Zählern: Es muss dieselbe Zahl herauskommen.</p><div class="math big">${N} : ${n} = ?</div>`, answer: q(k), hint: `Teile ${N} durch ${n}.`, explain: `Beide Male ${k}. Es wurde mit ${k} ${verb}: ${M(shown)}`, placeholder: 'Zahl' },
+    ],
+    diag: v => (!v.eq(q(k)) && v.eq(q(D - d)) ? `${kurz ? 'Beim Kürzen' : 'Beim Erweitern'} wird ${kurz ? 'geteilt' : 'malgenommen'}, nicht ${kurz ? 'subtrahiert' : 'addiert'}. Rechne ${D} : ${d}.` : null) };
+}
+/** Schrittweise kürzen: Ein Kind hat schon einmal gekürzt, jetzt weiter bis zum Ende. */
+function kSchritt(level: number): Task {
+  const NAMES = ['Lea', 'Tim', 'Mia', 'Ben', 'Emma', 'Paul'];
+  for (;;) {
+    const [n0, d0] = coprimeFrac(level === 2 ? 5 : 7), g = pick(level === 2 ? [8, 12, 18, 20] : [16, 24, 27, 36, 30, 48]);
+    const N = n0 * g, D = d0 * g;
+    if (D > (level === 2 ? 100 : 200)) continue;
+    const f = primeFactors(g), p1 = f[0], rest = f.slice(1), who = pick(NAMES);
+    let a = N / p1, b = D / p1;
+    const guide: GuideStep[] = [], lines: string[] = [M(`${fq(N, D)} ${eqK(p1, ':')} ${fq(a, b)}`)];
+    let chain = `${fq(N, D)} ${eqK(p1, ':')} ${fq(a, b)}`;
+    for (const p of rest) {
+      guide.push({ title: `Durch ${p} kürzen`, ask: `<p>${M(fq(a, b))}: ${a} und ${b} sind beide durch ${p} teilbar. Teile Zähler und Nenner durch ${p}. Wie heißt der neue Zähler?</p><div class="math big">${a} : ${p} = ?</div>`, answer: q(a / p), hint: `Rechne ${a} : ${p}. Den Nenner teilst du genauso: ${b} : ${p}.`, explain: M(`${fq(a, b)} ${eqK(p, ':')} ${fq(a / p, b / p)}`), placeholder: 'Zähler' });
+      lines.push(M(`${fq(a, b)} ${eqK(p, ':')} ${fq(a / p, b / p)}`));
+      a /= p; b /= p; chain += ` ${eqK(p, ':')} ${fq(a, b)}`;
+    }
+    guide.push({ title: 'Fertig gekürzt', ask: `<p>Jetzt haben Zähler und Nenner außer 1 keinen gemeinsamen Teiler mehr. Wie heißt der vollständig gekürzte Bruch?</p>`, answer: q(n0, d0), needReduced: true, hint: 'Schreibe den letzten Bruch auf.', explain: `${M(chain)}<br>Mit dem ggT ${g} geht es in einem Schritt: ${M(`${fq(N, D)} ${eqK(g, ':')} ${fq(n0, d0)}`)}. Denn ${f.join(' · ')} = ${g}.`, placeholder: 'z. B. 3/4' });
+    return { prompt: `${who} kürzt ${M(fq(N, D))} zuerst durch ${p1}: ${M(`${fq(N, D)} ${eqK(p1, ':')} ${fq(N / p1, D / p1)}`)}<br>Kürze weiter, bis der Bruch vollständig gekürzt ist.`, plain: `${N}/${D} schrittweise vollständig kürzen`, answer: q(n0, d0), needReduced: true, placeholder: 'z. B. 3/4', guide,
+      sol: list([{ rule: 'Schritt für Schritt', lines: [...lines, 'Die kleinen Zahlen unter dem Gleichheitszeichen sind die Kürzungszahlen.'] }, { rule: 'Schneller mit dem ggT', lines: [`ggT(${N}, ${D}) = ${g} = ${f.join(' · ')}`, M(`${fq(N, D)} ${eqK(g, ':')} ${fq(n0, d0)}`)] }], q(n0, d0)) };
+  }
+}
+/** Erst kürzen, dann auf einen anderen Nenner erweitern: 6/8 = ?/20 */
+function kKuerzErw(): Task {
+  for (;;) {
+    const [n0, d0] = coprimeFrac(6), j = R(2, 4), k = R(2, 6);
+    if (j === k) continue;
+    const N = n0 * j, D = d0 * j, t = d0 * k, z = n0 * k;
+    if (t % D === 0 || D % t === 0) continue;
+    return { prompt: `Ergänze: ${M(`${fq(N, D)} = ${fracH('?', t)}`)}. Welche Zahl gehört in den Zähler?`, plain: `${N}/${D} = ?/${t}`, answer: q(z), placeholder: 'Zähler',
+      sol: list([{ rule: 'Erst kürzen', lines: [`${t} ist kein Vielfaches von ${D}. Kürze deshalb zuerst vollständig:`, M(`${fq(N, D)} ${eqK(j, ':')} ${fq(n0, d0)}`)] },
+        { rule: 'Dann erweitern', lines: [`${t} : ${d0} = ${k}`, M(`${fq(n0, d0)} ${eqK(k, '·')} ${fq(z, t)}`)] }], q(z), String(z)),
+      guide: [
+        { title: 'Erst kürzen', ask: `<p>${t} ist kein Vielfaches von ${D}. Kürze deshalb zuerst ${M(fq(N, D))} vollständig.</p>`, answer: q(n0, d0), needReduced: true, hint: `Zähler und Nenner sind beide durch ${j} teilbar.`, explain: M(`${fq(N, D)} ${eqK(j, ':')} ${fq(n0, d0)}`), placeholder: 'z. B. 3/4' },
+        { title: 'Erweiterungszahl', ask: `<p>Mit welcher Zahl musst du ${M(fq(n0, d0))} erweitern, damit der Nenner ${t} wird?</p><div class="math big">${d0} · ? = ${t}</div>`, answer: q(k), hint: `${t} : ${d0}`, explain: `${d0} · ${k} = ${t}`, placeholder: 'Zahl' },
+        { title: 'Zähler', ask: `<div class="math big">${n0} · ${k} = ?</div>`, answer: q(z), hint: 'Zähler mit derselben Zahl mal.', explain: M(`${fq(N, D)} ${eqK(j, ':')} ${fq(n0, d0)} ${eqK(k, '·')} ${fq(z, t)}`), placeholder: 'Zähler' },
+      ],
+      diag: v => (v.eq(q(N + t - D)) || v.eq(q(N - (D - t))) ? 'Beim Kürzen und Erweitern wird geteilt oder malgenommen, nie addiert oder subtrahiert.' : null) };
+  }
+}
+/** Bruchstreifen: Wie viele Viertel sind gefärbt? */
+function kStreifen(): Task {
+  const d2 = pick([2, 3, 4, 5, 6]), k = pick(d2 <= 3 ? [2, 3, 4] : [2, 3]), n2 = R(1, d2 - 1), d = d2 * k, n = n2 * k;
+  const kurz = Math.random() < 0.6;
+  // kurz: oben n/d (viele kleine Teile), unten d2 große Teile. Sonst umgekehrt.
+  const [sn, sd, td, ans] = kurz ? [n, d, d2, n2] : [n2, d2, d, n];
+  const name = PART[td];
+  const rel = kurz ? `${d} : ${d2} = ${k}. Immer ${k} kleine Teile oben sind ein großes Teil unten.` : `${d} : ${d2} = ${k}. Jedes große Teil oben ist unten in ${k} kleine Teile zerlegt.`;
+  const eqLine = kurz ? M(`${fq(n, d)} ${eqK(k, ':')} ${fq(n2, d2)}`) : M(`${fq(n2, d2)} ${eqK(k, '·')} ${fq(n, d)}`);
+  return { prompt: `Der obere Streifen zeigt ${M(fq(sn, sd))}. Der untere Streifen hat ${td} gleiche Teile. Wie viele ${name} musst du unten färben, damit gleich viel gefärbt ist?${barH(sn, sd, fq(sn, sd))}${barH(0, td, fracH('?', td))}`,
+    plain: `${sn}/${sd} = ?/${td} am Bruchstreifen`, answer: q(ans), placeholder: 'Anzahl',
+    sol: list([{ rule: 'Teile vergleichen', lines: [rel] }, { rule: kurz ? 'Kürzen' : 'Erweitern', lines: [eqLine, `Unten musst du ${ans} ${name} färben.${barH(sn, sd, fq(sn, sd))}${barH(ans, td, fq(ans, td))}`] }], q(ans), String(ans)),
+    guide: [
+      { title: 'Teile vergleichen', ask: kurz ? `<p>Wie viele kleine Teile von oben passen in ein großes Teil unten?</p><div class="math big">${d} : ${d2} = ?</div>` : `<p>In wie viele kleine Teile ist ein großes Teil von oben unten zerlegt?</p><div class="math big">${d} : ${d2} = ?</div>`, answer: q(k), hint: 'Leg die Streifen gedanklich übereinander.', explain: rel, placeholder: 'Anzahl' },
+      { title: kurz ? 'Kürzen' : 'Erweitern', ask: kurz ? `<p>Oben sind ${n} kleine Teile gefärbt. Je ${k} davon sind ein großes Teil.</p><div class="math big">${n} : ${k} = ?</div>` : `<p>Oben ${n2 === 1 ? 'ist 1 großes Teil' : `sind ${n2} große Teile`} gefärbt. Jedes große Teil sind ${k} kleine Teile.</p><div class="math big">${n2} · ${k} = ?</div>`, answer: q(ans), hint: kurz ? `Teile ${n} durch ${k}.` : `Rechne ${n2} · ${k}.`, explain: eqLine, placeholder: 'Anzahl' },
+    ],
+    diag: v => (v.eq(q(sn)) && sn !== ans ? 'Das ist die Anzahl oben. Unten sind die Teile anders groß.' : null) };
+}
+/** Welcher Streifen zeigt denselben Anteil? */
+function kStreifenPick(): Task {
+  for (;;) {
+    const [n, d] = coprimeFrac(5), k = R(2, 3), N = n * k, D = d * k;
+    const cand: [number, number][] = [[n, D], [n + k, d + k], [N + 1, D], [N - 1, D], [N, D + k], [n + 1, d + 1]];
+    const wrong: string[] = [], seen = new Set<string>([`${N}/${D}`]);
+    for (const [a, b] of shufK(cand)) {
+      if (a < 1 || a >= b || b > 16 || q(a, b).eq(q(n, d)) || seen.has(`${a}/${b}`) || wrong.length >= 3) continue;
+      seen.add(`${a}/${b}`); wrong.push(barH(a, b, ''));
+    }
+    if (wrong.length < 3) continue;
+    const right = barH(N, D, '');
+    return kPick(`Welcher Streifen zeigt denselben Anteil wie ${M(fq(n, d))}?${barH(n, d, fq(n, d))}`, right, wrong,
+      [{ rule: 'Erweitern', lines: [M(`${fq(n, d)} ${eqK(k, '·')} ${fq(N, D)}`), `Der richtige Streifen hat ${D} Teile, davon sind ${N} gefärbt. Gleich viel gefärbt, nur kleinere Stücke.`] }],
+      () => [
+        { title: 'Teile zählen', ask: `<p>Der richtige Streifen hat ${D} Teile. Mit welcher Zahl wurde ${M(fq(n, d))} dann erweitert?</p><div class="math big">${D} : ${d} = ?</div>`, answer: q(k), hint: `Rechne ${D} : ${d}.`, explain: `Es wurde mit ${k} erweitert.`, placeholder: 'Zahl' },
+        { title: 'Gefärbte Teile', ask: `<p>Wie viele der ${D} Teile müssen gefärbt sein?</p><div class="math big">${n} · ${k} = ?</div>`, answer: q(N), hint: 'Zähler mit derselben Zahl mal.', explain: `${M(`${fq(n, d)} ${eqK(k, '·')} ${fq(N, D)}`)} Such den Streifen mit ${N} von ${D} gefärbten Teilen.`, placeholder: 'Anzahl' },
+      ], `der Streifen mit ${N} von ${D} gefärbten Teilen`);
+  }
+}
+/** Welcher Bruch ist gleichwertig (oder NICHT gleichwertig)? */
+function kGleich(level: number): Task {
+  for (;;) {
+    const [n, d] = coprimeFrac(level === 2 ? 6 : 9), j = level === 3 ? R(2, 4) : 1, k = R(2, 6);
+    if (k === j) continue;
+    const gN = n * j, gD = d * j, given = fq(gN, gD);
+    const wrongF: [number, number][] = shufK([[gN + k, gD + k], [gN * k, gD], [gN, gD * k], [n * k, d * k + 1], [gN * k, gD + k], [gN + 1, gD + 1]] as [number, number][])
+      .filter(([a, b]) => b > 0 && !q(a, b).eq(q(n, d)));
+    const keys = (f: [number, number][]) => [...new Set(f.map(([a, b]) => `${a}/${b}`))];
+    const show = (s: string) => { const [a, b] = s.split('/').map(Number); return M(fq(a, b)); };
+    const red = (s: string) => { const [a, b] = s.split('/').map(Number); const r = q(a, b).red(); return `${M(fq(a, b))} = ${M(qH(r))}`; };
+    const not = level === 3 && Math.random() < 0.5;
+    if (!not) {
+      const right = `${n * k}/${d * k}`, w = keys(wrongF).filter(s => s !== right && s !== `${gN}/${gD}`).slice(0, 3);
+      if (w.length < 3) continue;
+      return kPick(`Welcher Bruch ist gleichwertig zu ${M(given)}?`, show(right), w.map(show),
+        [{ rule: 'Kürzen', lines: [`Kürze alle Brüche vollständig. Gleichwertig ist der Bruch, bei dem ${M(fq(n, d))} herauskommt.`, ...[right, ...w].map(red)] }],
+        () => [
+          ...(j > 1 ? [{ title: 'Vollständig kürzen', ask: `<p>Kürze zuerst ${M(given)} vollständig. Welcher Bruch kommt heraus?</p>`, answer: q(n, d), needReduced: true, hint: `Zähler und Nenner sind beide durch ${j} teilbar.`, explain: M(`${given} ${eqK(j, ':')} ${fq(n, d)}`), placeholder: 'z. B. 2/3' }] : []),
+          { title: 'Erweitern', ask: `<p>Gleichwertig heißt: Zähler <b>und</b> Nenner mit derselben Zahl malnehmen. Erweitere ${M(fq(n, d))} mit ${k}. Wie heißt dann der Nenner?</p><div class="math big">${d} · ${k} = ?</div>`, answer: q(d * k), hint: `Rechne ${d} · ${k}.`, explain: `${M(`${fq(n, d)} ${eqK(k, '·')} ${fq(n * k, d * k)}`)}. Bei den anderen wurde addiert oder nur eine Zahl verändert.`, placeholder: 'Nenner' },
+        ],
+        `${M(fq(n * k, d * k))}`);
+    }
+    const ks = shufK([2, 3, 4, 5, 6].filter(x => x !== j)).slice(0, 3), eqs = ks.map(x => `${n * x}/${d * x}`);
+    const bad = keys(wrongF).find(s => !eqs.includes(s) && s !== `${gN}/${gD}`);
+    if (!bad) continue;
+    return kPick(`Welcher Bruch ist <b>nicht</b> gleichwertig zu ${M(given)}?`, show(bad), eqs.map(show),
+      [{ rule: 'Kürzen', lines: [`${M(given)} = ${M(fq(n, d))}`, ...[bad, ...eqs].map(red), `Nur ${show(bad)} ergibt nicht ${M(fq(n, d))}.`] }],
+      () => [{ title: 'Vollständig kürzen', ask: `<p>Kürze ${M(given)} vollständig. Welcher Bruch kommt heraus?</p>`, answer: q(n, d), needReduced: true, hint: `Zähler und Nenner sind beide durch ${j} teilbar.`, explain: `${M(`${given} ${eqK(j, ':')} ${fq(n, d)}`)}. Kürze jetzt jede Auswahl. Drei ergeben ${M(fq(n, d))}, eine nicht.`, placeholder: 'z. B. 2/3' }],
+      show(bad));
+  }
+}
+/** Wahr oder falsch, mit Begründung. */
+function kWahrFalsch(level: number): Task {
+  const S: (() => Task | null)[] = [];
+  const st = (claim: string, right: string, wrong: string[], expl: string[], guide: GuideStep[], label?: string) =>
+    kPick(`Stimmt die Aussage? Wähle die richtige Antwort mit Begründung.${claim.startsWith('„') ? `<p><b>${claim}</b></p>` : `<div class="math big">${claim}</div>`}`, right, wrong, [{ rule: 'Begründung', lines: expl }], () => guide, label ?? right);
+  const kleiner = () => {
+    const [n, d] = coprimeFrac(5), k = R(2, 3), N = n * k, D = d * k;
+    return st('„Beim Kürzen wird der Bruch kleiner.“', 'Falsch. Der Wert bleibt gleich. Es gibt nur weniger, dafür größere Stücke.',
+      ['Wahr. Zähler und Nenner werden kleiner, also wird auch der Bruch kleiner.', 'Wahr. Beim Kürzen wird geteilt, und Teilen macht kleiner.', 'Falsch. Der Bruch wird größer, weil die Stücke größer werden.'],
+      [M(`${fq(N, D)} ${eqK(k, ':')} ${fq(n, d)}`), `Beide Streifen sind gleich weit gefärbt:${barH(N, D, fq(N, D))}${barH(n, d, fq(n, d))}`],
+      [{ title: 'Ausprobieren', ask: `<p>Kürze ${M(fq(N, D))} durch ${k}. Wie heißt der neue Zähler?</p>`, answer: q(n), hint: `${N} : ${k}`, explain: `${M(`${fq(N, D)} ${eqK(k, ':')} ${fq(n, d)}`)} Gleich viel gefärbt:${barH(N, D, fq(N, D))}${barH(n, d, fq(n, d))}`, placeholder: 'Zähler' }]);
+  };
+  const groesser = () => {
+    const [n, d] = coprimeFrac(5), k = R(2, 3), N = n * k, D = d * k;
+    return st('„Beim Erweitern wird der Bruch größer.“', 'Falsch. Der Wert bleibt gleich. Es gibt mehr, dafür kleinere Stücke.',
+      ['Wahr. Zähler und Nenner werden größer, also auch der Bruch.', 'Wahr. Beim Erweitern wird malgenommen, und Malnehmen macht größer.', 'Falsch. Beim Erweitern wird der Bruch kleiner.'],
+      [M(`${fq(n, d)} ${eqK(k, '·')} ${fq(N, D)}`), `Beide Streifen sind gleich weit gefärbt:${barH(n, d, fq(n, d))}${barH(N, D, fq(N, D))}`],
+      [{ title: 'Ausprobieren', ask: `<p>Erweitere ${M(fq(n, d))} mit ${k}. Wie heißt der neue Zähler?</p>`, answer: q(N), hint: `${n} · ${k}`, explain: `${M(`${fq(n, d)} ${eqK(k, '·')} ${fq(N, D)}`)} Gleich viel gefärbt:${barH(n, d, fq(n, d))}${barH(N, D, fq(N, D))}`, placeholder: 'Zähler' }]);
+  };
+  const gleich = () => {
+    const [n, d] = coprimeFrac(level === 3 ? 9 : 5), k = R(2, level === 3 ? 7 : 4), N = n * k, D = d * k;
+    if (Math.random() < 0.5) {
+      return st(`${fq(N, D)} = ${fq(n, d)}`, `Wahr. Zähler und Nenner wurden beide durch ${k} geteilt.`,
+        ['Falsch. Verschiedene Zahlen ergeben verschiedene Brüche.', `Wahr. Der Zähler wurde durch ${k} geteilt, der Nenner bleibt.`, `Falsch. Man hat oben ${N - n} und unten ${D - d} abgezogen.`],
+        [M(`${fq(N, D)} ${eqK(k, ':')} ${fq(n, d)}`)],
+        [{ title: 'Kürzen', ask: `<p>Kürze ${M(fq(N, D))} vollständig. Welcher Bruch kommt heraus?</p>`, answer: q(n, d), needReduced: true, hint: `Zähler und Nenner sind beide durch ${k} teilbar.`, explain: `${M(`${fq(N, D)} ${eqK(k, ':')} ${fq(n, d)}`)}. Die Aussage stimmt.`, placeholder: 'z. B. 2/3' }],
+        `Wahr, gekürzt durch ${k}`);
+    }
+    const j = R(1, 3), a = n + j, b = d + j, r = q(a, b).red();
+    return st(`${fq(n, d)} = ${fq(a, b)}`, `Falsch. Oben und unten wurde ${j} addiert. Dabei ändert sich der Wert.`,
+      [`Wahr. Oben und unten wurde dieselbe Zahl addiert.`, 'Falsch. Brüche mit verschiedenen Nennern sind nie gleich.', 'Wahr. Die beiden Brüche liegen nah beieinander.'],
+      [`${M(fq(a, b))} ${r.d === BigInt(b) ? 'lässt sich nicht kürzen' : `= ${M(qH(r))}`}. Es kommt nicht ${M(fq(n, d))} heraus. Gleichwertig wäre zum Beispiel ${M(`${fq(n, d)} ${eqK(2, '·')} ${fq(2 * n, 2 * d)}`)}.`],
+      [{ title: 'Prüfen', ask: `<p>Kürze ${M(fq(a, b))} vollständig${r.d === BigInt(b) ? ' (vielleicht geht es gar nicht)' : ''}. Welcher Bruch kommt heraus?</p>`, answer: r, needReduced: true, hint: `Suche den ggT von ${a} und ${b}.`, explain: `${M(fq(a, b))} ergibt gekürzt ${M(qH(r))}, nicht ${M(fq(n, d))}. Die Aussage ist falsch.`, placeholder: 'z. B. 2/3' }],
+      `Falsch, es wurde addiert`);
+  };
+  const verschieden = () => {
+    const [N, D, x, y] = pick([[6, 8, 2, 4], [8, 12, 4, 2], [12, 18, 6, 3], [10, 15, 5, 1], [9, 12, 3, 2]]);
+    const r = q(N / x, D / y);
+    return st('„Man darf Zähler und Nenner durch verschiedene Zahlen teilen.“', 'Falsch. Dann ändert sich der Wert. Beide müssen durch dieselbe Zahl geteilt werden.',
+      ['Wahr. Hauptsache, beide Zahlen werden kleiner.', 'Wahr. Man muss nur darauf achten, dass kein Rest bleibt.', 'Falsch. Man darf nur den Zähler teilen.'],
+      [`Beispiel: ${M(fq(N, D))}. Zähler durch ${x}, Nenner durch ${y} ergibt ${M(fq(N / x, D / y))}. Das ist ein anderer Wert als ${M(qH(q(N, D).red()))}.`],
+      [{ title: 'Ausprobieren', ask: `<p>Teile im Bruch ${M(fq(N, D))} den Zähler durch ${x} und den Nenner durch ${y}. Welcher Bruch kommt heraus?</p>`, answer: r, hint: `${N} : ${x} und ${D} : ${y}`, explain: `${M(fq(N / x, D / y))} ist nicht dasselbe wie ${M(fq(N, D))} = ${M(qH(q(N, D).red()))}. Der Wert hat sich geändert.`, placeholder: 'z. B. 3/2' }], 'Falsch, der Wert ändert sich');
+  };
+  const jederKuerzen = () => {
+    const [a, b] = coprimeFrac(9, 4);
+    return st('„Jeder Bruch lässt sich kürzen.“', `Falsch. Bei ${fq(a, b)} ist der ggT 1. Der Bruch ist schon vollständig gekürzt.`,
+      ['Wahr. Jede Zahl hat Teiler, also kann man immer kürzen.', 'Wahr. Man teilt einfach Zähler und Nenner durch 2.', 'Falsch. Nur Brüche mit geradem Nenner lassen sich kürzen.'],
+      [`${a} und ${b} haben außer 1 keinen gemeinsamen Teiler. ${M(fq(a, b))} kann man nicht kürzen.`],
+      [{ title: 'ggT', ask: `<p>Was ist der ggT von ${a} und ${b}?</p>`, answer: q(1), hint: `Schreibe die Teiler von ${a} und von ${b} auf.`, explain: `Der ggT ist 1. ${M(fq(a, b))} lässt sich nicht kürzen.`, placeholder: 'ggT' }], `Falsch, ${fq(a, b)} geht nicht`);
+  };
+  const jederErw = () => {
+    const [a, b] = coprimeFrac(9), k = R(2, 9);
+    return st('„Jeden Bruch kann man erweitern.“', 'Wahr. Man kann Zähler und Nenner mit jeder Zahl außer 0 malnehmen.',
+      ['Falsch. Nur gekürzte Brüche kann man erweitern.', 'Falsch. Wenn der Nenner schon groß ist, geht es nicht mehr.', 'Wahr. Man addiert zu Zähler und Nenner dieselbe Zahl.'],
+      [`Zum Beispiel: ${M(`${fq(a, b)} ${eqK(k, '·')} ${fq(a * k, b * k)}`)}. Das geht mit jeder Zahl außer 0.`],
+      [{ title: 'Ausprobieren', ask: `<p>Erweitere ${M(fq(a, b))} mit ${k}. Wie heißt der neue Zähler?</p>`, answer: q(a * k), hint: `${a} · ${k}`, explain: M(`${fq(a, b)} ${eqK(k, '·')} ${fq(a * k, b * k)}`), placeholder: 'Zähler' }]);
+  };
+  const addieren = () => {
+    const [n, d, j] = pick([[1, 2, 1], [1, 3, 1], [2, 3, 1], [1, 4, 1], [1, 2, 2], [3, 4, 1], [2, 5, 1]]);
+    const a = n + j, b = d + j, H = Number(lcm(BigInt(d), BigInt(b)));
+    return st('„Addiert man zu Zähler und Nenner dieselbe Zahl, bleibt der Wert gleich.“', `Falsch. Aus ${fq(n, d)} wird ${fq(a, b)}, und das ist ein anderer Wert.`,
+      ['Wahr. Das ist dasselbe wie Erweitern.', 'Wahr. Oben und unten passiert ja dasselbe.', 'Falsch. Der Wert wird dabei immer kleiner.'],
+      [`${M(`${fq(n, d)} = ${fq((n * H) / d, H)}`)}, aber ${M(`${fq(a, b)} = ${fq((a * H) / b, H)}`)}. Erweitern heißt <b>malnehmen</b>, nicht addieren.`],
+      [{ title: 'Vergleichen', ask: `<p>Addiere ${j} zu Zähler und Nenner von ${M(fq(n, d))}. Du bekommst ${M(fq(a, b))}. Erweitere ${M(fq(a, b))} auf den Nenner ${H}. Wie heißt der Zähler?</p>`, answer: q((a * H) / b), hint: `${H} : ${b} = ${H / b}, also ${a} · ${H / b}.`, explain: `${M(`${fq(a, b)} = ${fq((a * H) / b, H)}`)}, aber ${M(`${fq(n, d)} = ${fq((n * H) / d, H)}`)}. Die Werte sind verschieden.`, placeholder: 'Zähler' }], 'Falsch, der Wert ändert sich');
+  };
+  const gekuerzt = () => {
+    if (Math.random() < 0.5) {
+      const [a, b] = pick([[8, 15], [9, 16], [4, 9], [10, 21], [14, 15], [8, 21], [16, 27], [15, 28], [25, 36], [9, 10], [20, 27]]);
+      const p = primeFactors(b)[0];
+      return st(`„${M(fq(a, b))} ist vollständig gekürzt.“`, `Wahr. ${a} und ${b} haben außer 1 keinen gemeinsamen Teiler.`,
+        [`Falsch. ${a} und ${b} sind keine Primzahlen, also kann man kürzen.`, `Falsch. Man kann noch durch ${p} kürzen.`, 'Wahr. Der Zähler ist kleiner als der Nenner.'],
+        [`Teiler von ${a}: ${divisors(a).join(', ')}`, `Teiler von ${b}: ${divisors(b).join(', ')}`, 'Gemeinsam ist nur die 1. Der Bruch ist vollständig gekürzt, obwohl beide Zahlen keine Primzahlen sind.'],
+        [{ title: 'ggT', ask: `<p>Was ist der ggT von ${a} und ${b}?</p>`, answer: q(1), hint: `Schreibe die Teiler von ${a} und von ${b} auf.`, explain: 'Der ggT ist 1. Der Bruch ist vollständig gekürzt.', placeholder: 'ggT' }], 'Wahr, ggT 1');
+    }
+    const g = pick([3, 5, 7]), [n0, d0] = coprimeFrac(level === 3 ? 9 : 6, 3);
+    if (n0 < 2) return null;
+    const a = n0 * g, b = d0 * g;
+    return st(`„${M(fq(a, b))} ist vollständig gekürzt.“`, `Falsch. ${a} und ${b} sind beide durch ${g} teilbar.`,
+      ['Wahr. Man kann nicht durch 2 kürzen, also ist er fertig.', 'Wahr. Der Zähler ist kleiner als der Nenner.', `Falsch. Man kann noch durch ${a} kürzen.`],
+      [M(`${fq(a, b)} ${eqK(g, ':')} ${fq(n0, d0)}`)],
+      [{ title: 'ggT', ask: `<p>Was ist der ggT von ${a} und ${b}?</p>`, answer: q(g), hint: 'Probiere 3, 5 und 7.', explain: `Der ggT ist ${g}: ${M(`${fq(a, b)} ${eqK(g, ':')} ${fq(n0, d0)}`)}. Der Bruch war noch nicht fertig gekürzt.`, placeholder: 'ggT' }], `Falsch, durch ${g} kürzbar`);
+  };
+  if (level === 1) S.push(kleiner, groesser, gleich, jederErw);
+  else if (level === 2) S.push(kleiner, gleich, verschieden, jederKuerzen, addieren, gekuerzt);
+  else S.push(gleich, verschieden, addieren, gekuerzt);
+  for (;;) { const t = pick(S)(); if (t) return t; }
+}
+
 export const TOPICS: Topic[] = [
   {
     id: 'pvs', klasse: 5, title: 'Punkt vor Strich', short: 'In welcher Reihenfolge rechnest du, wenn Plus, Mal und Klammern zusammen vorkommen?',
@@ -327,7 +592,7 @@ export const TOPICS: Topic[] = [
     },
   },
   {
-    id: 'kuerzen', klasse: 6, title: 'Brüche kürzen', short: 'Was ein Bruch ist und wie du ihn so einfach wie möglich schreibst.',
+    id: 'kuerzen', klasse: 6, title: 'Brüche kürzen', short: 'Was ein Bruch ist, wie du ihn kürzt und erweiterst und warum sein Wert dabei gleich bleibt.',
     exampleSol: () => ({ prompt: `Kürze vollständig: ${M(qH(q(18, 24)))}`, sol: kuerzenSol(18, 24) }),
     theory: `
       <p>Ein <b>Bruch</b> beschreibt Teile von einem Ganzen. Bei ${M(qH(q(3, 4)))} wird das Ganze in <b>4</b> gleich große Stücke geteilt. Das sagt die untere Zahl, der <b>Nenner</b>. Davon nimmst du <b>3</b> Stücke. Das sagt die obere Zahl, der <b>Zähler</b>.</p>
@@ -335,19 +600,20 @@ export const TOPICS: Topic[] = [
       <p><b>Kürzen</b> heißt: Zähler und Nenner durch dieselbe Zahl teilen. Der Bruch bleibt genauso groß, nur die Stücke werden größer und es sind weniger.</p>
       ${barH(6, 8, qH(q(6, 8)))}${barH(3, 4, qH(q(3, 4)))}
       <p>Bei ${M(qH(q(6, 8)))} teilst du oben und unten durch 2 und bekommst ${M(qH(q(3, 4)))}. Gleich viel angemalt!</p>
-      <div class="merke"><span class="merke-l">Merke</span><ol><li>Kürzen: Zähler <b>und</b> Nenner durch dieselbe Zahl teilen.</li><li>Am schnellsten geht es mit dem <b>ggT</b>, dem größten gemeinsamen Teiler.</li><li>Vollständig gekürzt ist ein Bruch, wenn oben und unten nur noch 1 als gemeinsamen Teiler haben.</li></ol></div>
+      <p><b>Erweitern</b> ist das Gegenteil: Zähler und Nenner mit derselben Zahl malnehmen. Dann gibt es mehr Stücke, dafür kleinere.</p>
+      ${barH(2, 3, qH(q(2, 3)))}${barH(8, 12, qH(q(8, 12)))}
+      <p><b>So schreibst du es im Heft:</b> Die Erweiterungszahl steht <b>über</b> dem Gleichheitszeichen, die Kürzungszahl <b>unter</b> dem Gleichheitszeichen.</p>
+      <p class="math big">${qH(q(2, 3))} ${eqK(4, '·')} ${qH(q(8, 12))}&emsp;&emsp;${qH(q(18, 24))} ${eqK(6, ':')} ${qH(q(3, 4))}</p>
+      <p><b>Auf einen bestimmten Nenner:</b> ${M(`${qH(q(3, 4))} = ${fracH('?', 20)}`)}. Der Nenner wird von 4 zu 20, also mal 5. Dann auch den Zähler mal 5: ${M(`${qH(q(3, 4))} ${eqK(5, '·')} ${qH(q(15, 20))}`)}. Genauso beim Kürzen: ${M(`${qH(q(12, 18))} = ${fracH('?', 3)}`)}. 18 : 3 = 6, also ${M(`${qH(q(12, 18))} ${eqK(6, ':')} ${qH(q(2, 3))}`)}.</p>
+      <p><b>Schrittweise kürzen</b> ist auch erlaubt: ${M(`${qH(q(24, 36))} ${eqK(2, ':')} ${qH(q(12, 18))} ${eqK(2, ':')} ${qH(q(6, 9))} ${eqK(3, ':')} ${qH(q(2, 3))}`)}. Mit dem ggT 12 geht es in einem Schritt: ${M(`${qH(q(24, 36))} ${eqK(12, ':')} ${qH(q(2, 3))}`)}.</p>
+      <p><b>Bruchstreifen</b> zeigen, warum der Wert gleich bleibt: Leg die Streifen übereinander. Es ist genau gleich viel gefärbt, egal in wie viele Stücke der Streifen geteilt ist. Alle diese Brüche heißen <b>gleichwertig</b>.</p>
+      <p><b>Typische Fehler:</b> Nur den Zähler verändern (${M(`${qH(q(2, 3))} ≠ ${qH(q(4, 3))}`)}) oder addieren statt malnehmen (${M(`${qH(q(2, 3))} ≠ ${qH(q(4, 5))}`)}).</p>
+      <div class="merke"><span class="merke-l">Merke</span><ol><li>Kürzen: Zähler <b>und</b> Nenner durch dieselbe Zahl teilen.</li><li>Erweitern: Zähler <b>und</b> Nenner mit derselben Zahl malnehmen.</li><li><b>Der Wert eines Bruchs ändert sich beim Kürzen und Erweitern nie.</b></li><li>Am schnellsten kürzt du mit dem <b>ggT</b>, dem größten gemeinsamen Teiler.</li><li>Vollständig gekürzt ist ein Bruch, wenn oben und unten nur noch 1 als gemeinsamen Teiler haben.</li></ol></div>
       <p>Teilbarkeits-Tricks: Gerade Zahlen gehen durch 2. Endet die Zahl auf 0 oder 5, geht sie durch 5. Ist die Quersumme durch 3 teilbar, geht die Zahl durch 3.</p>`,
     gen(level: number) {
-      const [n0, d0] = coprimeFrac([6, 9, 12][level - 1]);
-      const k = pick([[2, 3], [2, 3, 4, 5], [4, 6, 7, 8, 9, 12]][level - 1]);
-      const n = n0 * k, d = d0 * k;
-      const g = Number(gcd(BigInt(n), BigInt(d)));
-      const guide: GuideStep[] = [
-        { title: 'ggT finden', ask: `Was ist die größte Zahl, durch die ${n} und ${d} beide teilbar sind?`, answer: q(g), hint: `Schreibe die Teiler von ${n} und von ${d} auf und suche die größte Zahl, die in beiden Listen vorkommt.`, explain: `Der ggT von ${n} und ${d} ist ${g}.` },
-        { title: 'Kürzen', ask: `Teile Zähler und Nenner von ${M(qH(q(n, d)))} durch ${g}. Welcher Bruch kommt heraus?`, answer: q(n0, d0), needReduced: true, hint: `${n} : ${g} und ${d} : ${g}`, explain: `${M(`${qH(q(n, d))} = ${fracH(`${n} : ${g}`, `${d} : ${g}`)} = ${qH(q(n0, d0))}`)}`, placeholder: 'z. B. 3/4' },
-      ];
-      return { guide, prompt: `Kürze den Bruch vollständig: ${M(qH(q(n, d)))}`, plain: `${n}/${d} vollständig kürzen`, answer: q(n0, d0), sol: kuerzenSol(n, d), needReduced: true, placeholder: 'z. B. 3/4',
-        diag: v => (v.eq(q(n, d)) ? 'Das ist noch der Ausgangsbruch. Teile Zähler und Nenner durch dieselbe Zahl.' : 'Prüfe: Hast du Zähler und Nenner durch <b>dieselbe</b> Zahl geteilt?') };
+      if (level === 1) return pick([() => kBasic(1), () => kBasic(1), () => kErwAuf(1), () => kWelcheZahl(1), kStreifen, () => kWahrFalsch(1)])();
+      if (level === 2) return pick([() => kBasic(2), () => kAufNenner(2), () => kWelcheZahl(2), () => kSchritt(2), () => kGleich(2), kStreifenPick, () => kWahrFalsch(2)])();
+      return pick([() => kBasic(3), () => kAufNenner(3), () => kSchritt(3), () => kGleich(3), kKuerzErw, () => kWahrFalsch(3)])();
     },
   },
   {

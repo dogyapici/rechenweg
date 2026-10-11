@@ -53,6 +53,7 @@ const GRADE: Record<string, { gym: number; other: number }> = {
   prim: { gym: 5, other: 6 },
   haeuf: { gym: 6, other: 6 },
   raetsel: { gym: 5, other: 5 },
+  anteil: { gym: 6, other: 6 },
 };
 export const gradeOf = (id: string, p: Profile | null) => {
   const c = curriculumFor(p);
@@ -90,8 +91,8 @@ export interface Curriculum {
  */
 const BW_GYM: Curriculum = {
   name: 'Bildungsplan Baden-Württemberg, Gymnasium',
-  band: { zahl: '5/6', rund: '5/6', pot: '5/6', koord: '5/6', winkel: '5/6', sym: '5/6', koerper: '5/6', daten: '5/6', prop: '5/6', mass: '5/6', pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8', brvgl: '5/6', umw: '5/6', rat: '5/6', geschickt: '5/6', schrift: '5/6', kreis: '5/6', einh2: '5/6', prim: '5/6', haeuf: '5/6', raetsel: '5/6' },
-  grade: { zahl: 5, rund: 5, pot: 5, koord: 5, winkel: 5, sym: 5, koerper: 5, daten: 6, prop: 6, mass: 6, pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7, brvgl: 6, umw: 6, rat: 6, geschickt: 5, schrift: 5, kreis: 6, einh2: 6, prim: 5, haeuf: 6, raetsel: 5 },
+  band: { zahl: '5/6', rund: '5/6', pot: '5/6', koord: '5/6', winkel: '5/6', sym: '5/6', koerper: '5/6', daten: '5/6', prop: '5/6', mass: '5/6', pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8', brvgl: '5/6', umw: '5/6', rat: '5/6', geschickt: '5/6', schrift: '5/6', kreis: '5/6', einh2: '5/6', prim: '5/6', haeuf: '5/6', raetsel: '5/6', anteil: '5/6' },
+  grade: { zahl: 5, rund: 5, pot: 5, koord: 5, winkel: 5, sym: 5, koerper: 5, daten: 6, prop: 6, mass: 6, pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7, brvgl: 6, umw: 6, rat: 6, geschickt: 5, schrift: 5, kreis: 6, einh2: 6, prim: 5, haeuf: 6, raetsel: 5, anteil: 6 },
   missing: {
     '5/6': ['Schrägbilder, Grund- und Aufriss zeichnen', 'Senkrechte und Parallelen zeichnen, Abstände', 'Dreiecks- und Viereckarten mit ihren Eigenschaften',
       'Andere Zahlsysteme (römische Zahlen, Zweiersystem)', 'Größen schätzen', 'Zusammengesetzte Körper'],

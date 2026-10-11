@@ -233,8 +233,121 @@ function mixAddTask(): Task | null {
   }, () => true);
 }
 
+/* Brüche im Koordinatensystem (1. Quadrant, Einheit in d Teile geteilt) */
+interface FP { x: Q; y: Q; label: string }
+const cH = (v: Q) => mixedH(v) ?? qH(v.red());
+/** k/d und, wenn anders geschrieben, die gekürzte oder gemischte Form */
+const kd = (k: number, d: number) => { const a = fr(k, d), b = cH(q(k, d)); return a === b ? a : `${a} = ${b}`; };
+const ptH = (x: Q, y: Q) => `(${cH(x)}&#8239;|&#8239;${cH(y)})`;
+const DNAME: Record<number, string> = { 2: 'Halbe', 3: 'Drittel', 4: 'Viertel' };
+function coordFracSVG(d: number, U: number, pts: FP[]): string {
+  const s = 300 / U, X = (v: number) => v * s, Y = (v: number) => 300 - v * s;
+  let g = '';
+  for (let k = 0; k <= U * d; k++) {
+    const v = k / d, whole = k % d === 0;
+    const cls = k === 0 ? 'ax' : 'gl', st = whole && k ? ' style="stroke-width:2.2"' : '';
+    g += `<line class="${cls}"${st} x1="${X(v)}" y1="0" x2="${X(v)}" y2="300" /><line class="${cls}"${st} x1="0" y1="${Y(v)}" x2="300" y2="${Y(v)}" />`;
+    if (whole) g += `<text class="tk" x="${X(v)}" y="316" text-anchor="middle">${k / d}</text>${k ? `<text class="tk" x="-7" y="${Y(v) + 4}" text-anchor="end">${k / d}</text>` : ''}`;
+  }
+  g += `<text class="ax-l" x="304" y="296">x</text><text class="ax-l" x="6" y="-2">y</text>`;
+  g += pts.map(p => `<g class="pt given"><circle cx="${X(num(p.x))}" cy="${Y(num(p.y))}" r="5" /><text x="${X(num(p.x)) + 7}" y="${Y(num(p.y)) - 7}">${p.label}</text></g>`).join('');
+  return `<svg class="coord" viewBox="-26 -12 340 338" role="img" aria-label="Koordinatensystem von 0 bis ${U}, jede Einheit in ${d} Teile geteilt, mit den Punkten ${pts.map(p => p.label).join(', ')}">${g}</svg>`;
+}
+/** Vier Punkte: das Ziel, das Ziel mit vertauschten Koordinaten und zwei Nachbarn. */
+function fracPoints(d: number, U: number): { pts: FP[]; t: number } | null {
+  const M2 = U * d, kx = R(1, M2 - 1), ky = R(1, M2 - 1);
+  if (kx % d === 0 && ky % d === 0) return null;
+  if (kx === ky) return null;
+  const raw: [number, number][] = [[kx, ky], [ky, kx], ...shuffle([[kx + 1, ky], [kx - 1, ky], [kx, ky + 1], [kx, ky - 1], [kx + d, ky], [kx, ky - d]] as [number, number][])];
+  const keep: [number, number][] = [];
+  for (const [a, b] of raw) {
+    if (a < 1 || b < 1 || a > M2 || b > M2 || keep.some(([u, v]) => Math.abs(u - a) + Math.abs(v - b) < 1) || keep.length >= 4) continue;
+    keep.push([a, b]);
+  }
+  if (keep.length < 4 || keep[1][0] !== ky) return null;
+  const order = shuffle([0, 1, 2, 3]);
+  const pts = order.map((i, j) => ({ x: q(keep[i][0], d).red(), y: q(keep[i][1], d).red(), label: LETTERS[j] }));
+  return { pts, t: order.indexOf(0) };
+}
+function coordGuide(d: number, p: FP): GuideStep[] {
+  const kx = Number(p.x.mul(q(d)).n), ky = Number(p.y.mul(q(d)).n);
+  return [
+    { title: 'Einteilung', ask: `<p>In wie viele gleiche Teile ist die Strecke von 0 bis 1 auf der x-Achse geteilt?</p>`, answer: q(d), hint: 'Zähle die Kästchen zwischen 0 und 1.', explain: `Ein Kästchen ist ${M(fr(1, d))} lang.`, placeholder: 'Anzahl' },
+    { title: 'Nach rechts', ask: `<p>Die x-Koordinate zuerst: Wie viele Kästchen gehst du von 0 nach <b>rechts</b>, bis du bei ${M(cH(p.x))} bist?</p>`, answer: q(kx), hint: `${M(cH(p.x))} = ${M(fr(kx, d))}`, explain: `${M(`${cH(p.x)} = ${fr(kx, d)}`)}: ${kx} Kästchen nach rechts.`, placeholder: 'Anzahl' },
+    { title: 'Nach oben', ask: `<p>Dann die y-Koordinate: Wie viele Kästchen gehst du nach <b>oben</b>, bis du bei ${M(cH(p.y))} bist?</p>`, answer: q(ky), hint: `${M(cH(p.y))} = ${M(fr(ky, d))}`, explain: `${M(`${cH(p.y)} = ${fr(ky, d)}`)}: ${ky} Kästchen nach oben. Dort liegt Punkt ${p.label}.`, placeholder: 'Anzahl' },
+  ];
+}
+const coordSteps = (d: number, p: FP): ListSolution['steps'] => [
+  { rule: 'Einteilung', lines: [`Jede Einheit ist in ${d} Teile geteilt. Ein Kästchen ist ${M(fr(1, d))}.`] },
+  { rule: 'Ablesen', lines: [`Erst nach rechts (x), dann nach oben (y). Punkt ${p.label} liegt bei ${M(ptH(p.x, p.y))}.`, `x = ${M(kd(Number(p.x.mul(q(d)).n), d))}, y = ${M(kd(Number(p.y.mul(q(d)).n), d))}`] },
+];
+function coordWhich(level: number): Task | null {
+  return genFrom(() => {
+    const d = level === 2 ? pick([2, 4]) : pick([3, 4]), U = level === 2 ? 2 : pick([2, 3]);
+    const r = fracPoints(d, U); if (!r) return null;
+    const p = r.pts[r.t];
+    return pickFrom(`Welcher Punkt hat die Koordinaten ${M(ptH(p.x, p.y))}?${coordFracSVG(d, U, r.pts)}`, r.pts.map(x => `Punkt ${x.label}`), r.t,
+      coordSteps(d, p), coordGuide(d, p), { label: `Punkt ${p.label}` });
+  }, () => true);
+}
+function coordRead(level: number): Task | null {
+  return genFrom(() => {
+    const d = level === 2 ? pick([2, 4]) : pick([3, 4]), U = level === 2 ? 2 : 3;
+    const r = fracPoints(d, U); if (!r) return null;
+    const p = r.pts[R(0, 3)], ax = Math.random() < 0.5 ? 'x' : 'y', v = ax === 'x' ? p.x : p.y, o = ax === 'x' ? p.y : p.x;
+    if (v.isInt()) return null;
+    const k = Number(v.mul(q(d)).n), g = coordGuide(d, p);
+    const steps: GuideStep[] = [g[0], { ...g[ax === 'x' ? 1 : 2], ask: ax === 'x' ? '<p>Wie viele Kästchen liegt der Punkt rechts von der y-Achse?</p>' : '<p>Wie viele Kästchen liegt der Punkt über der x-Achse?</p>', hint: ax === 'x' ? 'Zähle von 0 aus nach rechts.' : 'Zähle von 0 aus nach oben.', explain: `${k} Kästchen, das sind ${M(fr(k, d))}.` },
+      { title: `${ax}-Koordinate`, ask: `<p>${k} Kästchen, jedes ist ${M(fr(1, d))}. Wie heißt die ${ax}-Koordinate? Schreibe sie als Bruch oder gemischte Zahl.</p>`, answer: v, hint: `${k} ${DNAME[d]}`, explain: M(`${ax} = ${kd(k, d)}`), placeholder: 'z. B. 3/4' }];
+    return task(`Gib die <b>${ax}-Koordinate</b> von Punkt ${p.label} an. Schreibe sie als Bruch oder gemischte Zahl.${coordFracSVG(d, U, r.pts)}`, v, cH(v), coordSteps(d, p), steps,
+      { form: 'frac', placeholder: 'z. B. 3/4', diag: x => (x.eq(o) ? `Das ist die ${ax === 'x' ? 'y' : 'x'}-Koordinate. Die ${ax}-Koordinate liest du ${ax === 'x' ? 'nach rechts' : 'nach oben'} ab.` : x.eq(q(k)) ? `Das ist die Anzahl der Kästchen. Jedes Kästchen ist aber nur ${M(fr(1, d))} lang.` : x.eq(q(k, d + 1)) ? `Zähle die Kästchen zwischen 0 und 1, nicht die Striche. Es sind ${d}.` : null) });
+  }, () => true);
+}
+function coordPickCoords(): Task | null {
+  return genFrom(() => {
+    const d = pick([3, 4]), U = pick([2, 3]);
+    const r = fracPoints(d, U); if (!r) return null;
+    const p = r.pts[r.t], one = q(1, d);
+    const right = M(ptH(p.x, p.y));
+    const wrong = uniq([M(ptH(p.y, p.x)), M(ptH(p.x.add(one), p.y)), M(ptH(p.x, p.y.sub(one))), M(ptH(q(Number(p.x.mul(q(d)).n), d + 1), q(Number(p.y.mul(q(d)).n), d + 1)))]).filter(s => s !== right && !s.includes('−') && !/\(0|&#8239;0\)/.test(s));
+    if (wrong.length < 3) return null;
+    return pickTask(`Welche Koordinaten hat Punkt ${p.label}?${coordFracSVG(d, U, r.pts)}`, right, wrong.slice(0, 3), coordSteps(d, p), coordGuide(d, p), { label: ptH(p.x, p.y) });
+  }, () => true);
+}
+/** Zahlenstrahl: An einer Stelle stehen viele gleichwertige Brüche. */
+function lineFracSVG(d: number, U: number, k: number): string {
+  const W = 280, s = W / U, X = (v: number) => 10 + v * s;
+  let g = `<line x1="4" y1="40" x2="${W + 18}" y2="40" stroke="currentColor" stroke-width="2" />`;
+  for (let i = 0; i <= U * d; i++) {
+    const whole = i % d === 0;
+    g += `<line x1="${X(i / d)}" y1="${whole ? 30 : 34}" x2="${X(i / d)}" y2="${whole ? 50 : 46}" stroke="currentColor" stroke-width="${whole ? 2 : 1.3}" />`;
+    if (whole) g += `<text x="${X(i / d)}" y="68" text-anchor="middle">${i / d}</text>`;
+  }
+  g += `<circle class="dot" cx="${X(k / d)}" cy="40" r="6" /><text x="${X(k / d)}" y="20" text-anchor="middle">?</text>`;
+  return `<svg class="fig" viewBox="0 0 ${W + 24} 76" style="max-width:340px" role="img" aria-label="Zahlenstrahl von 0 bis ${U}, jede Einheit in ${d} Teile geteilt, ein Punkt ist markiert">${g}</svg>`;
+}
+function lineNot(level: number): Task | null {
+  return genFrom(() => {
+    const [n, d, U] = pick(level === 2 ? [[1, 2, 1], [1, 3, 1], [2, 3, 1], [1, 4, 1], [3, 4, 1], [2, 5, 1]] : [[3, 2, 2], [5, 4, 2], [2, 3, 1], [3, 4, 1], [3, 5, 1], [4, 3, 2]] as [number, number, number][]);
+    const ks = shuffle([2, 3, 4, 5, 6]).slice(0, 3);
+    const eqs = ks.map(k => `${n * k}/${d * k}`), k0 = pick(ks);
+    const badC: [number, number][] = shuffle([[n * k0 + 1, d * k0], [n + k0, d + k0], [n * k0, d * k0 + 1], [n * k0 - 1, d * k0], [n * k0, d + k0]] as [number, number][]);
+    const bad = badC.map(([a, b]) => `${a}/${b}`).find(s => { const [a, b] = s.split('/').map(Number); return a > 0 && !q(a, b).eq(q(n, d)) && !eqs.includes(s); });
+    if (!bad) return null;
+    const sh = (s: string) => { const [a, b] = s.split('/').map(Number); return M(fr(a, b)); };
+    const rd = (s: string) => { const [a, b] = s.split('/').map(Number); return `${M(fr(a, b))} = ${M(qH(q(a, b).red()))}`; };
+    const v = q(n, d), vH = cH(v);
+    return pickTask(`An einer Stelle des Zahlenstrahls stehen viele Brüche. Welcher Bruch steht <b>nicht</b> an der markierten Stelle?${lineFracSVG(d, U, n)}`, sh(bad), eqs.map(sh),
+      [{ rule: 'Ablesen', lines: [`Jede Einheit ist in ${d} Teile geteilt. Der Punkt liegt bei ${M(fr(n, d))}${mixedH(v) ? ` = ${M(vH)}` : ''}.`] },
+       { rule: 'Kürzen', lines: [...[bad, ...eqs].map(rd), `Nur ${sh(bad)} ist nicht gleichwertig zu ${M(fr(n, d))}.`] }],
+      [{ title: 'Ablesen', ask: `<p>Jede Einheit ist in ${d} Teile geteilt. Welcher Bruch mit dem Nenner ${d} steht an der markierten Stelle?</p>`, answer: v, needReduced: true, hint: `Zähle die Teile von 0 bis zum Punkt.`, explain: `Der Punkt liegt bei ${M(fr(n, d))}.`, placeholder: 'z. B. 1/2' },
+       { title: 'Kürzen', ask: `<p>Kürze ${sh(bad)} vollständig. Welcher Bruch kommt heraus?</p>`, answer: q(...(bad.split('/').map(Number) as [number, number])).red(), needReduced: true, hint: 'Teile Zähler und Nenner durch ihren ggT.', explain: `${rd(bad)}. Das ist nicht ${M(fr(n, d))}. Alle anderen Brüche ergeben gekürzt ${M(fr(n, d))}: ${eqs.map(rd).join(', ')}.`, placeholder: 'z. B. 2/3' }],
+      { label: sh(bad) });
+  }, () => true);
+}
+
 const BRVGL: Topic = {
-  id: 'brvgl', klasse: 6, title: 'Brüche vergleichen und ordnen', short: 'Brüche erweitern, vergleichen, ordnen und auf der Zahlengeraden finden.',
+  id: 'brvgl', klasse: 6, title: 'Brüche vergleichen und ordnen', short: 'Brüche erweitern, vergleichen, ordnen und auf der Zahlengeraden und im Koordinatensystem finden.',
   exampleSol: () => { const t = vglTask(2); return { prompt: t.prompt, sol: t.sol }; },
   theory: `
     <p>Ein Bruch wie ${M(fr(3, 5))} heißt: Das Ganze wird in <b>5</b> gleiche Teile geteilt (Nenner), davon nimmst du <b>3</b> (Zähler).${stripSVG(3, 5)}</p>
@@ -243,11 +356,13 @@ const BRVGL: Topic = {
     <p>${M(`${fr(2, 3)} &#9633; ${fr(3, 4)}`)}: Hauptnenner 12. ${M(`${fr(2, 3)} = ${fr(8, 12)}`)} und ${M(`${fr(3, 4)} = ${fr(9, 12)}`)}. Also ${M(`${fr(2, 3)} &lt; ${fr(3, 4)}`)}.</p>
     <p><b>Gemischte Zahlen</b> bestehen aus Ganzen und einem Bruch: ${M(`${mixedH(q(11, 4))} = ${fr(11, 4)}`)}, denn 2 Ganze sind 8 Viertel und 8 + 3 = 11.</p>
     <p><b>Zwischen</b> zwei Brüchen liegt immer noch ein Bruch. Erweitere so weit, bis zwischen den Zählern Platz ist: ${M(`${fr(1, 3)} = ${fr(4, 12)}`)} und ${M(`${fr(1, 2)} = ${fr(6, 12)}`)}. Dazwischen liegt ${M(fr(5, 12))}.</p>
+    <p><b>An einer Stelle stehen viele Brüche:</b> ${M(fr(1, 2))}, ${M(fr(2, 4))}, ${M(fr(3, 6))} und ${M(fr(5, 10))} sind gleichwertig. Sie stehen auf dem Zahlenstrahl an derselben Stelle. ${M(fr(4, 6))} nicht, denn ${M(`${fr(4, 6)} = ${fr(2, 3)}`)}.${lineFracSVG(4, 1, 2)}</p>
+    <p><b>Brüche im Koordinatensystem:</b> Ist jede Einheit in gleiche Teile geteilt, kannst du auch Brüche ablesen. Erst nach rechts (x), dann nach oben (y). Hier ist jede Einheit in 4 Teile geteilt. Ein Kästchen ist ${M(fr(1, 4))}. Punkt A liegt bei ${M(ptH(q(3, 4), q(5, 4)))}.${coordFracSVG(4, 2, [{ x: q(3, 4), y: q(5, 4), label: 'A' }])}</p>
     <div class="merke"><span class="merke-l">Merke</span><ol><li>Erweitern: Zähler und Nenner mit derselben Zahl mal.</li><li>Vergleichen: erst gleiche Nenner, dann die Zähler vergleichen.</li><li>Gemischte Zahl in unechten Bruch: Ganze mal Nenner, plus Zähler.</li><li>Nenner werden nie addiert.</li></ol></div>`,
   gen(level) {
     if (level === 1) return pick([readTask, () => erwTask(1), bildPick])();
-    if (level === 2) return pick([() => vglTask(2), bruchLine, () => toImproper(2), () => toMixed(2), () => erwTask(2)])();
-    return pick([ordTask, zwischenTask, mixAddTask, () => vglTask(3)])();
+    if (level === 2) return pick([() => vglTask(2), bruchLine, () => toImproper(2), () => toMixed(2), () => erwTask(2), () => coordRead(2), () => coordWhich(2), () => lineNot(2)])();
+    return pick([ordTask, zwischenTask, mixAddTask, () => vglTask(3), () => coordWhich(3), () => coordRead(3), coordPickCoords, () => lineNot(3)])();
   },
   text: level => genFrom(() => {
     if (level === 4) {
@@ -676,6 +791,84 @@ function ratMulDec(): Task | null {
   }, t => !t.answer.isZero() && t.answer.terminating());
 }
 
+/* Zahlenmengen ℕ, ℤ, ℚ */
+const SETS = ['ℕ (natürliche Zahlen)', 'ℤ (ganze Zahlen)', 'ℚ (rationale Zahlen)'];
+const setsSVG = () => `<svg class="fig" viewBox="0 0 320 180" style="max-width:380px" role="img" aria-label="Zahlenmengen ineinander: ℕ liegt in ℤ, ℤ liegt in ℚ">
+  <rect class="sh" x="4" y="4" width="312" height="172" rx="16" /><rect class="sh" x="22" y="34" width="208" height="128" rx="14" /><rect class="sh" x="40" y="64" width="110" height="84" rx="12" />
+  <text x="16" y="24" style="font-size:16px">ℚ rationale Zahlen</text><text x="34" y="54" style="font-size:16px">ℤ ganze Zahlen</text><text x="50" y="84" style="font-size:14px">ℕ natürliche</text>
+  <text x="62" y="112">1; 2; 3</text><text x="62" y="134">17; 250</text>
+  <text x="166" y="92">0</text><text x="166" y="116">−1</text><text x="166" y="140">−20</text>
+  <text x="248" y="70">1/2</text><text x="248" y="98">−0,75</text><text x="248" y="126">2,5</text><text x="248" y="154">−7/3</text>
+</svg>`;
+interface MZ { h: string; v: Q; set: 0 | 1 | 2; simple: boolean }
+function mzNum(level: number): MZ {
+  const k = R(0, level === 1 ? 2 : 4);
+  if (k === 0) { const n = R(1, 99); return { h: String(n), v: q(n), set: 0, simple: true }; }
+  if (k === 1) { const n = R(1, 60); return { h: sg(-n), v: q(-n), set: 1, simple: true }; }
+  if (k === 2) { const x = ratNum(null); return { h: x.h, v: x.v, set: 2, simple: true }; }
+  // Stufe 2: Brüche, die eigentlich ganze Zahlen sind
+  const d = R(2, 6), w = R(1, 8), neg = k === 4;
+  const v = q(neg ? -w * d : w * d, d);
+  return { h: (neg ? '−' : '') + fracH(w * d, d), v, set: neg ? 1 : 0, simple: false };
+}
+function mengeTask(level: number): Task {
+  const x = mzNum(level), r = x.v.red(), ganz = r.isInt();
+  const why = x.set === 0 ? `${M(qH(r))} ist eine positive ganze Zahl, also eine natürliche Zahl.` : x.set === 1 ? `${M(qH(r))} ist eine ganze Zahl, aber negativ. Natürliche Zahlen sind nur 1, 2, 3, …` : `${M(x.h)} ist keine ganze Zahl. Sie liegt zwischen zwei ganzen Zahlen. Das ist eine rationale Zahl.`;
+  return pickFrom(`Zu welcher <b>kleinsten</b> Zahlenmenge gehört ${M(x.h)}?`, SETS, x.set,
+    [{ rule: 'Vereinfachen', lines: [x.simple ? `${M(x.h)} lässt sich nicht einfacher schreiben.` : `${M(x.h)} = ${M(qH(r))}`] }, { rule: 'Entscheiden', lines: [why, 'Jede natürliche Zahl ist auch ganz, jede ganze Zahl ist auch rational. Gefragt ist die kleinste passende Menge.'] }],
+    [{ title: 'Ganz oder nicht?', choose: { ask: `Ist ${M(x.h)} eine ganze Zahl (ohne Bruchteil und ohne Stellen nach dem Komma)?`, options: opts(ganz ? 'Ja' : 'Nein', [ganz ? 'Nein' : 'Ja']), why: ganz ? (x.simple ? `${M(x.h)} hat keinen Bruchteil.` : `Rechne aus: ${M(`${x.h} = ${qH(r)}`)}.`) : `${M(x.h)} liegt zwischen zwei ganzen Zahlen.` },
+      ask: `<p>Schreibe ${M(x.h)} so einfach wie möglich. Kürze oder rechne aus, wenn es geht.</p>`, answer: r, hint: x.simple ? 'Manchmal ist die Zahl schon ganz einfach.' : 'Ein Bruchstrich heißt: geteilt. Rechne Zähler : Nenner.', explain: `${x.simple ? M(x.h) : M(`${x.h} = ${qH(r)}`)}. ${why}`, placeholder: 'Zahl' }],
+    { label: SETS[x.set] });
+}
+function wfMenge(level: number): Task {
+  const st = (claim: string, right: string, wrong: string[], expl: string[], g: GuideStep[], label: string) =>
+    pickTask(`Stimmt die Aussage? Wähle die richtige Antwort mit Begründung.<p><b>${claim}</b></p>`, right, wrong, [{ rule: 'Begründung', lines: expl }], g, { label });
+  const S: (() => Task)[] = [
+    () => { const m = R(2, 20);
+      return st('„Jede ganze Zahl ist auch eine rationale Zahl.“', `Wahr. Jede ganze Zahl kann man als Bruch schreiben, zum Beispiel ${M(`−${m} = −${fracH(m, 1)}`)}.`,
+        ['Falsch. Rationale Zahlen sind nur Brüche und Kommazahlen.', 'Falsch. Negative Zahlen sind nicht rational.', 'Wahr. Aber nur die positiven ganzen Zahlen.'],
+        [`ℤ liegt ganz in ℚ. Jede ganze Zahl ist ein Bruch mit dem Nenner 1: ${M(`−${m} = −${fracH(m, 1)}`)}.`],
+        [{ title: 'Als Bruch schreiben', ask: `<p>Schreibe ${M(sg(-m))} als Bruch mit dem Nenner 1. Wie heißt der Zähler?</p><div class="math big">${sg(-m)} = ${fracH('?', 1)}</div>`, answer: q(-m), hint: 'Geteilt durch 1 ändert nichts.', explain: `${M(`−${m} = −${fracH(m, 1)}`)}. Also ist ${sg(-m)} auch eine rationale Zahl.`, placeholder: 'Zähler' }], 'Wahr'); },
+    () => { const m = R(2, 30);
+      return st(`„${sg(-m)} ist eine natürliche Zahl.“`, `Falsch. Natürliche Zahlen sind 1, 2, 3, … ${sg(-m)} ist negativ. Es ist eine ganze Zahl.`,
+        [`Wahr. ${sg(-m)} hat kein Komma und keinen Bruchstrich.`, 'Wahr. Jede ganze Zahl ist natürlich.', `Falsch. ${sg(-m)} ist gar keine ganze Zahl.`],
+        [`ℕ = {1; 2; 3; …}. Negative Zahlen gehören nicht dazu. ${sg(-m)} liegt in ℤ, aber nicht in ℕ.`],
+        [{ title: 'Natürliche Zahlen', ask: '<p>Natürliche Zahlen sind die Zahlen zum Zählen. Welches ist die kleinste natürliche Zahl?</p>', answer: q(1), hint: 'Womit fängst du beim Zählen an?', explain: `ℕ = {1; 2; 3; …}. ${sg(-m)} ist kleiner als 1, also keine natürliche Zahl.`, placeholder: 'Zahl' }], 'Falsch'); },
+    () => st('„Jede natürliche Zahl ist auch eine ganze Zahl.“', 'Wahr. ℤ enthält 1, 2, 3, … und dazu die Null und die negativen ganzen Zahlen.',
+        ['Falsch. Ganze Zahlen sind nur die negativen Zahlen.', 'Falsch. ℕ und ℤ haben keine gemeinsamen Zahlen.', 'Wahr. ℕ ist größer als ℤ.'],
+        ['ℕ liegt ganz in ℤ: ℤ = {…; −2; −1; 0; 1; 2; …}.'],
+        [{ title: 'Ganze Zahlen', ask: '<p>Wie viele ganze Zahlen liegen <b>zwischen</b> −3 und 3 (ohne −3 und 3)?</p>', answer: q(5), hint: 'Schreibe sie auf: −2, …', explain: '−2, −1, 0, 1, 2. Die natürlichen Zahlen 1 und 2 sind auch dabei.', placeholder: 'Anzahl' }], 'Wahr'),
+  ];
+  if (level >= 2) S.push(
+    () => st('„Jede rationale Zahl ist auch eine ganze Zahl.“', `Falsch. ${fr(1, 2)} ist rational, liegt aber zwischen 0 und 1. Dort gibt es keine ganze Zahl.`,
+        ['Wahr. ℚ ist die größte Menge, also steckt alles in ℤ.', 'Wahr. Man kann jeden Bruch so lange kürzen, bis eine ganze Zahl herauskommt.', 'Falsch. Rationale Zahlen sind immer negativ.'],
+        [`Andersherum stimmt es: Jede ganze Zahl ist rational. Aber ${M(fr(1, 2))} = 0,5 ist nicht ganz.`],
+        [{ title: 'Beispiel', ask: `<p>Schreibe ${M(fr(1, 2))} als Kommazahl.</p>`, answer: q(1, 2), hint: '1 : 2', explain: `${M(`${fr(1, 2)} = 0,5`)}. Das ist keine ganze Zahl.`, placeholder: 'z. B. 0,5' }], 'Falsch'),
+    () => { const [n, d] = pick([[3, 4], [1, 4], [1, 2], [2, 5], [3, 5], [1, 5]] as [number, number][]), v = q(-n, d), h = dH(v);
+      return st(`„${h} ist eine rationale Zahl.“`, `Wahr. ${M(`${h} = ${qH(v)}`)}. Das ist ein Bruch, also rational.`,
+        ['Falsch. Kommazahlen sind nicht rational.', `Falsch. ${h} ist negativ, also eine ganze Zahl.`, `Wahr. ${h} ist eine ganze Zahl.`],
+        [`${M(`${h} = ${qH(v)}`)}. Jede Zahl, die man als Bruch schreiben kann, ist rational.`],
+        [{ title: 'Als Bruch', ask: `<p>Schreibe ${M(h)} als vollständig gekürzten Bruch.</p>`, answer: v, needReduced: true, hint: `${h} sind ${n * (100 / d)} Hundertstel.`, explain: `${M(`${h} = ${qH(v)}`)}`, placeholder: 'z. B. −3/4' }], 'Wahr'); },
+  );
+  return pick(S)();
+}
+/** Welche Zahl ist ganz, aber nicht natürlich? (oder rational, aber nicht ganz?) */
+function ganzNichtNat(): Task {
+  const m = R(2, 30), [n, d] = pick([[3, 4], [1, 2], [2, 3], [5, 4], [1, 5]] as [number, number][]), dd = R(2, 5), w = R(2, 6);
+  if (Math.random() < 0.5) {
+    return pickTask('Welche Zahl ist <b>ganz</b>, aber <b>nicht natürlich</b>?', M(sg(-m)), [M(String(m)), M(`−${fr(n, d)}`), M(sg(decS(-(R(11, 49) * 10 + R(1, 9)), 2)))],
+      [{ rule: 'Ganz, aber nicht natürlich', lines: [`Natürliche Zahlen sind 1, 2, 3, … Ganze Zahlen sind zusätzlich 0 und die negativen ganzen Zahlen.`, `${M(sg(-m))} ist ganz und negativ, also nicht natürlich.`] }],
+      [{ title: 'Negativ und ganz', choose: { ask: 'Welche Zahlen sind sicher nicht natürlich?', options: opts('die negativen Zahlen', ['die großen Zahlen', 'die Zahlen mit zwei Ziffern']), why: 'Natürliche Zahlen sind 1, 2, 3, … Negative Zahlen gehören nicht dazu.' },
+        ask: '<p>Welche der Zahlen ist negativ und hat weder Bruchstrich noch Komma? Gib sie ein.</p>', answer: q(-m), hint: 'Ganze Zahlen haben keinen Bruchteil.', explain: `${M(sg(-m))} ist ganz, aber nicht natürlich.`, placeholder: 'Zahl' }],
+      { label: sg(-m) });
+  }
+  const trap = fracH(w * dd, dd);
+  return pickTask('Welche Zahl ist <b>rational</b>, aber <b>nicht ganz</b>?', M(`−${fr(n, d)}`), [M(sg(-m)), M(String(m)), M(trap)],
+    [{ rule: 'Nicht ganz', lines: [`${M(`${trap} = ${w * dd} : ${dd} = ${w}`)} ist ganz.`, `${M(`−${fr(n, d)}`)} liegt zwischen zwei ganzen Zahlen. Sie ist rational, aber nicht ganz.`] }],
+    [{ title: 'Vorsicht, Falle', ask: `<p>Rechne aus: ${M(`${trap} = ?`)}</p>`, answer: q(w), hint: `${w * dd} : ${dd}`, explain: `${M(`${trap} = ${w}`)}. Das ist eine ganze Zahl. Also bleibt nur ${M(`−${fr(n, d)}`)}.`, placeholder: 'Zahl' }],
+    { label: `−${fr(n, d)}` });
+}
+
 const RAT: Topic = {
   id: 'rat', klasse: 6, title: 'Rationale Zahlen', short: 'Negative Kommazahlen und Brüche vergleichen, ordnen und damit rechnen.',
   example: '(−2,5) + 1,7',
@@ -685,10 +878,16 @@ const RAT: Topic = {
     <p><b>Betrag:</b> der Abstand zur Null. Er ist nie negativ: ${M('|−2,5| = 2,5')}.</p>
     <p><b>Vergleichen:</b> Weiter rechts auf der Zahlengeraden ist größer. Bei negativen Zahlen ist die mit dem größeren Betrag die kleinere: ${M('−2,7 &lt; −2,3')}.</p>
     <p><b>Rechnen</b> geht wie mit ganzen Zahlen: Plus heißt nach rechts, Minus heißt nach links. ${M('(−2,5) + 1,7 = −0,8')}. Bei Mal und Geteilt rechnest du erst ohne Vorzeichen, dann gilt: gleiche Vorzeichen plus, verschiedene minus. ${M(`(−${fr(2, 3)}) · ${fr(3, 4)} = −${fr(1, 2)}`)}</p>
-    <div class="merke"><span class="merke-l">Merke</span><ol><li>Negative Zahlen: je weiter weg von der Null, desto kleiner.</li><li>Der Betrag ist nie negativ.</li><li>Minus eine negative Zahl wird plus.</li><li>Mal/Geteilt: gleiche Vorzeichen plus, verschiedene minus.</li></ol></div>`,
+    <p><b>Zahlenmengen:</b> Zahlen werden in Mengen eingeteilt. Jede Menge hat ein eigenes Zeichen.</p>
+    <ul><li><b>ℕ, die natürlichen Zahlen:</b> die Zahlen zum Zählen, 1; 2; 3; 4; … (Mit der Null schreibt man ℕ₀.)</li>
+    <li><b>ℤ, die ganzen Zahlen:</b> alle natürlichen Zahlen, die Null und die negativen ganzen Zahlen: …; −2; −1; 0; 1; 2; …</li>
+    <li><b>ℚ, die rationalen Zahlen:</b> alle Zahlen, die man als Bruch schreiben kann, auch negative. Zum Beispiel ${M(fr(1, 2))}, ${M('−0,75')}, ${M('2,5')} und auch ${M(`−4 = −${fracH(4, 1)}`)}.</li></ul>
+    ${setsSVG()}
+    <p>Die Mengen stecken ineinander: Jede natürliche Zahl ist auch ganz, jede ganze Zahl ist auch rational. Andersherum nicht: ${M('−3')} ist ganz, aber nicht natürlich. ${M(`−${fr(3, 4)}`)} ist rational, aber nicht ganz. Vorsicht: ${M(fr(8, 4))} sieht aus wie ein Bruch, ist aber 2, also eine natürliche Zahl.</p>
+    <div class="merke"><span class="merke-l">Merke</span><ol><li>ℕ liegt in ℤ, ℤ liegt in ℚ.</li><li>Negative Zahlen: je weiter weg von der Null, desto kleiner.</li><li>Der Betrag ist nie negativ.</li><li>Minus eine negative Zahl wird plus.</li><li>Mal/Geteilt: gleiche Vorzeichen plus, verschiedene minus.</li></ol></div>`,
   gen(level) {
-    if (level === 1) return pick([betragTask, ratVgl])();
-    if (level === 2) return pick([ratLine, ratOrd, ratAdd, ratAdd])();
+    if (level === 1) return pick([betragTask, ratVgl, () => mengeTask(1), () => wfMenge(1)])();
+    if (level === 2) return pick([ratLine, ratOrd, ratAdd, ratAdd, () => mengeTask(2), () => wfMenge(2), ganzNichtNat])();
     return pick([ratFrac, ratFrac, ratMulDec])();
   },
   text: level => genFrom(() => {
