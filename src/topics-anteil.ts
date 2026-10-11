@@ -22,6 +22,7 @@ const diagOf = (ans: Q, cases: [Q | null, string][]) => (v: Q): string | null =>
   return null;
 };
 const echt = (n: number, d: number) => n < d;
+const tl = (k: number) => `${k} ${k === 1 ? 'Teil' : 'Teile'}`;
 
 function task(prompt: string, answer: Q, resH: string, steps: ListSolution['steps'], guide: GuideStep[], o: Partial<Task> = {}): Task {
   return { prompt, answer, sol: list(steps, answer, resH), guide, placeholder: 'Deine Lösung', ...o };
@@ -409,8 +410,8 @@ function verhTeil(): Task | null {
 }
 
 const SHARE: { s: (x: number, y: number, T: number) => string; n1: string; n2: string; u: string; base: number[] }[] = [
-  { s: (x, y, T) => `Anna und Ben teilen sich ${T} Murmeln im Verhältnis ${x} : ${y}. Anna bekommt ${x} Teile, Ben ${y} Teile.`, n1: 'Anna', n2: 'Ben', u: 'Murmeln', base: [2, 3, 4, 5, 6] },
-  { s: (x, y, T) => `Mia und Tom haben zusammen ${T} € gewonnen. Sie teilen das Geld im Verhältnis ${x} : ${y}. Mia bekommt ${x} Teile, Tom ${y} Teile.`, n1: 'Mia', n2: 'Tom', u: '€', base: [3, 4, 5, 6, 8, 10] },
+  { s: (x, y, T) => `Anna und Ben teilen sich ${T} Murmeln im Verhältnis ${x} : ${y}. Anna bekommt ${tl(x)}, Ben ${tl(y)}.`, n1: 'Anna', n2: 'Ben', u: 'Murmeln', base: [2, 3, 4, 5, 6] },
+  { s: (x, y, T) => `Mia und Tom haben zusammen ${T} € gewonnen. Sie teilen das Geld im Verhältnis ${x} : ${y}. Mia bekommt ${tl(x)}, Tom ${tl(y)}.`, n1: 'Mia', n2: 'Tom', u: '€', base: [3, 4, 5, 6, 8, 10] },
   { s: (x, y, T) => `${T} ml Holundersaft bestehen aus Sirup und Wasser im Verhältnis ${x} : ${y}.`, n1: 'Sirup', n2: 'Wasser', u: 'ml', base: [20, 25, 30, 40, 50] },
 ];
 function verhGesamt(): Task | null {
@@ -470,8 +471,37 @@ function verhVsAnteil(): Task | null {
 type WT = ReturnType<typeof wordTask>;
 const asFrac = (t: WT): Task => ({ ...t, form: 'frac' as const, placeholder: 'z. B. 3/4' });
 
+const KIDS: [string, 'er' | 'sie'][] = [['Mia', 'sie'], ['Ben', 'er'], ['Lena', 'sie'], ['Tim', 'er'], ['Emre', 'er'], ['Sofia', 'sie'], ['Noah', 'er'], ['Lea', 'sie'], ['Jonas', 'er'], ['Aylin', 'sie']];
+const kid = () => { const [n, p] = pick(KIDS); return { n, p, gen: /[sxz]$/.test(n) ? `${n}’` : `${n}s` }; };
+
 function text4(): Task | null {
-  const k = R(0, 5);
+  const k = R(0, 7);
+  if (k === 6) {
+    const K = kid(), [n, d] = properFrac([3, 4, 5, 6, 10, 12]), t = R(3, 6), m = (60 / d) * n;
+    if (n === 1 && Math.random() < 0.5) return null;
+    return wordTask({
+      prompt: `${K.n} macht jeden Tag ${M(fr(n, d))} Stunde Hausaufgaben. Wie viele Minuten sind das an ${t} Tagen?`,
+      steps: [
+        { title: 'Ein Tag', ask: `Wie viele Minuten sind ${M(fr(n, d))} Stunde? (1 h = 60 min)`, calc: `60 : ${d} · ${n}`, wrong: [`60 : ${n} · ${d}`, `${n} · ${d}`], why: 'Erst in Minuten umrechnen: durch den Nenner teilen, mit dem Zähler mal.', unit: 'min' },
+        { title: `${t} Tage`, ask: `Wie viele Minuten sind es an ${t} Tagen?`, calc: `${m} · ${t}`, wrong: [`${m} + ${t}`], why: 'Jeden Tag gleich lang: mal die Anzahl der Tage.', unit: 'min' },
+      ],
+      unit: 'min', term: `60 : ${d} · ${n} · ${t}`, sentence: v => `An ${t} Tagen sind es ${v}.`,
+    });
+  }
+  if (k === 7) {
+    const [A, B] = shuffle(KIDS.map(x => x[0])).slice(0, 2), [x, y] = coprime(1, 5), kk = pick([2, 3, 4, 5, 6, 8, 10]);
+    if (x >= y) return null;
+    const T = (x + y) * kk;
+    return wordTask({
+      prompt: `${A} und ${B} haben beim Flohmarkt zusammen ${T} € eingenommen. Sie teilen das Geld im Verhältnis ${x} : ${y}. ${A} bekommt ${tl(x)}, ${B} ${tl(y)}. Wie viel Euro bekommt ${B} mehr als ${A}?`,
+      steps: [
+        { title: 'Teile', ask: 'Wie viele Teile sind es zusammen?', calc: `${x} + ${y}`, wrong: [`${x} · ${y}`, `${y} − ${x}`], why: 'Alle Teile zusammen ergeben das Ganze.', unit: 'Teile' },
+        { title: 'Ein Teil', ask: 'Wie viel Euro ist ein Teil?', calc: `${T} : ${x + y}`, wrong: [`${T} : ${y}`, `${T} · ${x + y}`], why: 'Das ganze Geld auf alle Teile verteilen.', unit: '€' },
+        { title: 'Mehr', ask: `${B} hat ${y - x} ${y - x === 1 ? 'Teil' : 'Teile'} mehr als ${A}. Wie viel Euro sind das?`, calc: `${kk} · ${y - x}`, wrong: [`${kk} · ${y}`, `${kk} + ${y - x}`], why: `Der Unterschied sind ${y} − ${x} = ${y - x} Teile.`, unit: '€' },
+      ],
+      unit: '€', sentence: v => `${B} bekommt ${v} mehr als ${A}.`,
+    });
+  }
   if (k === 0) {
     const C = pick([
       { s: (f: string, G: number) => `Lena hat ${G} € gespart. Sie gibt ${f} davon für ein Spiel aus. Wie viel kostet das Spiel?`, u: '€', Gs: rng(12, 60), sent: (v: string) => `Das Spiel kostet ${v}.` },
@@ -564,7 +594,39 @@ function text4(): Task | null {
 }
 
 function text5(): Task | null {
-  const k = R(0, 5);
+  const k = R(0, 7);
+  if (k === 6) {
+    // Zwei Anteile vom selben Ganzen
+    const K = kid(), [n1, d1] = properFrac([3, 4, 5, 6]), [n2, d2] = properFrac([4, 5, 6, 8, 10]), G = pick([20, 24, 30, 36, 40, 48, 60]);
+    if (d1 === d2 || G % d1 || G % d2) return null;
+    const a1 = (G / d1) * n1, a2 = (G / d2) * n2, rest = G - a1 - a2;
+    if (rest <= 0) return null;
+    return wordTask({
+      prompt: `${K.n} bekommt ${G} € Taschengeld im Monat. ${M(fr(n1, d1))} davon spart ${K.p}. ${M(fr(n2, d2))} des <b>ganzen</b> Taschengelds gibt ${K.p} für Süßigkeiten aus. Wie viel Geld bleibt für anderes übrig?`,
+      steps: [
+        { title: 'Sparen', ask: `Wie viel sind ${M(fr(n1, d1))} von ${G} €?`, calc: `${G} : ${d1} · ${n1}`, wrong: [`${G} : ${n1} · ${d1}`], why: 'Durch den Nenner teilen, mit dem Zähler mal.', unit: '€' },
+        { title: 'Süßigkeiten', ask: `Wie viel sind ${M(fr(n2, d2))} von ${G} €?`, calc: `${G} : ${d2} · ${n2}`, wrong: [`${G - a1} : ${d2} · ${n2}`, `${G} : ${n2} · ${d2}`], why: `Hier ist das ganze Taschengeld von ${G} € gemeint, nicht der Rest.`, unit: '€' },
+        { title: 'Zusammen weg', ask: 'Wie viel Geld ist damit verplant?', calc: `${a1} + ${a2}`, unit: '€' },
+        { title: 'Übrig', ask: 'Wie viel bleibt übrig?', calc: `${G} − ${a1 + a2}`, wrong: [`${G} + ${a1 + a2}`], why: 'Alles minus das Verplante.', unit: '€' },
+      ],
+      unit: '€', sentence: v => `Für anderes bleiben ${v} übrig.`,
+    });
+  }
+  if (k === 7) {
+    // Drei Zutaten im Verhältnis
+    const [b, z, m] = pick([[1, 1, 2], [1, 2, 3], [2, 3, 5], [2, 1, 3], [1, 1, 3]] as [number, number, number][]), T = pick([300, 400, 500, 600, 800, 900, 1000, 1200]), S = b + z + m;
+    if (T % S) return null;
+    const one = T / S, K = kid();
+    return wordTask({
+      prompt: `${K.n} mischt für Streusel Butter, Zucker und Mehl im Verhältnis ${b} : ${z} : ${m}. Zusammen sollen es ${T} g sein. Wie viel Gramm Mehl braucht ${K.p}?`,
+      steps: [
+        { title: 'Teile', ask: 'Wie viele Teile sind es zusammen?', calc: `${b} + ${z} + ${m}`, wrong: [`${b} · ${z} · ${m}`], why: 'Butter-, Zucker- und Mehl-Teile zusammen.', unit: 'Teile' },
+        { title: 'Ein Teil', ask: 'Wie viel Gramm ist ein Teil?', calc: `${T} : ${S}`, wrong: [`${T} : ${m}`], why: 'Die ganze Menge auf alle Teile verteilen.', unit: 'g' },
+        { title: 'Mehl', ask: `Mehl hat ${m} Teile. Wie viel Gramm sind das?`, calc: `${one} · ${m}`, wrong: [`${one} + ${m}`, `${one} · ${b}`], why: `Ein Teil mal ${m}.`, unit: 'g' },
+      ],
+      unit: 'g', sentence: v => `${K.n} braucht ${v} Mehl.`,
+    });
+  }
   if (k === 0) {
     // Anteil vom Rest
     const [n1, d1] = properFrac([2, 3, 4, 5]), [n2, d2] = properFrac([2, 3, 4, 5]), base = d1 * d2, G = base * pick([2, 3, 4, 5]);
