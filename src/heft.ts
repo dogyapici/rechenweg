@@ -461,6 +461,8 @@ export function heftPrim(n: number): Heft {
 }
 
 /* ---------- Textaufgaben: Rechnung und Antwortsatz ---------- */
+/** Geldbeträge mit zwei Nachkommastellen: 43,4 € wird 43,40 €. */
+export const euro = (vH: string, unit?: string) => (unit === '€' ? vH.replace(/,(\d)$/, ',$10') : vH);
 export function heftWord(steps: { title: string; calc: string; unit?: string }[], sentence: string): Heft | null {
   const hb = new HeftBuilder('Textaufgabe');
   hb.snap('Lies die Aufgabe zweimal. Unterstreiche im Text, was gegeben ist und was gesucht ist. Dann schreibst du ins Heft:');
@@ -468,7 +470,7 @@ export function heftWord(steps: { title: string; calc: string; unit?: string }[]
     let sol;
     try { sol = evalExpr(s.calc); } catch { return null; }
     const dec = /,/.test(s.calc) || !/\//.test(s.calc);
-    const vH = qH(sol.result, dec && sol.result.terminating());
+    const vH = euro(qH(sol.result, dec && sol.result.terminating()), s.unit);
     const u = s.unit ? ' ' + s.unit : '';
     hb.text(/[+\-−·:/]/.test(s.calc.replace(/^-/, '')) ? `<span class="math">${sol.inputHTML} = ${vH}${u}</span>` : `${s.title}: <span class="math">${vH}${u}</span>`, s.title);
     const side = sideCalc(s.calc);
