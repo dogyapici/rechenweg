@@ -83,7 +83,10 @@ const BW_GYM: Curriculum = {
   band: { zahl: '5/6', rund: '5/6', pot: '5/6', koord: '5/6', winkel: '5/6', sym: '5/6', koerper: '5/6', daten: '5/6', prop: '5/6', mass: '5/6', pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8' },
   grade: { zahl: 5, rund: 5, pot: 5, koord: 5, winkel: 5, sym: 5, koerper: 5, daten: 6, prop: 6, mass: 6, pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7 },
   missing: {
-    '5/6': [],
+    '5/6': ['Bruch, Dezimalzahl und Prozent umwandeln (auch periodisch)', 'Brüche vergleichen, ordnen, erweitern, Zahlengerade, gemischte Zahlen',
+      'Negative Brüche und Dezimalzahlen, Betrag', 'Kreis und Trapez', 'Rechengesetze, Rechenvorteile, Terme aufstellen und gliedern',
+      'Schriftlich multiplizieren und dividieren', 'Flächen- und Volumeneinheiten', 'Primfaktorzerlegung und Teilbarkeitsregeln',
+      'Relative Häufigkeiten, Diagramme erstellen und beurteilen', 'Zahlenrätsel, Rückwärtsrechnen, Zahlenfolgen, Wertetabellen'],
     '7/8': ['Zinsrechnung', 'Terme mit Variablen und Klammern', 'Binomische Formeln', 'Wurzeln und reelle Zahlen', 'Lineare Gleichungssysteme',
       'Quadratische Gleichungen', 'Lineare und quadratische Funktionen'],
   },

@@ -8,6 +8,7 @@ import { B, M, R, exprTask, genFrom, list, pick, type Task, type Topic } from '.
 export const gz = (n: number | bigint) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '&#8239;');
 const dH = (v: Q) => qH(v, true);
 const eur = (v: Q) => (v.isInt() ? dH(v) : (Number(v.n) / Number(v.d)).toFixed(2).replace('.', ','));
+const dec1 = (n: number) => String(n).replace('.', ',');
 const opts = (right: string, wrong: string[]) => [{ html: right, ok: true }, ...wrong.filter(w => w !== right).map(w => ({ html: w, ok: false }))];
 function task(prompt: string, answer: Q, steps: ListSolution['steps'], guide: GuideStep[], o: Partial<Task> = {}): Task {
   return { prompt, answer, sol: list(steps, answer, o.placeholder?.startsWith('Antwort in ') ? `${dH(answer)} ${o.placeholder.slice(11)}` : dH(answer)), guide, placeholder: 'Deine Lösung', ...o };
@@ -256,27 +257,32 @@ function dreisatz(c: Ctx, story: string): Task {
       { rule: 'Dreisatz', lines: [`${c.a} ${c.xu} → ${dH(c.ya)} ${c.yu}`, `1 ${c.xu} → ${dH(one)} ${c.yu} (${c.anti ? `mal ${c.a}` : `geteilt durch ${c.a}`})`, `${c.b} ${c.xu} → ${dH(yb)} ${c.yu} (${c.anti ? `geteilt durch ${c.b}` : `mal ${c.b}`})`] }], yb, `${dH(yb)} ${c.yu}`),
     diag: v => { const wrong = c.anti ? c.ya.div(q(c.a)).mul(q(c.b)) : c.ya.mul(q(c.a)).div(q(c.b)); return v.eq(wrong) ? (c.anti ? 'Das wäre richtig, wenn es proportional wäre. Hier gilt aber: je mehr, desto <b>weniger</b>.' : 'Das wäre richtig, wenn es antiproportional wäre. Hier gilt: je mehr, desto <b>mehr</b>.') : null; } };
 }
-const PROP_STORIES = [
-  { x: 'Hefte', xu: 'Hefte', y: 'Preis', yu: '€', s: (a: number, b: number, y: string) => `${a} Hefte kosten ${y} €. Wie viel kosten ${b} Hefte?` },
-  { x: 'Brötchen', xu: 'Brötchen', y: 'Preis', yu: '€', s: (a: number, b: number, y: string) => `${a} Brötchen kosten ${y} €. Wie viel kosten ${b} Brötchen?` },
-  { x: 'Minuten', xu: 'min', y: 'Strecke', yu: 'km', s: (a: number, b: number, y: string) => `Ein Radfahrer fährt gleichmäßig. In ${a} Minuten schafft er ${y} km. Wie weit kommt er in ${b} Minuten?` },
+// Jede Geschichte hat realistische Werte für eine Einheit (one) und sagt, ob nur ganze Zahlen Sinn ergeben.
+interface Story { x: string; xu: string; y: string; yu: string; one: (level: number) => Q; int?: boolean; s: (a: number, b: number, y: string) => string }
+const cents = (lo: number, hi: number, step: number) => q(R(lo / step, hi / step) * step, 100);
+const PROP_STORIES: Story[] = [
+  { x: 'Hefte', xu: 'Hefte', y: 'Preis', yu: '€', one: l => l === 1 ? q(R(1, 3)) : cents(40, 250, 5), s: (a, b, y) => `${a} Hefte kosten ${y} €. Wie viel kosten ${b} Hefte?` },
+  { x: 'Brötchen', xu: 'Brötchen', y: 'Preis', yu: '€', one: () => cents(30, 90, 5), s: (a, b, y) => `${a} Brötchen kosten ${y} €. Wie viel kosten ${b} Brötchen?` },
+  { x: 'Eintrittskarten', xu: 'Karten', y: 'Preis', yu: '€', one: l => l === 1 ? q(R(4, 12)) : cents(450, 1250, 50), s: (a, b, y) => `${a} Eintrittskarten fürs Kino kosten ${y} €. Wie viel kosten ${b} Karten?` },
+  { x: 'Stunden', xu: 'h', y: 'Strecke', yu: 'km', one: l => l === 1 ? q(R(12, 20)) : q(R(24, 40), 2), s: (a, b, y) => `Eine Radfahrerin fährt gleichmäßig. In ${a} Stunden schafft sie ${y} km. Wie weit kommt sie in ${b} Stunden?` },
+  { x: 'Kilogramm', xu: 'kg', y: 'Preis', yu: '€', one: l => l === 1 ? q(R(2, 4)) : cents(150, 450, 10), s: (a, b, y) => `${a} kg Äpfel kosten ${y} €. Wie viel kosten ${b} kg?` },
 ];
-const ANTI_STORIES = [
-  { x: 'Pumpen', xu: 'Pumpen', y: 'Stunden', yu: 'h', s: (a: number, b: number, y: string) => `${a} gleiche Pumpen leeren ein Becken in ${y} Stunden. Wie lange brauchen ${b} Pumpen?` },
-  { x: 'Kinder', xu: 'Kinder', y: 'Gummibärchen pro Kind', yu: 'Stück', s: (a: number, b: number, y: string) => `Eine Tüte Gummibärchen reicht für ${a} Kinder, wenn jedes ${y} Stück bekommt. Wie viele bekommt jedes, wenn ${b} Kinder teilen?` },
-  { x: 'Maler', xu: 'Maler', y: 'Tage', yu: 'Tage', s: (a: number, b: number, y: string) => `${a} Maler streichen ein Haus in ${y} Tagen. Wie lange brauchen ${b} Maler?` },
+const ANTI_STORIES: Story[] = [
+  { x: 'Pumpen', xu: 'Pumpe', y: 'Stunden', yu: 'h', one: () => q(R(6, 24) * 2), s: (a, b, y) => `${a} gleiche Pumpen leeren ein Becken in ${y} Stunden. Wie lange brauchen ${b} Pumpen?` },
+  { x: 'Kinder', xu: 'Kind', y: 'Gummibärchen pro Kind', yu: 'Stück', int: true, one: () => q(R(6, 20) * 12), s: (a, b, y) => `Eine Tüte Gummibärchen reicht für ${a} Kinder, wenn jedes ${y} Stück bekommt. Wie viele bekommt jedes, wenn ${b} Kinder teilen?` },
+  { x: 'Maler', xu: 'Maler', y: 'Tage', yu: 'Tage', int: true, one: () => q(R(4, 15) * 12), s: (a, b, y) => `${a} Maler streichen ein Haus in ${y} Tagen. Wie lange brauchen ${b} Maler?` },
 ];
 function propGen(level: number): Task | null {
+  let st: Story = PROP_STORIES[0];
   return genFrom(() => {
     const anti = level === 3 && Math.random() < 0.6;
-    const st = pick(anti ? ANTI_STORIES : PROP_STORIES);
-    const a = R(2, 8), b = R(2, 12);
+    st = pick(anti ? ANTI_STORIES : PROP_STORIES);
+    const a = R(2, anti ? 6 : 8), b = R(2, anti ? 8 : 12);
     if (a === b) return null;
-    const one = level === 1 ? q(R(1, 9)) : anti ? q(R(2, 12)) : q(R(5, 60), pick([1, 2, 4, 10]));
+    const one = st.one(level);
     const ya = anti ? one.div(q(a)) : one.mul(q(a));
-    const t = dreisatz({ a, b, ya, anti, x: st.x, y: st.y, xu: st.xu, yu: st.yu }, st.s(a, b, st.yu === '€' ? eur(ya) : dH(ya)));
-    return t;
-  }, t => t.answer.sign() > 0 && t.answer.terminating() && t.guide!.every(s => s.answer.terminating() && (s.answer.mul(q(100)).isInt())) && (level > 1 || t.guide!.every(s => s.answer.isInt())));
+    return dreisatz({ a, b, ya, anti, x: st.x, y: st.y, xu: st.xu, yu: st.yu }, st.s(a, b, st.yu === '€' ? eur(ya) : dH(ya)));
+  }, t => t.answer.sign() > 0 && t.answer.terminating() && t.guide!.every(s => s.answer.terminating() && (s.answer.mul(q(100)).isInt())) && (!st.int || t.guide!.every(s => s.answer.isInt())) && (level > 1 || t.guide!.every(s => s.answer.isInt())));
 }
 const PROP: Topic = {
   id: 'prop', klasse: 6, title: 'Proportional und antiproportional', short: 'Dreisatz: je mehr, desto mehr oder je mehr, desto weniger.',
@@ -395,7 +401,7 @@ const MASS: Topic = {
       steps: [
         { title: 'Länge in Wirklichkeit', ask: `Wie lang ist das Zimmer in Wirklichkeit? Rechne erst in cm, dann in m.`, calc: `${a} · 50 : 100`, wrong: [`${a} : 50`], why: 'Plan → Wirklichkeit: mal 50. Dann durch 100 für Meter.', unit: 'm' },
         { title: 'Breite in Wirklichkeit', ask: 'Wie breit ist das Zimmer in Wirklichkeit?', calc: `${b} · 50 : 100`, unit: 'm' },
-        { title: 'Fläche', ask: 'Wie groß ist die Fläche?', calc: `${(a * 50) / 100} · ${(b * 50) / 100}`, wrong: [`2 · ${(a * 50) / 100} + 2 · ${(b * 50) / 100}`], why: 'Fläche vom Rechteck: Länge mal Breite.', unit: 'm²' },
+        { title: 'Fläche', ask: 'Wie groß ist die Fläche?', calc: `${dec1((a * 50) / 100)} · ${dec1((b * 50) / 100)}`, wrong: [`2 · ${dec1((a * 50) / 100)} + 2 · ${dec1((b * 50) / 100)}`], why: 'Fläche vom Rechteck: Länge mal Breite.', unit: 'm²' },
       ],
       unit: 'm²', sentence: v => `Das Zimmer hat ${v} Fläche.`,
     });
