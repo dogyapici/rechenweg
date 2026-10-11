@@ -948,7 +948,7 @@ const BOYS = ['Ben', 'Tim', 'Emre', 'Noah', 'Jonas', 'Paul', 'Luca', 'Elias'];
 interface Kid { n: string; er: string; Er: string; sein: string }
 const kidOf = (n: string): Kid => (GIRLS.includes(n) ? { n, er: 'sie', Er: 'Sie', sein: 'ihr' } : { n, er: 'er', Er: 'Er', sein: 'sein' });
 /** Ein Kind oder mehrere verschiedene Kinder mit passendem Pronomen. */
-const kid = (): Kid => kidOf(pick([...GIRLS, ...BOYS]));
+const kidB = (): Kid => kidOf(pick([...GIRLS, ...BOYS]));
 const kids = (k: number): Kid[] => {
   const all = [...GIRLS, ...BOYS], out: Kid[] = [];
   while (out.length < k) { const n = pick(all); if (!out.some(o => o.n === n)) out.push(kidOf(n)); }
@@ -981,7 +981,7 @@ function glThree(o: { prompt: string; eq: string; wrong: string[]; ask: string; 
 
 function glWord(level: number): Word | null {
   if (level === 4) {
-    const k = R(0, 5), p = kid();
+    const k = R(0, 5), p = kidB();
     if (k === 0) {
       const x = R(2, 12), a = R(2, 9), b = R(1, 20), c = a * x + b;
       return wordTask({
@@ -1112,7 +1112,7 @@ const one = (title: string, ask: string, a: number, b: number, hint: string): Te
   ({ title, ask: `${ask}<div class="math big">${a} : ${b} = ?</div>`, answer: a / b, hint, explain: `${a} : ${b} = ${a / b}` });
 
 function teilStory(): TeilStory | null {
-  const k = R(0, 10), p = kid();
+  const k = R(0, 10), p = kidB();
   const ggtGoal = (what: string, most: string) => `${what} „${most}“ heißt: der <b>größte</b> gemeinsame Teiler.`;
   const kgvGoal = (what: string) => `${what} Gesucht ist das <b>kleinste gemeinsame Vielfache</b>.`;
   if (k === 0) {
@@ -1267,7 +1267,7 @@ function teilWord(level: number): Word | null {
 /* Größen */
 const kom = (x: number) => String(x).replace('.', ',');
 function groeWord(level: number): Word | null {
-  const p = kid();
+  const p = kidB();
   if (level === 4) {
     const k = R(0, 5);
     if (k === 0) {
@@ -1420,7 +1420,7 @@ function groeWord(level: number): Word | null {
 
 /* Flächen und Umfang */
 function flaeWord(level: number): Word | null {
-  const p = kid();
+  const p = kidB();
   if (level === 4) {
     const k = R(0, 4);
     if (k === 0) {
@@ -1559,7 +1559,7 @@ function flaeWord(level: number): Word | null {
 
 /* Negative Zahlen */
 function negWord(level: number): Word | null {
-  const p = kid();
+  const p = kidB();
   if (level === 4) {
     const k = R(0, 4);
     if (k === 0) {
