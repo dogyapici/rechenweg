@@ -1,4 +1,5 @@
 /* ===== Klasse 5/6: Teilbarkeit und Primfaktoren, Häufigkeiten und Diagramme, Zahlenrätsel und Folgen ===== */
+import { heftPrim } from './heft.js';
 import type { GuideChoice, GuideStep, WordStep } from './guide.js';
 import { wordTask } from './guide.js';
 import { q, qH, type Q, type ListSolution } from './engine/index.js';
@@ -181,7 +182,7 @@ function zerlegPick(): Task | null {
 function countTask(): Task | null {
   const f = randFactors(); if (!f) return null;
   const n = prod(f), u = uniq(f).length;
-  return { prompt: `Zerlege ${M(String(n))} in Primfaktoren. Aus wie vielen Primfaktoren besteht die Zerlegung? Gleiche Faktoren zählen mehrfach.`, answer: q(f.length), placeholder: 'Anzahl',
+  return { heft: heftPrim(n), prompt: `Zerlege ${M(String(n))} in Primfaktoren. Aus wie vielen Primfaktoren besteht die Zerlegung? Gleiche Faktoren zählen mehrfach.`, answer: q(f.length), placeholder: 'Anzahl',
     sol: list([...ladderSteps(n), { rule: 'Zählen', lines: [`${mulH(f)}: Das sind ${f.length} Primfaktoren.`] }], q(f.length)),
     guide: [...ladderGuide(n), { title: 'Zählen', ask: '<p>Die Primfaktoren sind alle Zahlen, durch die du geteilt hast, und die letzte Primzahl. Wie viele sind es?</p>', answer: q(f.length), explain: `${n} = ${mulH(f)}: ${f.length} Primfaktoren`, hint: 'Gleiche Zahlen zählen mehrfach.' }],
     diag: v => (u !== f.length && v.eq(q(u)) ? `Du hast gleiche Faktoren nur einmal gezählt. ${n} = ${mulH(f)}.` : null) };
@@ -193,7 +194,7 @@ function powTask(): Task | null {
   const p = pick(rep), k = f.filter(x => x === p).length;
   if (Math.random() < 0.5) {
     const shown = uniq(f).map(b => { const e = f.filter(x => x === b).length; return b === p ? `${b}<sup>□</sup>` : e > 1 ? `${b}<sup>${e}</sup>` : String(b); }).join(' · ');
-    return { prompt: `Ergänze die Potenzschreibweise: ${M(`${n} = ${shown}`)}`, answer: q(k), placeholder: 'Hochzahl',
+    return { heft: heftPrim(n), prompt: `Ergänze die Potenzschreibweise: ${M(`${n} = ${shown}`)}`, answer: q(k), placeholder: 'Hochzahl',
       sol: list(ladderSteps(n), q(k), `${n} = ${powH(f)}`),
       guide: [...ladderGuide(n), { title: 'Hochzahl', ask: `<p>Schreibe alle Primfaktoren auf: ${M(mulH(f))}. Wie oft kommt die ${B(String(p))} vor?</p>`, answer: q(k), explain: `${p} kommt ${k}-mal vor: ${M(`${p}<sup>${k}</sup>`)}`, hint: 'Die Hochzahl sagt, wie oft der Faktor vorkommt.' }],
       diag: v => (v.eq(q(p)) ? `Gefragt ist die Hochzahl: Wie oft kommt die ${p} vor?` : null) };

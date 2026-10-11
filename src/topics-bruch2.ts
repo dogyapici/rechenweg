@@ -1,4 +1,5 @@
 /* ===== Klasse 6: Brüche vergleichen, Bruch/Dezimalzahl/Prozent, rationale Zahlen ===== */
+import { heftDiv } from './heft.js';
 import type { GuideStep } from './guide.js';
 import { autoGuide, wordTask } from './guide.js';
 import { Q, q, qH, fracH, mixedH, sg, lcm, evalExpr, type ListSolution } from './engine/index.js';
@@ -533,6 +534,7 @@ function bruchProz(): Task {
      { title: 'Kürzen', ask: `<p>Kürze ${M(fr(p, 100))} durch ${g}.</p>`, answer: v, needReduced: true, hint: `${p} : ${g} und 100 : ${g}`, explain: M(`${fr(p, 100)} = ${fr(n, d)}`), placeholder: 'z. B. 2/5' }],
     { form: 'frac', needReduced: true, placeholder: 'z. B. 2/5' });
 }
+const withHeft = (h: Task['heft'], t: Task): Task => ({ ...t, heft: h });
 function periodPick(): Task {
   for (;;) {
     const [n, d] = pick(PER_FR), L = longDiv(n, d), right = perH(n, d);
@@ -550,8 +552,8 @@ function periodPick(): Task {
       g.push({ title: `${i + 1}. Stelle nach dem Komma`, ask: `<p>Rechne ${n} : ${d} schriftlich. Jetzt teilst du ${10 * r} durch ${d}. Welche Ziffer schreibst du?</p>`, answer: q(dg), hint: `Wie oft passt ${d} in ${10 * r}?`, explain: `${10 * r} : ${d} = ${dg} Rest ${nr}${i === show - 1 ? '. Dieser Rest war schon einmal da. Ab jetzt wiederholt sich alles!' : ''}`, placeholder: 'Ziffer' });
       r = nr;
     }
-    return pickTask(`Welche Dezimalzahl ist ${M(fr(n, d))}? Der Strich über Ziffern heißt: Diese Ziffern wiederholen sich immer weiter.`, M(right), wrong.slice(0, 3).map(M),
-      [{ rule: 'Schriftlich teilen', lines: [`${n} : ${d} = ${L.int},${L.digits.join('')}${L.digits.slice(L.pre).join('')}…`, 'Ein Rest kommt zum zweiten Mal vor. Ab da wiederholen sich die Ziffern.'] }, { rule: 'Periode', lines: [M(`${fr(n, d)} = ${right}`)] }], g, { label: right });
+    return withHeft(heftDiv(String(n), String(d)), pickTask(`Welche Dezimalzahl ist ${M(fr(n, d))}? Der Strich über Ziffern heißt: Diese Ziffern wiederholen sich immer weiter.`, M(right), wrong.slice(0, 3).map(M),
+      [{ rule: 'Schriftlich teilen', lines: [`${n} : ${d} = ${L.int},${L.digits.join('')}${L.digits.slice(L.pre).join('')}…`, 'Ein Rest kommt zum zweiten Mal vor. Ab da wiederholen sich die Ziffern.'] }, { rule: 'Periode', lines: [M(`${fr(n, d)} = ${right}`)] }], g, { label: right }));
   }
 }
 function abbrPick(): Task {
@@ -603,7 +605,7 @@ function divDec(): Task {
   const lines = L.digits.map(dg => { const s = `${10 * rr} : ${d} = ${dg} Rest ${(10 * rr) % d}`; rr = (10 * rr) % d; return s; });
   return task(`Schreibe ${M(fr(n, d))} als Dezimalzahl. Rechne ${M(`${n} : ${d}`)} schriftlich.`, v, dH(v),
     [{ rule: 'Schriftlich teilen', lines: [`${n} : ${d} = 0, … (${d} passt 0-mal in ${n})`, ...lines] }, { rule: 'Ergebnis', lines: [M(`${fr(n, d)} = ${dH(v)}`)] }], g,
-    { form: 'dec', placeholder: 'z. B. 0,375' });
+    { form: 'dec', placeholder: 'z. B. 0,375', heft: heftDiv(String(n), String(d)) });
 }
 
 const UMW: Topic = {

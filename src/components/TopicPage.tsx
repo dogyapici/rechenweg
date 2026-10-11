@@ -9,6 +9,8 @@ import { makeTask } from '../stages';
 import { AiExplain } from './AiExplain';
 import { Html } from './Html';
 import { Practice } from './Practice';
+import { HeftView } from './HeftView';
+import { heftFor, type Heft } from '../heft';
 
 type Tab = 'theorie' | 'beispiel' | 'ueben';
 const STEPS = [['theorie', 'Verstehen'], ['beispiel', 'Beispiel'], ['ueben', 'Üben']] as const;
@@ -41,6 +43,7 @@ export function TopicPage({ id, stats, onStats, onBack, backLabel = 'Zurück zur
   const [examples, setExamples] = useState<Example[]>(() => [0, 1, 2].map(i => makeExample(t, i)));
   const example = examples[exI];
   const exHTML = useMemo(() => solHTML(example.sol), [example]);
+  const exHeft = useMemo<Heft | null>(() => { const e = example as Example & { heft?: Heft | null; plain?: string; word?: boolean }; return e.heft !== undefined ? e.heft : heftFor(e); }, [example]);
   const renew = () => setExamples(examples.map((e, i) => (i === exI ? makeExample(t, i, true) : e)));
   const show = (k: Tab) => { setTab(k); window.scrollTo({ top: 0 }); };
 
@@ -89,6 +92,12 @@ export function TopicPage({ id, stats, onStats, onBack, backLabel = 'Zurück zur
             <Html as="p" className={`prompt${exI === 2 ? ' story' : ''}`} html={example.prompt} />
             <StepReveal html={exHTML} start={0} />
           </section>
+          {exHeft && (
+            <section className="card panel">
+              <h2 className="h2">So schreibst du es ins Heft</h2>
+              <HeftView heft={exHeft} />
+            </section>
+          )}
           <div className="cta">
             {exI < 2
               ? <button className="btn big" onClick={() => { setExI(exI + 1); window.scrollTo({ top: 0 }); }}>Nächstes Beispiel 👉</button>

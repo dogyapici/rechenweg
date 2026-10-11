@@ -1,4 +1,5 @@
 /* ===== Klasse 5/6: große Zahlen, Runden, Potenzen, Zuordnungen, Maßstab, Daten ===== */
+import { heftDreisatz } from './heft.js';
 import type { GuideChoice, GuideStep } from './guide.js';
 import { autoGuide, wordTask } from './guide.js';
 import { q, qH, type Q, type ExprSolution, type ListSolution } from './engine/index.js';
@@ -253,6 +254,7 @@ function dreisatz(c: Ctx, story: string): Task {
     { title: `Auf ${c.b} ${c.xu} umrechnen`, ask: `<p>Und für ${c.b} ${c.xu}?</p><div class="math big">${dH(one)} ${c.anti ? ':' : '·'} ${c.b} = ?</div>`, answer: yb, hint: c.anti ? 'Jetzt teilst du durch die neue Anzahl.' : 'Jetzt nimmst du mal die neue Anzahl.', explain: `${c.b} ${c.xu}: ${dH(yb)} ${c.yu}`, placeholder: `Antwort in ${c.yu}` },
   ];
   return { prompt: story, plain: story, answer: yb, guide: g, placeholder: `Antwort in ${c.yu}`,
+    heft: heftDreisatz({ a: String(c.a), b: String(c.b), ya: `${dH(c.ya)} ${c.yu}`, y1: `${dH(one)} ${c.yu}`, yb: `${dH(yb)} ${c.yu}`, x: c.x, y: c.y, anti: c.anti }),
     sol: list([{ rule: c.anti ? 'Antiproportional erkennen' : 'Proportional erkennen', lines: [ch.why] },
       { rule: 'Dreisatz', lines: [`${c.a} ${c.xu} → ${dH(c.ya)} ${c.yu}`, `1 ${c.xu} → ${dH(one)} ${c.yu} (${c.anti ? `mal ${c.a}` : `geteilt durch ${c.a}`})`, `${c.b} ${c.xu} → ${dH(yb)} ${c.yu} (${c.anti ? `geteilt durch ${c.b}` : `mal ${c.b}`})`] }], yb, `${dH(yb)} ${c.yu}`),
     diag: v => { const wrong = c.anti ? c.ya.div(q(c.a)).mul(q(c.b)) : c.ya.mul(q(c.a)).div(q(c.b)); return v.eq(wrong) ? (c.anti ? 'Das wäre richtig, wenn es proportional wäre. Hier gilt aber: je mehr, desto <b>weniger</b>.' : 'Das wäre richtig, wenn es antiproportional wäre. Hier gilt: je mehr, desto <b>mehr</b>.') : null; } };

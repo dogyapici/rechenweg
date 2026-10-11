@@ -2,6 +2,7 @@
 import { autoGuide, type GuideStep } from './guide.js';
 import { TEXT } from './textaufgaben.js';
 import type { Task, Topic } from './topics';
+import { heftFor } from './heft.js';
 
 export const MAX_LEVEL = 5;
 /** So viele richtige Aufgaben in Folge ohne Hilfe braucht es für die nächste Stufe. */
@@ -19,11 +20,11 @@ export const STAGES: Stage[] = [
 ];
 
 export function makeTask(topic: Topic, level: number): Task | null {
-  if (level >= 4) {
-    const t = TEXT[topic.id]?.(level) ?? topic.text?.(level);
-    if (t) return t;
-  }
-  return topic.gen(Math.min(level, 3));
+  let t: Task | null = null;
+  if (level >= 4) t = TEXT[topic.id]?.(level) ?? topic.text?.(level) ?? null;
+  if (!t) t = topic.gen(Math.min(level, 3));
+  if (t && t.heft === undefined) t.heft = heftFor(t);
+  return t;
 }
 
 export const guideFor = (t: Task): GuideStep[] => (t.guide?.length ? t.guide : autoGuide(t.sol));

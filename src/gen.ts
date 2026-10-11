@@ -2,6 +2,7 @@
 import type { GuideStep } from './guide.js';
 import { MathError, Q, qH, evalExpr, type Solution, type ExprSolution, type ListSolution } from './engine/index.js';
 import type { Widget } from './widgets.js';
+import type { Heft } from './heft.js';
 
 /** Eine Übungsaufgabe. `answer` und `sol` kommen immer aus der Recheneinheit. */
 export interface Task {
@@ -21,6 +22,8 @@ export interface Task {
   word?: boolean;
   /** Antwort wird nicht getippt, sondern gezeichnet, geklickt oder ausgewählt. */
   widget?: Widget;
+  /** So schreibt man die Rechnung ins Heft (für Aufgaben, die man nicht im Kopf rechnet). */
+  heft?: Heft | null;
 }
 export interface Topic {
   id: string;

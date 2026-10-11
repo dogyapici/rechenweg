@@ -10,10 +10,11 @@ import { AnswerInput } from './Widgets';
 import { AiExplain } from './AiExplain';
 import { Guide } from './Guide';
 import { Html } from './Html';
+import { HeftView } from './HeftView';
 
 type Feedback = { state: 'right' | 'wrong' | 'almost' | 'invalid'; msg: string };
 interface TaskState {
-  task: Task | null; tries: number; hint: boolean; revealed: boolean; done: boolean; guided: boolean;
+  task: Task | null; tries: number; hint: boolean; revealed: boolean; done: boolean; guided: boolean; heft: boolean;
   fb: Feedback | null; lastWrong: string | null; lastDiag: string | null; levelMsg: string; n: number;
 }
 
@@ -22,7 +23,7 @@ function newTask(topic: Topic, s: TopicStats, n = 0): TaskState {
   let task: Task | null = null;
   for (let i = 0; i < 5 && !task; i++) task = makeTask(topic, s.level);
   const guided = !!task && s.level >= 2 && !(s.atLevel ?? 0) && guideFor(task).length > 1 && !task.widget;
-  return { task, tries: 0, hint: guided, revealed: false, done: false, guided, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n };
+  return { task, tries: 0, hint: guided, revealed: false, done: false, guided, heft: false, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n };
 }
 const PARTY = ['🎉', '⭐', '✨', '🎈', '⭐', '🎉'];
 const ICON = { right: '✓', wrong: '✗', almost: '≈', invalid: '?' };
@@ -143,6 +144,8 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
           <span className="score">✓ {s.right} richtig</span>
         </div>
         <Html as="p" className={`prompt${k.word ? ' story' : ''}`} html={k.prompt} />
+        {k.heft && !T.done && !T.heft && <p className="paper-tip">📝 Rechne auf Papier mit. Unter „Im Heft“ siehst du, wie es aussehen soll.</p>}
+        {k.heft && T.heft && !T.done && !T.guided && <HeftView heft={k.heft} />}
 
         {T.guided && !T.done && (
           <>
@@ -168,8 +171,9 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
         {T.levelMsg && <p className="levelup">{T.levelMsg}</p>}
         {T.hint && !T.done && !T.guided && <Html className="hintbox" html={'💡 ' + (guide[0]?.hint ? `<b>${guide[0].title}:</b> ${guide[0].hint}` : hintHTML(k.sol))} />}
         {!T.done && !T.guided && (
-          <div className="helpers three">
+          <div className={`helpers ${k.heft ? 'four' : 'three'}`}>
             <button className="btn quiet" onClick={() => setT({ ...T, hint: true })} disabled={T.hint}>💡 Tipp</button>
+            {k.heft && <button className="btn quiet" onClick={() => setT({ ...T, hint: true, heft: true })} disabled={T.heft}>📝 Im Heft</button>}
             {guide.length > 0 && <button className={`btn ${T.tries >= 1 ? 'soft' : 'quiet'}`} onClick={() => setT({ ...T, hint: true, guided: true, fb: null })}>🧭 Gemeinsam lösen</button>}
             <button className="btn quiet" onClick={reveal}>👀 Lösung</button>
           </div>
@@ -179,6 +183,7 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
 
       {T.done && (
         <section className="card panel">
+          {k.heft && <><h2 className="h2">So steht es im Heft</h2><HeftView heft={k.heft} startAll={T.heft} /></>}
           {T.revealed
             ? <><h2 className="h2">So wird es gerechnet</h2><StepReveal html={solution} /></>
             : <details className="solbox" open={T.tries > 1}><summary>So wird es gerechnet</summary><Html html={solution} /></details>}
