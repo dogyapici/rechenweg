@@ -6,7 +6,7 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'pvs', title: 'Punkt vor Strich', covers: 'Rechenregeln, Klammern, Punkt vor Strich, Terme mit natürlichen Zahlen berechnen, Kopfrechnen mit mehreren Rechenzeichen' },
   { id: 'teil', title: 'Teiler, Vielfache und Primzahlen', covers: 'Teiler, Vielfache, Quersumme, Teilbarkeit durch 3, Primzahlen, ggT, kgV, gemeinsame Teiler und Vielfache' },
   { id: 'groe', title: 'Größen und Einheiten', covers: 'Größen, Einheiten umrechnen, Längen, Gewichte/Massen, Zeit, Geld, km m cm mm, t kg g, h min s, Euro und Cent, Kommaschreibweise bei Größen' },
-  { id: 'flae', title: 'Umfang und Flächeninhalt', covers: 'Umfang, Flächeninhalt, Flächeneinheiten, Rechteck, Quadrat, Dreieck, Parallelogramm, zusammengesetzte Figuren, fehlende Seite berechnen' },
+  { id: 'flae', title: 'Umfang und Flächeninhalt', covers: 'Umfang, Flächeninhalt, Flächeneinheiten, Rechteck, Quadrat, Dreieck, Parallelogramm, Trapez, zusammengesetzte Figuren, fehlende Seite berechnen' },
   { id: 'kuerzen', title: 'Brüche kürzen', covers: 'Was ist ein Bruch, Anteile, Zähler und Nenner, Brüche kürzen, ggT, Teiler, gleichwertige Brüche' },
   { id: 'bradd', title: 'Brüche addieren und subtrahieren', covers: 'Brüche addieren, Brüche subtrahieren, Hauptnenner, kgV' },
   { id: 'brmul', title: 'Brüche multiplizieren und dividieren', covers: 'Brüche multiplizieren, Brüche dividieren, Kehrwert, Bruch mal natürliche Zahl, Anteile von Größen' },
