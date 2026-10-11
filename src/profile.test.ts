@@ -26,7 +26,7 @@ describe('Profil', () => {
     expect(fitOf('proz', p(6))).toBe('later');
   });
   it('öffnet alles bis zur eigenen Klasse', () => {
-    expect(reachable(p(5))).toEqual(['zahl', 'rund', 'pvs', 'pot', 'groe', 'flae', 'koord', 'winkel', 'sym', 'koerper', 'daten']);
+    expect(reachable(p(5))).toEqual(['zahl', 'rund', 'schrift', 'pvs', 'geschickt', 'pot', 'prim', 'groe', 'flae', 'koord', 'winkel', 'sym', 'koerper', 'daten', 'raetsel']);
     expect(reachable(p(6))).not.toContain('proz');
     expect(reachable(p(6))).toContain('prop');
     expect(reachable(p(7, 'real'))).not.toContain('gl');

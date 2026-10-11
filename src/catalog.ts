@@ -24,6 +24,16 @@ export const CATALOG: CatalogEntry[] = [
   { id: 'sym', title: 'Symmetrie und Spiegeln', covers: 'Symmetrie, achsensymmetrisch, Symmetrieachse, punktsymmetrisch, Spiegeln, Spiegelbild, Figuren spiegeln' },
   { id: 'koerper', title: 'Körper und Netze', covers: 'Körper, Würfel, Quader, Pyramide, Prisma, Zylinder, Kegel, Ecken Kanten Flächen, Netze, Würfelnetz, Volumen, Rauminhalt, Oberfläche' },
   { id: 'koord', title: 'Koordinatensystem', covers: 'Koordinatensystem, Koordinaten, Punkte eintragen, Punkte ablesen, x-Achse, y-Achse, Figuren im Koordinatensystem, Quadranten' },
+  { id: 'brvgl', title: 'Brüche vergleichen und ordnen', covers: 'Brüche vergleichen, Brüche ordnen, größer kleiner, Brüche erweitern, Zahlengerade, Zahlenstrahl, Brüche darstellen, gemischte Zahlen, unechte Brüche' },
+  { id: 'umw', title: 'Bruch, Dezimalzahl und Prozent', covers: 'Brüche in Dezimalzahlen umwandeln, Dezimalzahlen in Brüche, periodische Dezimalzahlen, abbrechende Dezimalzahlen, Bruch in Prozent, Prozent als Bruch, Zehnerbrüche, Hundertstel' },
+  { id: 'rat', title: 'Rationale Zahlen', covers: 'Rationale Zahlen, negative Brüche, negative Dezimalzahlen, Betrag, Gegenzahl, Zahlengerade mit negativen Zahlen, rationale Zahlen ordnen und vergleichen, Rechnen mit rationalen Zahlen' },
+  { id: 'geschickt', title: 'Rechengesetze und Terme', covers: 'Rechengesetze, Kommutativgesetz, Assoziativgesetz, Distributivgesetz, Vertauschungsgesetz, Verbindungsgesetz, Verteilungsgesetz, geschickt rechnen, Rechenvorteile, Fachbegriffe Summe Differenz Produkt Quotient, Terme aufstellen, Terme gliedern' },
+  { id: 'schrift', title: 'Schriftlich multiplizieren und dividieren', covers: 'schriftliche Multiplikation, schriftliche Division, schriftlich rechnen, Komma verschieben, Kommazahlen schriftlich multiplizieren und dividieren, Überschlag' },
+  { id: 'kreis', title: 'Kreis', covers: 'Kreis, Radius, Durchmesser, Mittelpunkt, Kreisumfang, Kreisfläche, Pi, Halbkreis, Kreisring' },
+  { id: 'einh2', title: 'Flächen- und Volumeneinheiten', covers: 'Flächeneinheiten, mm² cm² dm² m² a ha km², Volumeneinheiten, mm³ cm³ dm³ m³, Liter, Milliliter, Hohlmaße, Einheiten umrechnen' },
+  { id: 'prim', title: 'Teilbarkeit und Primfaktoren', covers: 'Teilbarkeitsregeln, Teilbarkeit durch 2 3 4 5 6 9 10, Endstellenregel, Quersummenregel, Primzahlen erkennen, Primfaktorzerlegung, Primfaktoren, Potenzschreibweise' },
+  { id: 'haeuf', title: 'Häufigkeiten und Diagramme', covers: 'Urliste, Häufigkeitstabelle, absolute Häufigkeit, relative Häufigkeit, Anteil in Prozent, Säulendiagramm zeichnen, Streifendiagramm, Kreisdiagramm, irreführende Diagramme, Aussagen zu Diagrammen' },
+  { id: 'raetsel', title: 'Zahlenrätsel, Folgen und Tabellen', covers: 'Zahlenrätsel, Platzhalter, Umkehraufgabe, Rückwärtsrechnen, Probieren, Zahlenfolgen, Muster, Wertetabelle, proportionale Tabelle prüfen' },
 ];
 export const CATALOG_IDS = CATALOG.map(c => c.id);
 

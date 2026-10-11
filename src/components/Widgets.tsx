@@ -142,8 +142,10 @@ function AngleWidget({ w, value, onChange, locked }: P<'angle'>) {
 
 /* Auswahl aus Bildern */
 function PickWidget({ w, value, onChange, locked }: P<'pick'>) {
+  // Sätze als Antworten (z. B. Begründungen) brauchen die ganze Breite.
+  const long = w.options.some(o => !o.includes('<svg') && o.replace(/<[^>]*>/g, '').length > 24);
   return (
-    <div className="pick-grid" role="radiogroup" aria-label="Antwort auswählen">
+    <div className={`pick-grid${long ? ' long' : ''}`} role="radiogroup" aria-label="Antwort auswählen">
       {w.options.map((o, k) => (
         <button key={k} type="button" role="radio" aria-checked={value === String(k + 1)} className={`pick${value === String(k + 1) ? ' on' : ''}`} disabled={locked} onClick={() => onChange(String(k + 1))}>
           <span className="pick-l">{LETTERS[k]}</span><Html as="span" className="pick-c" html={o} />

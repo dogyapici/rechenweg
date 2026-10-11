@@ -43,6 +43,16 @@ const GRADE: Record<string, { gym: number; other: number }> = {
   neg: { gym: 6, other: 7 },
   proz: { gym: 7, other: 7 },
   gl: { gym: 7, other: 8 },
+  brvgl: { gym: 6, other: 6 },
+  umw: { gym: 6, other: 6 },
+  rat: { gym: 6, other: 7 },
+  geschickt: { gym: 5, other: 5 },
+  schrift: { gym: 5, other: 5 },
+  kreis: { gym: 6, other: 8 },
+  einh2: { gym: 6, other: 6 },
+  prim: { gym: 5, other: 6 },
+  haeuf: { gym: 6, other: 6 },
+  raetsel: { gym: 5, other: 5 },
 };
 export const gradeOf = (id: string, p: Profile | null) => {
   const c = curriculumFor(p);
@@ -80,13 +90,11 @@ export interface Curriculum {
  */
 const BW_GYM: Curriculum = {
   name: 'Bildungsplan Baden-Württemberg, Gymnasium',
-  band: { zahl: '5/6', rund: '5/6', pot: '5/6', koord: '5/6', winkel: '5/6', sym: '5/6', koerper: '5/6', daten: '5/6', prop: '5/6', mass: '5/6', pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8' },
-  grade: { zahl: 5, rund: 5, pot: 5, koord: 5, winkel: 5, sym: 5, koerper: 5, daten: 6, prop: 6, mass: 6, pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7 },
+  band: { zahl: '5/6', rund: '5/6', pot: '5/6', koord: '5/6', winkel: '5/6', sym: '5/6', koerper: '5/6', daten: '5/6', prop: '5/6', mass: '5/6', pvs: '5/6', teil: '5/6', groe: '5/6', flae: '5/6', neg: '5/6', kuerzen: '5/6', bradd: '5/6', brmul: '5/6', dez: '5/6', proz: '7/8', gl: '7/8', brvgl: '5/6', umw: '5/6', rat: '5/6', geschickt: '5/6', schrift: '5/6', kreis: '5/6', einh2: '5/6', prim: '5/6', haeuf: '5/6', raetsel: '5/6' },
+  grade: { zahl: 5, rund: 5, pot: 5, koord: 5, winkel: 5, sym: 5, koerper: 5, daten: 6, prop: 6, mass: 6, pvs: 5, groe: 5, flae: 5, teil: 6, neg: 6, kuerzen: 6, bradd: 6, brmul: 6, dez: 6, proz: 7, gl: 7, brvgl: 6, umw: 6, rat: 6, geschickt: 5, schrift: 5, kreis: 6, einh2: 6, prim: 5, haeuf: 6, raetsel: 5 },
   missing: {
-    '5/6': ['Bruch, Dezimalzahl und Prozent umwandeln (auch periodisch)', 'Brüche vergleichen, ordnen, erweitern, Zahlengerade, gemischte Zahlen',
-      'Negative Brüche und Dezimalzahlen, Betrag', 'Kreis und Trapez', 'Rechengesetze, Rechenvorteile, Terme aufstellen und gliedern',
-      'Schriftlich multiplizieren und dividieren', 'Flächen- und Volumeneinheiten', 'Primfaktorzerlegung und Teilbarkeitsregeln',
-      'Relative Häufigkeiten, Diagramme erstellen und beurteilen', 'Zahlenrätsel, Rückwärtsrechnen, Zahlenfolgen, Wertetabellen'],
+    '5/6': ['Schrägbilder, Grund- und Aufriss zeichnen', 'Senkrechte und Parallelen zeichnen, Abstände', 'Dreiecks- und Viereckarten mit ihren Eigenschaften',
+      'Andere Zahlsysteme (römische Zahlen, Zweiersystem)', 'Größen schätzen', 'Zusammengesetzte Körper'],
     '7/8': ['Zinsrechnung', 'Terme mit Variablen und Klammern', 'Binomische Formeln', 'Wurzeln und reelle Zahlen', 'Lineare Gleichungssysteme',
       'Quadratische Gleichungen', 'Lineare und quadratische Funktionen'],
   },

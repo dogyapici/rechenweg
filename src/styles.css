@@ -120,6 +120,8 @@ table.stellen td { font-size: 22px; }
 /* Brüche, Mathe */
 .math { font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
 .math.big { font-size: 22px; white-space: normal; line-height: 2; }
+.prompt .math, .pick-c .math { white-space: normal; }
+.prompt table, .theory table, .sol table { display: block; max-width: 100%; overflow-x: auto; }
 .frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; line-height: 1.15; margin: 0 .1em; font-size: .9em; }
 .frac .fn { border-bottom: 1.6px solid currentColor; padding: 0 .22em; }
 .frac .fd { padding: 0 .22em; }
@@ -153,7 +155,7 @@ pre.column { font: 400 20px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monos
 
 .panel { padding: 20px; display: grid; gap: 16px; min-width: 0; }
 .h1 { font-size: clamp(26px, 5vw, 34px); font-weight: 800; }
-.h2 { font-size: 21px; font-weight: 800; }
+.prompt { font-size: 23px; line-height: 1.8; font-weight: 700; min-width: 0; }
 .lead { color: var(--muted); font-size: 18px; margin-top: -8px; }
 .prompt { font-size: 23px; line-height: 1.8; font-weight: 700; }
 
@@ -565,7 +567,10 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .pick:disabled { cursor: default; }
 .pick-l { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--paper); font-weight: 700; }
 .pick.on .pick-l { background: var(--blue); color: #fff; }
-.pick-c { flex: 1; display: flex; justify-content: center; }
+.pick-c { flex: 1; min-width: 0; text-align: center; overflow-wrap: break-word; hyphens: auto; }
+.pick-grid.long { grid-template-columns: minmax(0, 1fr); }
+.pick-grid.long .pick-c { text-align: left; }
+.pick-c > svg, .pick-c > .fig { display: block; margin: 0 auto; }
 .tk.sm { font-size: 8px; }
 .solid:focus:not(:focus-visible), .coord:focus:not(:focus-visible), .angle-w:focus:not(:focus-visible) { outline: none; }
 
@@ -686,3 +691,4 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .numline .pt text { font-size: 15px; font-weight: 800; fill: var(--red); }
 .nl-l { font-size: 12px; text-align: center; color: var(--ink); line-height: 1; }
 .nl-l .frac { font-size: 11px; }
+.per { text-decoration: overline; text-decoration-thickness: 2px; }
