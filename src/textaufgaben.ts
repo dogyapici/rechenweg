@@ -3,7 +3,7 @@ import { MathError, q, gcd, lcm, type Q } from './engine/index.js';
 import { wordTask, type GuideStep } from './guide.js';
 import { ggtTask, kgvTask } from './topics.js';
 
-type Word = ReturnType<typeof wordTask>;
+type Word = Omit<ReturnType<typeof wordTask>, 'heft'> & { heft?: ReturnType<typeof wordTask>['heft'] };
 const R = (a: number, b: number): number => a + Math.floor(Math.random() * (b - a + 1));
 const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 const G = (a: number, b: number) => Number(gcd(BigInt(a), BigInt(b)));

@@ -1,5 +1,6 @@
 /* ===== „Gemeinsam lösen“: jede Aufgabe in kleine Schritte zerlegt. Alle Zahlen kommen aus der Recheneinheit. ===== */
 import { Q, evalExpr, qH, solveEq, type ListSolution, type Solution } from './engine/index.js';
+import { heftWord, type Heft } from './heft.js';
 
 export interface GuideChoice { ask: string; options: { html: string; ok: boolean }[]; why: string }
 export interface GuideStep {
@@ -116,5 +117,6 @@ export function wordTask(o: { prompt: string; steps: WordStep[]; sentence: (v: s
   if (o.term) extra.push(`Alles in einem Term: ${termH(o.term)} = ${M(lastH)}`);
   const sol: ListSolution = { kind: 'list', steps, result: last!, resultHTML: lastH, extra };
   const needReduced = o.steps[o.steps.length - 1].needReduced;
-  return { prompt: o.prompt, plain: o.prompt, answer: last!, sol, guide, needReduced, placeholder: o.unit ? `Antwort in ${o.unit}` : 'Deine Antwort', word: true as const };
+  const heft = heftWord(o.steps.map(w => ({ title: w.title, calc: w.calc, unit: w.unit })), sentence);
+  return { prompt: o.prompt, plain: o.prompt, answer: last!, sol, guide, needReduced, placeholder: o.unit ? `Antwort in ${o.unit}` : 'Deine Antwort', word: true as const, heft: heft as Heft | null | undefined };
 }
