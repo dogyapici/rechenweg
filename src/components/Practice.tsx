@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { MathError, hintHTML, htmlToText, parseAnswer, solHTML } from '../engine/index.js';
 import { pick, type Task, type Topic } from '../topics';
+import { formIssue } from '../gen';
 import { freshStats, type Stats, type TopicStats } from '../storage';
 import { MAX_LEVEL, STAGES, STREAK_UP, guideFor, makeTask } from '../stages';
 import type { TutorContext } from '../ai';
@@ -75,6 +76,8 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
         setT({ ...T, fb: { state: 'almost', msg: 'Fast! Der Wert stimmt, aber du kannst den Bruch noch weiter kürzen.' } });
         return;
       }
+      const fi = formIssue(k, input);
+      if (fi) { setT({ ...T, fb: { state: 'almost', msg: fi } }); return; }
       const next = { ...T, tries: T.tries + 1, done: true };
       const lm = finish(true, next);
       setT({ ...next, levelMsg: lm, fb: { state: 'right', msg: pick(['Super, richtig!', 'Richtig! Genau so.', 'Stark gerechnet!', 'Richtig! Das sitzt.']) + (next.tries > 1 ? ' Gut, dass du drangeblieben bist.' : '') } });

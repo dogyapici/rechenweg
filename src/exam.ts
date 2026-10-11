@@ -2,6 +2,7 @@
 import { MathError, parseAnswer } from './engine/index.js';
 import { makeTask } from './stages';
 import { TOPICS, type Task } from './topics';
+import { formIssue } from './gen';
 
 export interface ExamTask { topic: string; task: Task }
 
@@ -40,7 +41,7 @@ export function mark(task: Task, input: string): Mark {
   try {
     const a = parseAnswer(input);
     if (!task.answer.eq(a.v)) return { points: 0, state: 'wrong' };
-    if (task.needReduced && a.raw && !a.v.isRed()) return { points: 0.5, state: 'half' };
+    if ((task.needReduced && a.raw && !a.v.isRed()) || formIssue(task, input)) return { points: 0.5, state: 'half' };
     return { points: 1, state: 'right' };
   } catch (e) {
     if (e instanceof MathError) return { points: 0, state: 'wrong' };
