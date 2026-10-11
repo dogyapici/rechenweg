@@ -19,6 +19,7 @@ const shuffle = <T,>(a: T[]): T[] => { const b = [...a]; for (let i = b.length -
 const opts = (right: string, wrong: string[]) => shuffle([{ html: right, ok: true }, ...[...new Set(wrong)].filter(w => w !== right).map(w => ({ html: w, ok: false }))]);
 const ch = (ask: string, right: string, wrong: string[], why: string): GuideChoice => ({ ask, options: opts(right, wrong), why });
 const exprSteps = (s: ExprSolution): ListStep[] => s.steps.map(st => ({ rule: st.rule, lines: [M(st.before), ...st.lines] }));
+const KIDS = ['Lukas', 'Mia', 'Emma', 'Noah', 'Ben', 'Lea', 'Finn', 'Hanna', 'Jonas', 'Ida', 'Elif', 'Mehmet', 'Sofia', 'Paul', 'Mila', 'Ole', 'Lina', 'Emil', 'Sara', 'Leon', 'Aylin', 'Jakob'];
 const merke = (items: string[]) => `<div class="merke"><span class="merke-l">Merke</span><ol>${items.map(i => `<li>${i}</li>`).join('')}</ol></div>`;
 
 /** Rechenaufgabe: Vorschritte (optional) und dann eine Rechnung, die die Engine Schritt für Schritt ausrechnet. */
@@ -171,8 +172,10 @@ const GESCHICKT: Topic = {
     }, t => t.answer.sign() > 0);
   },
   text: level => genFrom(() => {
+    const name = pick(KIDS);
     if (level === 4) {
-      if (Math.random() < 0.5) {
+      const k = R(0, 5);
+      if (k === 0) {
         const a = R(3, 8), b = 10 - a, p = pick([1.25, 1.75, 2.45, 0.85, 3.15]), P = dc(p), it = pick(['Hefte', 'Brezeln', 'Brötchen', 'Stifte']);
         return wordTask({
           prompt: `Lena kauft ${a} ${it}, Tim kauft ${b} ${it}. Ein Stück kostet ${P} €. Wie viel bezahlen beide zusammen? Rechne geschickt.`,
@@ -183,41 +186,125 @@ const GESCHICKT: Topic = {
           unit: '€', term: `(${a} + ${b}) · ${P}`, sentence: v => `Zusammen bezahlen sie ${v}.`,
         });
       }
-      const p = R(4, 12), s = pick([1, 2]), n = 100 - s;
+      if (k === 1) {
+        const p = R(4, 12), s = pick([1, 2]), n = 100 - s;
+        return wordTask({
+          prompt: `Die ganze Schule fährt ins Museum. Es fahren ${n} Kinder mit, der Eintritt kostet ${p} € pro Kind. Wie viel Eintritt bezahlen alle zusammen? Rechne geschickt mit ${n} = 100 ${MINUS} ${s}.`,
+          steps: [
+            { title: 'Für 100 Kinder', ask: 'Wie viel müssten 100 Kinder bezahlen?', calc: `${p} · 100`, pick: { ask: 'Welcher Term ist geschickt?', right: `${p} · 100 − ${p} · ${s}`, wrong: [`${p} · 100 − ${s}`, `${p} · 100 + ${p} · ${s}`] }, why: `${n} Kinder sind ${s} weniger als 100. Also: 100 Kinder rechnen und ${s} ${s === 1 ? 'Kind' : 'Kinder'} wieder abziehen.`, unit: '€' },
+            { title: `${s === 1 ? 'Ein Kind' : 'Zwei Kinder'} zu viel`, ask: `Wie viel ${s === 1 ? 'bezahlt 1 Kind' : 'bezahlen 2 Kinder'}?`, calc: `${p} · ${s}`, unit: '€' },
+            { title: 'Abziehen', ask: `Wie viel bezahlen also die ${n} Kinder?`, calc: `${p * 100} − ${p * s}`, unit: '€' },
+          ],
+          unit: '€', term: `${p} · 100 − ${p} · ${s}`, sentence: v => `Alle zusammen bezahlen ${v} Eintritt.`,
+        });
+      }
+      if (k === 2) {
+        const [c, d] = pick([[4, 25], [25, 4], [2, 50], [8, 125]]), x = R(11, 49), it = pick([['Packungen', 'Stifte', 'Stiften'], ['Schachteln', 'Kekse', 'Keksen'], ['Tüten', 'Murmeln', 'Murmeln'], ['Beutel', 'Bonbons', 'Bonbons']]);
+        return wordTask({
+          prompt: `Im Lager stehen ${c} Kartons. In jedem Karton sind ${d} ${it[0]} mit je ${x} ${it[2]}. Wie viele ${it[1]} sind das insgesamt? Rechne geschickt.`,
+          steps: [
+            { title: 'Erst die Packungen', ask: `Wie viele ${it[0]} sind in allen Kartons zusammen?`, calc: `${c} · ${d}`, pick: { ask: 'Welcher Term ist geschickt?', right: `(${c} · ${d}) · ${x}`, wrong: [`${c} · ${d} + ${x}`, `(${c} + ${d}) · ${x}`] }, why: `${c} · ${d} = ${c * d}. Mit ${c * d} rechnet es sich leicht. Beim Malnehmen darfst du Klammern setzen, wie du willst (Verbindungsgesetz).` },
+            { title: `Dann die ${it[1]}`, ask: `Wie viele ${it[1]} sind in ${c * d} ${it[0]}?`, calc: `${c * d} · ${x}`, unit: it[1], hint: `Mal ${c * d}: ${c * d === 100 ? 'zwei Nullen' : 'drei Nullen'} anhängen.` },
+          ],
+          unit: it[1], term: `${c} · ${d} · ${x}`, sentence: v => `Das sind ${v} insgesamt.`,
+        });
+      }
+      if (k === 3) {
+        const a = R(21, 79), b = 100 - a, p = R(5, 9);
+        return wordTask({
+          prompt: `Das Kino verkauft am Samstag ${a} Kinderkarten und am Sonntag ${b} Kinderkarten. Eine Kinderkarte kostet ${p} €. Wie viel Geld nimmt das Kino an beiden Tagen mit Kinderkarten ein? Rechne geschickt.`,
+          steps: [
+            { title: 'Erst die Karten', ask: 'Wie viele Kinderkarten sind es an beiden Tagen zusammen?', calc: `${a} + ${b}`, pick: { ask: 'Welcher Term ist geschickt?', right: `(${a} + ${b}) · ${p}`, wrong: [`${a} + ${b} · ${p}`, `${a} · ${b} · ${p}`] }, why: `${a} · ${p} + ${b} · ${p} = (${a} + ${b}) · ${p}. Du klammerst den Preis aus (Verteilungsgesetz). ${a} + ${b} = 100.` },
+            { title: 'Dann das Geld', ask: `Was kosten 100 Karten zu je ${p} €?`, calc: `100 · ${p}`, unit: '€' },
+          ],
+          unit: '€', term: `(${a} + ${b}) · ${p}`, sentence: v => `Das Kino nimmt ${v} ein.`,
+        });
+      }
+      if (k === 4) {
+        const a = R(11, 49), c = 100 - a, b = R(12, 48);
+        return wordTask({
+          prompt: `Ein Bus fährt drei Haltestellen an. An der ersten steigen ${a} Leute ein, an der zweiten ${b} und an der dritten ${c}. Vorher war der Bus leer und niemand ist ausgestiegen. Wie viele Leute sitzen jetzt im Bus? Rechne geschickt.`,
+          steps: [
+            { title: 'Passende Zahlen', ask: `Welche zwei Zahlen ergeben zusammen 100? Rechne ${a} + ${c}.`, calc: `${a} + ${c}`, pick: { ask: 'Welcher Term ist geschickt?', right: `(${a} + ${c}) + ${b}`, wrong: [`(${a} + ${b}) · ${c}`, `${a} + ${b} − ${c}`] }, why: `${a} + ${c} = 100. Beim Addieren darfst du die Zahlen vertauschen und Klammern setzen (Vertauschungs- und Verbindungsgesetz).` },
+            { title: 'Dazuzählen', ask: `Jetzt kommen noch die ${b} Leute dazu. Wie viele sind es?`, calc: `100 + ${b}`, unit: 'Leute' },
+          ],
+          unit: 'Leute', term: `${a} + ${b} + ${c}`, sentence: v => `Jetzt sitzen ${v} im Bus.`,
+        });
+      }
+      const n = R(12, 39), it = pick(['Luftballons', 'Strohhalme', 'Wäscheklammern', 'Aufkleber']);
       return wordTask({
-        prompt: `Die ganze Schule fährt ins Museum. Es fahren ${n} Kinder mit, der Eintritt kostet ${p} € pro Kind. Wie viel Eintritt bezahlen alle zusammen? Rechne geschickt mit ${n} = 100 ${MINUS} ${s}.`,
+        prompt: `Für das Sommerfest kauft ${name} ${n} Packungen ${it}. In jeder Packung sind 101 Stück. Wie viele ${it} sind das? Rechne geschickt mit 101 = 100 + 1.`,
         steps: [
-          { title: 'Für 100 Kinder', ask: 'Wie viel müssten 100 Kinder bezahlen?', calc: `${p} · 100`, pick: { ask: 'Welcher Term ist geschickt?', right: `${p} · 100 − ${p} · ${s}`, wrong: [`${p} · 100 − ${s}`, `${p} · 100 + ${p} · ${s}`] }, why: `${n} Kinder sind ${s} weniger als 100. Also: 100 Kinder rechnen und ${s} ${s === 1 ? 'Kind' : 'Kinder'} wieder abziehen.`, unit: '€' },
-          { title: `${s === 1 ? 'Ein Kind' : 'Zwei Kinder'} zu viel`, ask: `Wie viel ${s === 1 ? 'bezahlt 1 Kind' : 'bezahlen 2 Kinder'}?`, calc: `${p} · ${s}`, unit: '€' },
-          { title: 'Abziehen', ask: `Wie viel bezahlen also die ${n} Kinder?`, calc: `${p * 100} − ${p * s}`, unit: '€' },
+          { title: '100 Stück pro Packung', ask: `Wie viele wären es mit nur 100 Stück pro Packung?`, calc: `${n} · 100`, pick: { ask: 'Welcher Term ist geschickt?', right: `${n} · 100 + ${n} · 1`, wrong: [`${n} · 100 + 1`, `${n} + 100 · 1`] }, why: `101 = 100 + 1. Die ${n} wird mit <b>beiden</b> Teilen malgenommen (Verteilungsgesetz).` },
+          { title: 'Das eine Stück mehr', ask: `In jeder Packung ist noch 1 Stück mehr. Wie viele sind es zusammen?`, calc: `${n * 100} + ${n}`, wrong: [`${n * 100} + 1`], why: `Jede der ${n} Packungen hat ein Stück mehr, also ${n} Stück mehr.`, unit: it },
         ],
-        unit: '€', term: `${p} · 100 − ${p} · ${s}`, sentence: v => `Alle zusammen bezahlen ${v} Eintritt.`,
+        unit: it, term: `${n} · 100 + ${n} · 1`, sentence: v => `Das sind ${v}.`,
       });
     }
-    if (Math.random() < 0.5) {
-      const n = R(24, 30), b = R(12, 20), k = R(2, 4), pb = R(15, 29), sp = R(25, 49);
-      if (n * b <= k * pb + sp) return null;
+    const k = R(0, 4);
+    if (k === 0) {
+      const n = R(24, 30), b = R(12, 20), c = R(2, 4), pb = R(15, 29), sp = R(25, 49);
+      if (n * b <= c * pb + sp) return null;
       return wordTask({
-        prompt: `In der Klasse 6b sind ${n} Kinder. Jedes Kind zahlt ${b} € in die Klassenkasse. Davon kauft die Klasse ${k} Bälle zu je ${pb} € und ein Spiel für ${sp} €. Wie viel Geld bleibt übrig? Stelle zuerst einen Term auf.`,
+        prompt: `In der Klasse 6b sind ${n} Kinder. Jedes Kind zahlt ${b} € in die Klassenkasse. Davon kauft die Klasse ${c} Bälle zu je ${pb} € und ein Spiel für ${sp} €. Wie viel Geld bleibt übrig? Stelle zuerst einen Term auf.`,
         steps: [
-          { title: 'Einnahmen', ask: 'Wie viel Geld kommt in die Kasse?', calc: `${n} · ${b}`, pick: { ask: 'Welcher Term passt zur ganzen Aufgabe?', right: `${n} · ${b} − (${k} · ${pb} + ${sp})`, wrong: [`${n} · ${b} − ${k} · ${pb} + ${sp}`, `(${n} + ${b}) − ${k} · ${pb} − ${sp}`] }, why: 'Erst das ganze Geld, dann ziehst du alle Ausgaben ab. Die Ausgaben gehören zusammen in eine Klammer.', unit: '€' },
-          { title: 'Bälle', ask: `Was kosten die ${k} Bälle?`, calc: `${k} · ${pb}`, unit: '€' },
-          { title: 'Alle Ausgaben', ask: 'Wie viel gibt die Klasse insgesamt aus?', calc: `${k * pb} + ${sp}`, unit: '€' },
-          { title: 'Was übrig bleibt', ask: 'Wie viel Geld bleibt übrig?', calc: `${n * b} − ${k * pb + sp}`, unit: '€' },
+          { title: 'Einnahmen', ask: 'Wie viel Geld kommt in die Kasse?', calc: `${n} · ${b}`, pick: { ask: 'Welcher Term passt zur ganzen Aufgabe?', right: `${n} · ${b} − (${c} · ${pb} + ${sp})`, wrong: [`${n} · ${b} − ${c} · ${pb} + ${sp}`, `(${n} + ${b}) − ${c} · ${pb} − ${sp}`] }, why: 'Erst das ganze Geld, dann ziehst du alle Ausgaben ab. Die Ausgaben gehören zusammen in eine Klammer.', unit: '€' },
+          { title: 'Bälle', ask: `Was kosten die ${c} Bälle?`, calc: `${c} · ${pb}`, unit: '€' },
+          { title: 'Alle Ausgaben', ask: 'Wie viel gibt die Klasse insgesamt aus?', calc: `${c * pb} + ${sp}`, unit: '€' },
+          { title: 'Was übrig bleibt', ask: 'Wie viel Geld bleibt übrig?', calc: `${n * b} − ${c * pb + sp}`, unit: '€' },
         ],
-        unit: '€', term: `${n} · ${b} − (${k} · ${pb} + ${sp})`, sentence: v => `Es bleiben ${v} übrig.`,
+        unit: '€', term: `${n} · ${b} − (${c} · ${pb} + ${sp})`, sentence: v => `Es bleiben ${v} übrig.`,
       });
     }
-    const e = R(2, 4), pe = R(9, 13), c = R(3, 7), pc = R(5, 8), g = pick([5, 10, 15]);
+    if (k === 1) {
+      const e = R(2, 4), pe = R(9, 13), c = R(3, 7), pc = R(5, 8), g = pick([5, 10, 15]);
+      return wordTask({
+        prompt: `Familie Kaya geht ins Kino: ${e} Erwachsene zu je ${pe} € und ${c} Kinder zu je ${pc} €. Sie haben einen Gutschein über ${g} €. Wie viel müssen sie noch bezahlen? Stelle zuerst einen Term auf.`,
+        steps: [
+          { title: 'Erwachsene', ask: 'Wie viel kosten die Karten für die Erwachsenen?', calc: `${e} · ${pe}`, pick: { ask: 'Welcher Term passt zur ganzen Aufgabe?', right: `${e} · ${pe} + ${c} · ${pc} − ${g}`, wrong: [`(${e} + ${c}) · ${pe} − ${g}`, `${e} · ${pe} + ${c} · (${pc} − ${g})`] }, why: 'Erwachsene und Kinder haben verschiedene Preise. Erst beide Teile ausrechnen, dann den Gutschein abziehen.', unit: '€' },
+          { title: 'Kinder', ask: 'Wie viel kosten die Karten für die Kinder?', calc: `${c} · ${pc}`, unit: '€' },
+          { title: 'Zusammen', ask: 'Wie viel kosten alle Karten?', calc: `${e * pe} + ${c * pc}`, unit: '€' },
+          { title: 'Gutschein abziehen', ask: 'Wie viel müssen sie noch bezahlen?', calc: `${e * pe + c * pc} − ${g}`, unit: '€' },
+        ],
+        unit: '€', term: `${e} · ${pe} + ${c} · ${pc} − ${g}`, sentence: v => `Sie müssen noch ${v} bezahlen.`,
+      });
+    }
+    if (k === 2) {
+      const a = R(3, 8), p = R(4, 7), b = R(2, 6), r = R(5, 9), schein = pick([50, 100]);
+      if (a * p + b * r >= schein) return null;
+      return wordTask({
+        prompt: `Für das Sportfest kauft Frau Berger ${a} Kisten Wasser zu je ${p} € und ${b} Kisten Apfelschorle zu je ${r} €. Sie bezahlt mit einem ${schein}-€-Schein. Wie viel Wechselgeld bekommt sie? Stelle zuerst einen Term auf.`,
+        steps: [
+          { title: 'Wasser', ask: 'Was kostet das Wasser?', calc: `${a} · ${p}`, pick: { ask: 'Welcher Term passt zur ganzen Aufgabe?', right: `${schein} − (${a} · ${p} + ${b} · ${r})`, wrong: [`${schein} − ${a} · ${p} + ${b} · ${r}`, `(${a} + ${b}) · (${p} + ${r}) − ${schein}`] }, why: 'Vom Schein ziehst du den ganzen Einkauf ab. Der Einkauf gehört zusammen in eine Klammer.', unit: '€' },
+          { title: 'Apfelschorle', ask: 'Was kostet die Apfelschorle?', calc: `${b} · ${r}`, unit: '€' },
+          { title: 'Einkauf', ask: 'Was kostet der ganze Einkauf?', calc: `${a * p} + ${b * r}`, unit: '€' },
+          { title: 'Wechselgeld', ask: 'Wie viel Wechselgeld bekommt sie?', calc: `${schein} − ${a * p + b * r}`, wrong: [`${schein} + ${a * p + b * r}`], why: 'Was vom Schein übrig bleibt: minus.', unit: '€' },
+        ],
+        unit: '€', term: `${schein} − (${a} · ${p} + ${b} · ${r})`, sentence: v => `Sie bekommt ${v} Wechselgeld.`,
+      });
+    }
+    if (k === 3) {
+      const w = R(5, 10), s = R(1, w - 2), n = R(4, 12), had = R(5, 30);
+      return wordTask({
+        prompt: `${name} bekommt jede Woche ${w} € Taschengeld und gibt davon ${s} € aus. Den Rest spart ${name}. In der Spardose sind schon ${had} €. Wie viel Geld ist nach ${n} Wochen in der Spardose? Stelle zuerst einen Term auf.`,
+        steps: [
+          { title: 'Eine Woche', ask: `Wie viel spart ${name} pro Woche?`, calc: `${w} − ${s}`, pick: { ask: 'Welcher Term passt zur ganzen Aufgabe?', right: `${had} + ${n} · (${w} − ${s})`, wrong: [`${had} + ${n} · ${w} − ${s}`, `(${had} + ${n}) · (${w} − ${s})`] }, why: `Jede Woche kommt derselbe Betrag dazu: ${w} € − ${s} €. Der gehört in eine Klammer, die ${n}-mal gerechnet wird.`, unit: '€' },
+          { title: `${n} Wochen`, ask: `Wie viel spart ${name} in ${n} Wochen?`, calc: `${n} · ${w - s}`, wrong: [`${n} + ${w - s}`], unit: '€' },
+          { title: 'In der Spardose', ask: 'Wie viel ist jetzt in der Spardose?', calc: `${had} + ${n * (w - s)}`, why: 'Das alte Geld kommt dazu.', unit: '€' },
+        ],
+        unit: '€', term: `${had} + ${n} · (${w} − ${s})`, sentence: v => `In der Spardose sind dann ${v}.`,
+      });
+    }
+    const a = R(4, 9), st = pick([8, 10, 12, 16]), p = pick([1, 2]), kosten = R(10, 30);
+    if (a * st * p <= kosten) return null;
     return wordTask({
-      prompt: `Familie Kaya geht ins Kino: ${e} Erwachsene zu je ${pe} € und ${c} Kinder zu je ${pc} €. Sie haben einen Gutschein über ${g} €. Wie viel müssen sie noch bezahlen? Stelle zuerst einen Term auf.`,
+      prompt: `Die Klasse 5c macht einen Kuchenbasar. Sie backt ${a} Kuchen und schneidet jeden in ${st} Stücke. Ein Stück kostet ${p} €. Die Zutaten haben ${kosten} € gekostet. Wie viel Gewinn macht die Klasse, wenn alles verkauft wird? Stelle zuerst einen Term auf.`,
       steps: [
-        { title: 'Erwachsene', ask: 'Wie viel kosten die Karten für die Erwachsenen?', calc: `${e} · ${pe}`, pick: { ask: 'Welcher Term passt zur ganzen Aufgabe?', right: `${e} · ${pe} + ${c} · ${pc} − ${g}`, wrong: [`(${e} + ${c}) · ${pe} − ${g}`, `${e} · ${pe} + ${c} · (${pc} − ${g})`] }, why: 'Erwachsene und Kinder haben verschiedene Preise. Erst beide Teile ausrechnen, dann den Gutschein abziehen.', unit: '€' },
-        { title: 'Kinder', ask: 'Wie viel kosten die Karten für die Kinder?', calc: `${c} · ${pc}`, unit: '€' },
-        { title: 'Zusammen', ask: 'Wie viel kosten alle Karten?', calc: `${e * pe} + ${c * pc}`, unit: '€' },
-        { title: 'Gutschein abziehen', ask: 'Wie viel müssen sie noch bezahlen?', calc: `${e * pe + c * pc} − ${g}`, unit: '€' },
+        { title: 'Stücke', ask: 'Wie viele Kuchenstücke gibt es?', calc: `${a} · ${st}`, pick: { ask: 'Welcher Term passt zur ganzen Aufgabe?', right: `${a} · ${st} · ${p} − ${kosten}`, wrong: [`(${a} + ${st}) · ${p} − ${kosten}`, `${a} · ${st} · (${p} − ${kosten})`] }, why: 'Erst alle Einnahmen (Stücke mal Preis), dann die Kosten für die Zutaten abziehen.', unit: 'Stücke' },
+        { title: 'Einnahmen', ask: 'Wie viel Geld bringen alle Stücke?', calc: `${a * st} · ${p}`, unit: '€' },
+        { title: 'Gewinn', ask: 'Wie viel bleibt nach Abzug der Zutaten übrig?', calc: `${a * st * p} − ${kosten}`, wrong: [`${a * st * p} + ${kosten}`], why: 'Die Zutaten kosten Geld: minus.', unit: '€' },
       ],
-      unit: '€', term: `${e} · ${pe} + ${c} · ${pc} − ${g}`, sentence: v => `Sie müssen noch ${v} bezahlen.`,
+      unit: '€', term: `${a} · ${st} · ${p} − ${kosten}`, sentence: v => `Die Klasse macht ${v} Gewinn.`,
     });
   }, t => t.guide.every(s => s.answer.sign() > 0)),
 };
@@ -416,8 +503,10 @@ const SCHRIFT: Topic = {
     }, t => t.answer.sign() > 0);
   },
   text: level => genFrom(() => {
+    const name = pick(KIDS);
     if (level === 4) {
-      if (Math.random() < 0.5) {
+      const k = R(0, 4);
+      if (k === 0) {
         const n = R(21, 34), p = R(249, 489);
         if (n % 10 === 0) return null;
         const t = Math.floor(n / 10) * 10, o = n % 10;
@@ -432,22 +521,104 @@ const SCHRIFT: Topic = {
           unit: '€', term: `${p} · ${n}`, sentence: v => `Alle Tablets kosten zusammen ${v}.`,
         });
       }
-      const n = R(12, 24), p = R(21, 49), s = n * p;
+      if (k === 1) {
+        const n = R(12, 24), p = R(21, 49), s = n * p;
+        return wordTask({
+          prompt: `Der Sportverein kauft ${n} gleiche Trikots und bezahlt dafür ${gz(s)} €. Wie viel kostet ein Trikot?`,
+          steps: [{ title: 'Ein Trikot', ask: 'Wie viel kostet ein Trikot?', calc: `${s} : ${n}`, wrong: [`${s} · ${n}`, `${s} − ${n}`], why: 'Der Preis wird gleichmäßig auf alle Trikots verteilt: geteilt.', unit: '€', hint: `Schriftlich: Wie oft passt ${n} in die ersten Ziffern?` }],
+          unit: '€', sentence: v => `Ein Trikot kostet ${v}.`,
+        });
+      }
+      if (k === 2) {
+        const br = R(4, 7), pro = R(25, 40), n = R(12, 29), all = br * pro * n;
+        return wordTask({
+          prompt: `Die Stadtbücherei bekommt neue Regale. Jedes Regal hat ${br} Bretter, auf jedes Brett passen ${pro} Bücher. Es sollen ${gz(all)} Bücher eingeräumt werden. Wie viele Regale braucht die Bücherei?`,
+          steps: [
+            { title: 'Ein Regal', ask: 'Wie viele Bücher passen in ein Regal?', calc: `${br} · ${pro}`, wrong: [`${br} + ${pro}`], why: `${br} Bretter mit je ${pro} Büchern: mal.`, unit: 'Bücher' },
+            { title: 'Alle Regale', ask: 'Wie viele Regale braucht man?', calc: `${all} : ${br * pro}`, wrong: [`${all} · ${br * pro}`, `${all} − ${br * pro}`], why: `So oft passen ${br * pro} Bücher in ${gz(all)} Bücher: geteilt.`, unit: 'Regale', hint: 'Überschlage zuerst, dann teile schriftlich.' },
+          ],
+          unit: 'Regale', sentence: v => `Die Bücherei braucht ${v}.`,
+        });
+      }
+      if (k === 3) {
+        const p = R(62, 88);
+        return wordTask({
+          prompt: `Das Herz von ${name} schlägt in Ruhe etwa ${p}-mal in der Minute. Wie oft schlägt es dann an einem ganzen Tag?`,
+          steps: [
+            { title: 'Eine Stunde', ask: 'Wie oft schlägt das Herz in einer Stunde?', calc: `${p} · 60`, wrong: [`${p} · 100`, `${p} + 60`], why: 'Eine Stunde hat 60 Minuten.' },
+            { title: 'Ein Tag', ask: 'Wie oft schlägt es an einem Tag?', calc: `${p * 60} · 24`, wrong: [`${p * 60} · 12`], why: 'Ein Tag hat 24 Stunden.', hint: 'Schriftlich malnehmen: erst mit 2, dann mit 4.' },
+          ],
+          sentence: v => `Das Herz schlägt an einem Tag etwa ${v}-mal.`,
+        });
+      }
+      const sack = pick([12, 15, 25]), n = R(104, 289), kg = sack * n, pr = R(6, 14);
       return wordTask({
-        prompt: `Der Sportverein kauft ${n} gleiche Trikots und bezahlt dafür ${gz(s)} €. Wie viel kostet ein Trikot?`,
-        steps: [{ title: 'Ein Trikot', ask: 'Wie viel kostet ein Trikot?', calc: `${s} : ${n}`, wrong: [`${s} · ${n}`, `${s} − ${n}`], why: 'Der Preis wird gleichmäßig auf alle Trikots verteilt: geteilt.', unit: '€', hint: `Schriftlich: Wie oft passt ${n} in die ersten Ziffern?` }],
-        unit: '€', sentence: v => `Ein Trikot kostet ${v}.`,
+        prompt: `Bauer Kaiser erntet ${gz(kg)} kg Kartoffeln. Er füllt sie in Säcke zu je ${sack} kg. Einen Sack verkauft er für ${pr} €. Wie viel Geld bekommt er, wenn er alle Säcke verkauft?`,
+        steps: [
+          { title: 'Säcke', ask: 'Wie viele Säcke werden voll?', calc: `${kg} : ${sack}`, wrong: [`${kg} · ${sack}`, `${kg} − ${sack}`], why: `In jeden Sack kommen ${sack} kg: geteilt.`, unit: 'Säcke' },
+          { title: 'Geld', ask: 'Wie viel Geld bekommt er für alle Säcke?', calc: `${n} · ${pr}`, wrong: [`${n} + ${pr}`], why: `Jeder Sack bringt ${pr} €: mal.`, unit: '€' },
+        ],
+        unit: '€', sentence: v => `Er bekommt ${v}.`,
       });
     }
-    const n = R(22, 30), bus = n * R(28, 45), h = R(24, 36), k = R(2, 4), e = R(5, 12);
+    const k = R(0, 4);
+    if (k === 0) {
+      const n = R(22, 30), bus = n * R(28, 45), h = R(24, 36), nt = R(2, 4), e = R(5, 12);
+      return wordTask({
+        prompt: `Die Klasse 6a (${n} Kinder) fährt ins Schullandheim. Der Bus kostet für alle zusammen ${gz(bus)} €. Die Übernachtung kostet ${h} € pro Kind und Nacht, sie bleiben ${nt} Nächte. Dazu kommen ${e} € Eintritt pro Kind. Wie viel muss jedes Kind bezahlen?`,
+        steps: [
+          { title: 'Bus pro Kind', ask: 'Wie viel Busgeld muss jedes Kind bezahlen?', calc: `${bus} : ${n}`, wrong: [`${bus} · ${n}`, `${bus} − ${n}`], why: 'Die Buskosten werden auf alle Kinder verteilt.', unit: '€' },
+          { title: 'Übernachtung', ask: `Was kosten ${nt} Nächte für ein Kind?`, calc: `${h} · ${nt}`, wrong: [`${h} + ${nt}`], unit: '€' },
+          { title: 'Zusammen pro Kind', ask: 'Wie viel muss jedes Kind insgesamt bezahlen?', calc: `${bus / n} + ${h * nt} + ${e}`, unit: '€', hint: 'Bus, Übernachtung und Eintritt zusammenzählen.' },
+        ],
+        unit: '€', term: `${bus} : ${n} + ${h} · ${nt} + ${e}`, sentence: v => `Jedes Kind muss ${v} bezahlen.`,
+      });
+    }
+    if (k === 1) {
+      const rows = R(24, 42), seats = R(18, 32), empty = R(12, 68), p = R(14, 29);
+      return wordTask({
+        prompt: `Ein Konzertsaal hat ${rows} Reihen mit je ${seats} Plätzen. Beim Konzert am Freitag bleiben ${empty} Plätze leer. Eine Karte kostet ${p} €. Wie viel Geld nimmt der Saal mit den Karten ein?`,
+        steps: [
+          { title: 'Alle Plätze', ask: 'Wie viele Plätze hat der Saal?', calc: `${rows} · ${seats}`, wrong: [`${rows} + ${seats}`], why: `${rows} Reihen mit je ${seats} Plätzen: mal.`, unit: 'Plätze' },
+          { title: 'Verkaufte Karten', ask: 'Wie viele Karten wurden verkauft?', calc: `${rows * seats} − ${empty}`, wrong: [`${rows * seats} + ${empty}`], why: 'Die leeren Plätze wurden nicht verkauft: minus.', unit: 'Karten' },
+          { title: 'Einnahmen', ask: 'Wie viel Geld bringen die Karten?', calc: `${rows * seats - empty} · ${p}`, wrong: [`${rows * seats - empty} : ${p}`], why: `Jede Karte kostet ${p} €: mal.`, unit: '€', hint: 'Schriftlich malnehmen, Zeile für Zeile.' },
+        ],
+        unit: '€', term: `(${rows} · ${seats} − ${empty}) · ${p}`, sentence: v => `Der Saal nimmt ${v} ein.`,
+      });
+    }
+    if (k === 2) {
+      const r = R(24, 75), h = R(3, 8), box = pick([6, 12]);
+      return wordTask({
+        prompt: `Eine Maschine in der Saftfabrik füllt jede Minute ${r} Flaschen ab. Sie läuft ${h} Stunden ohne Pause. Die Flaschen kommen in Kisten mit je ${box} Flaschen. Wie viele Kisten werden voll?`,
+        steps: [
+          { title: 'Eine Stunde', ask: 'Wie viele Flaschen füllt die Maschine in einer Stunde ab?', calc: `${r} · 60`, wrong: [`${r} · 100`, `${r} + 60`], why: 'Eine Stunde hat 60 Minuten.', unit: 'Flaschen' },
+          { title: `${h} Stunden`, ask: `Wie viele Flaschen sind es in ${h} Stunden?`, calc: `${r * 60} · ${h}`, unit: 'Flaschen' },
+          { title: 'Kisten', ask: 'Wie viele Kisten werden voll?', calc: `${r * 60 * h} : ${box}`, wrong: [`${r * 60 * h} · ${box}`], why: `In jede Kiste kommen ${box} Flaschen: geteilt.`, unit: 'Kisten' },
+        ],
+        unit: 'Kisten', term: `${r} · 60 · ${h} : ${box}`, sentence: v => `Es werden ${v} voll.`,
+      });
+    }
+    if (k === 3) {
+      const m = R(15, 30), months = R(8, 16), had = R(3, 12) * 10, oma = R(3, 10) * 10, price = had + oma + m * months;
+      return wordTask({
+        prompt: `${name} möchte ein Fahrrad für ${price} € kaufen. In der Spardose sind schon ${had} €. Oma schenkt noch ${oma} € dazu. Den Rest spart ${name} jeden Monat mit ${m} €. Wie viele Monate muss ${name} noch sparen?`,
+        steps: [
+          { title: 'Schon da', ask: 'Wie viel Geld ist schon da?', calc: `${had} + ${oma}`, unit: '€' },
+          { title: 'Was fehlt', ask: 'Wie viel Geld fehlt noch?', calc: `${price} − ${had + oma}`, wrong: [`${price} + ${had + oma}`], why: 'Vom Preis ziehst du ab, was schon da ist.', unit: '€' },
+          { title: 'Monate', ask: 'Wie viele Monate muss gespart werden?', calc: `${price - had - oma} : ${m}`, wrong: [`${price - had - oma} · ${m}`], why: `Jeden Monat kommen ${m} € dazu: So oft passt ${m} in den Rest.`, unit: 'Monate' },
+        ],
+        unit: 'Monate', term: `(${price} − ${had} − ${oma}) : ${m}`, sentence: v => `${name} muss noch ${v} sparen.`,
+      });
+    }
+    const n = R(52, 99) * 24, fl = pick([2, 3]), box = 24, pr = R(5, 9);
     return wordTask({
-      prompt: `Die Klasse 6a (${n} Kinder) fährt ins Schullandheim. Der Bus kostet für alle zusammen ${gz(bus)} €. Die Übernachtung kostet ${h} € pro Kind und Nacht, sie bleiben ${k} Nächte. Dazu kommen ${e} € Eintritt pro Kind. Wie viel muss jedes Kind bezahlen?`,
+      prompt: `Beim Stadtlauf laufen ${gz(n)} Läuferinnen und Läufer mit. Alle bekommen je ${fl} Flaschen Wasser. Das Wasser kommt in Kisten mit je ${box} Flaschen, eine Kiste kostet ${pr} €. Wie viel kostet das ganze Wasser?`,
       steps: [
-        { title: 'Bus pro Kind', ask: 'Wie viel Busgeld muss jedes Kind bezahlen?', calc: `${bus} : ${n}`, wrong: [`${bus} · ${n}`, `${bus} − ${n}`], why: 'Die Buskosten werden auf alle Kinder verteilt.', unit: '€' },
-        { title: 'Übernachtung', ask: `Was kosten ${k} Nächte für ein Kind?`, calc: `${h} · ${k}`, wrong: [`${h} + ${k}`], unit: '€' },
-        { title: 'Zusammen pro Kind', ask: 'Wie viel muss jedes Kind insgesamt bezahlen?', calc: `${bus / n} + ${h * k} + ${e}`, unit: '€', hint: 'Bus, Übernachtung und Eintritt zusammenzählen.' },
+        { title: 'Flaschen', ask: 'Wie viele Flaschen braucht man?', calc: `${n} · ${fl}`, wrong: [`${n} + ${fl}`], unit: 'Flaschen' },
+        { title: 'Kisten', ask: 'Wie viele Kisten sind das?', calc: `${n * fl} : ${box}`, wrong: [`${n * fl} · ${box}`], why: `In jeder Kiste sind ${box} Flaschen: geteilt.`, unit: 'Kisten' },
+        { title: 'Preis', ask: 'Was kosten alle Kisten?', calc: `${(n * fl) / box} · ${pr}`, wrong: [`${(n * fl) / box} + ${pr}`], unit: '€' },
       ],
-      unit: '€', term: `${bus} : ${n} + ${h} · ${k} + ${e}`, sentence: v => `Jedes Kind muss ${v} bezahlen.`,
+      unit: '€', term: `${n} · ${fl} : ${box} · ${pr}`, sentence: v => `Das Wasser kostet ${v}.`,
     });
   }, t => t.guide.every(s => s.answer.sign() > 0)),
 };
@@ -571,47 +742,147 @@ const KREIS: Topic = {
     }, t => t.answer.sign() > 0);
   },
   text: level => genFrom(() => {
+    const name = pick(KIDS), dec = <T extends object>(t: T) => ({ ...t, form: 'dec' as const });
     if (level === 4) {
-      if (Math.random() < 0.55) {
-        const d = pick([50, 55, 60, 65, 70]), n = 10;
-        const t = wordTask({
+      const k = R(0, 4);
+      if (k === 0) {
+        const d = R(50, 72), n = pick([10, 100]);
+        return dec(wordTask({
           prompt: `Ein Fahrradreifen hat einen Durchmesser von ${d} cm. Wie viele Meter fährt das Fahrrad, wenn sich das Rad ${n}-mal dreht? Rechne mit π ≈ ${PI}.`,
           steps: [
             { title: 'Eine Umdrehung', ask: 'Wie weit kommt das Rad bei einer Umdrehung? Das ist der Umfang.', calc: `${d} · ${PI}`, wrong: [`${d} · ${d} · ${PI}`, `${d} : 2 · ${PI}`], why: 'Bei einer Umdrehung rollt der Reifen einmal seinen Umfang ab: u = d · 3,14.', unit: 'cm' },
-            { title: `${n} Umdrehungen`, ask: `Wie weit kommt das Rad bei ${n} Umdrehungen?`, calc: `${dc(d * 3.14)} · ${n}`, unit: 'cm', hint: 'Mal 10: Komma eine Stelle nach rechts.' },
+            { title: `${n} Umdrehungen`, ask: `Wie weit kommt das Rad bei ${n} Umdrehungen?`, calc: `${dc(d * 3.14)} · ${n}`, unit: 'cm', hint: n === 10 ? 'Mal 10: Komma eine Stelle nach rechts.' : 'Mal 100: Komma zwei Stellen nach rechts.' },
             { title: 'In Meter', ask: 'Wie viele Meter sind das?', calc: `${dc(d * 3.14 * n)} : 100`, wrong: [`${dc(d * 3.14 * n)} : 10`, `${dc(d * 3.14 * n)} : 1000`], why: '1 m = 100 cm.', unit: 'm' },
           ],
           unit: 'm', sentence: v => `Das Fahrrad fährt ${v} weit.`,
-        });
-        return { ...t, form: 'dec' as const };
+        }));
       }
-      const d = R(3, 8), p = R(4, 9);
-      const t = wordTask({
-        prompt: `Ein rundes Blumenbeet hat einen Durchmesser von ${d} m. Herum soll ein Zaun. 1 m Zaun kostet ${p} €. Wie teuer ist der Zaun? Rechne mit π ≈ ${PI}.`,
+      if (k === 1) {
+        const d = R(3, 8), p = R(4, 9);
+        return dec(wordTask({
+          prompt: `Ein rundes Blumenbeet hat einen Durchmesser von ${d} m. Herum soll ein Zaun. 1 m Zaun kostet ${p} €. Wie teuer ist der Zaun? Rechne mit π ≈ ${PI}.`,
+          steps: [
+            { title: 'Länge des Zauns', ask: 'Wie lang muss der Zaun sein?', calc: `${d} · ${PI}`, wrong: [`${dc(d / 2)} · ${dc(d / 2)} · ${PI}`, `2 · ${d} · ${PI}`], why: 'Der Zaun geht einmal außen herum. Das ist der Umfang: u = d · 3,14.', unit: 'm' },
+            { title: 'Preis', ask: 'Wie viel kostet der Zaun?', calc: `${dc(d * 3.14)} · ${p}`, wrong: [`${dc(d * 3.14)} + ${p}`], unit: '€' },
+          ],
+          unit: '€', term: `${d} · ${PI} · ${p}`, sentence: v => `Der Zaun kostet ${v}.`,
+        }));
+      }
+      if (k === 2) {
+        const r = R(2, 9), g = pick([20, 25, 30, 40, 50]);
+        return dec(wordTask({
+          prompt: `Im Garten soll ein runder Rasen mit ${r} m Radius neu gesät werden. Für jeden Quadratmeter braucht man ${g} g Grassamen. Wie viel Gramm Samen braucht man? Rechne mit π ≈ ${PI}.`,
+          steps: [
+            { title: 'Fläche', ask: 'Wie groß ist die Rasenfläche?', calc: `${r} · ${r} · ${PI}`, wrong: [`2 · ${r} · ${PI}`, `${r} · ${PI}`], why: 'Samen braucht man für die ganze Fläche: A = r · r · 3,14.', unit: 'm²' },
+            { title: 'Samen', ask: 'Wie viel Gramm Samen braucht man?', calc: `${dc(r * r * 3.14)} · ${g}`, wrong: [`${dc(r * r * 3.14)} + ${g}`, `${dc(r * r * 3.14)} : ${g}`], why: `Für jeden m² braucht man ${g} g: mal.`, unit: 'g' },
+          ],
+          unit: 'g', term: `${r} · ${r} · ${PI} · ${g}`, sentence: v => `Man braucht ${v} Grassamen.`,
+        }));
+      }
+      if (k === 3) {
+        const d = R(6, 10), h = R(8, 14);
+        return dec(wordTask({
+          prompt: `Eine Konservendose hat einen Durchmesser von ${d} cm. Das Papier-Etikett geht einmal ganz um die Dose herum und ist ${h} cm hoch. Wie groß ist das Etikett? Rechne mit π ≈ ${PI}.`,
+          steps: [
+            { title: 'Länge des Etiketts', ask: 'Wie lang ist das Etikett? Es geht einmal um die Dose herum.', calc: `${d} · ${PI}`, wrong: [`${d} · ${d} · ${PI}`, `${d} : 2 · ${PI}`], why: 'Einmal herum ist der Umfang: u = d · 3,14.', unit: 'cm' },
+            { title: 'Fläche', ask: 'Abgewickelt ist das Etikett ein Rechteck. Wie groß ist seine Fläche?', calc: `${dc(d * 3.14)} · ${h}`, wrong: [`${dc(d * 3.14)} + ${h}`, `2 · (${dc(d * 3.14)} + ${h})`], why: 'Fläche vom Rechteck: Länge mal Breite.', unit: 'cm²' },
+          ],
+          unit: 'cm²', sentence: v => `Das Etikett ist ${v} groß.`,
+        }));
+      }
+      const r = pick([20, 25, 30, 40, 50]);
+      return dec(wordTask({
+        prompt: `Der große Zeiger einer Bahnhofsuhr ist ${r} cm lang. Wie viele Meter legt seine Spitze an einem ganzen Tag zurück? Rechne mit π ≈ ${PI}.`,
         steps: [
-          { title: 'Länge des Zauns', ask: 'Wie lang muss der Zaun sein?', calc: `${d} · ${PI}`, wrong: [`${d / 2} · ${d / 2} · ${PI}`, `2 · ${d} · ${PI}`], why: 'Der Zaun geht einmal außen herum. Das ist der Umfang: u = d · 3,14.', unit: 'm' },
-          { title: 'Preis', ask: 'Wie viel kostet der Zaun?', calc: `${dc(d * 3.14)} · ${p}`, wrong: [`${dc(d * 3.14)} + ${p}`], unit: '€' },
+          { title: 'Eine Runde', ask: 'Wie weit kommt die Spitze bei einer Runde? Der Zeiger ist der Radius.', calc: `2 · ${r} · ${PI}`, wrong: [`${r} · ${PI}`, `${r} · ${r} · ${PI}`], why: 'Die Spitze läuft einmal auf dem Kreis herum: u = 2 · r · 3,14.', unit: 'cm' },
+          { title: 'Ein Tag', ask: 'Der große Zeiger schafft jede Stunde eine Runde. Wie weit kommt die Spitze an einem Tag?', calc: `${dc(2 * r * 3.14)} · 24`, wrong: [`${dc(2 * r * 3.14)} · 12`], why: 'Ein Tag hat 24 Stunden.', unit: 'cm' },
+          { title: 'In Meter', ask: 'Wie viele Meter sind das?', calc: `${dc(2 * r * 3.14 * 24)} : 100`, wrong: [`${dc(2 * r * 3.14 * 24)} : 1000`], why: '1 m = 100 cm.', unit: 'm' },
         ],
-        unit: '€', term: `${d} · ${PI} · ${p}`, sentence: v => `Der Zaun kostet ${v}.`,
-      });
-      return { ...t, form: 'dec' as const };
+        unit: 'm', sentence: v => `Die Spitze legt an einem Tag ${v} zurück.`,
+      }));
     }
-    const D = pick([30, 32, 34, 36]), d = pick([20, 22, 24, 26]);
-    const big = D / 2, small = d / 2;
-    const AB = big * big * 3.14, AS = 2 * small * small * 3.14;
-    if (Math.abs(AB - AS) < 10) return null;
-    const bigWins = AB > AS;
-    const t = wordTask({
-      prompt: `In der Pizzeria gibt es eine große Pizza mit ${D} cm Durchmesser oder zwei kleine mit je ${d} cm Durchmesser. Beide Angebote kosten gleich viel. Bei welchem Angebot bekommst du mehr Pizza, und wie viel cm² mehr ist es? Rechne mit π ≈ ${PI}.`,
+    const k = R(0, 5);
+    if (k === 0) {
+      const D = pick([28, 30, 32, 34, 36, 38, 40]), d = pick([18, 20, 22, 24, 26]);
+      const big = D / 2, small = d / 2;
+      const AB = big * big * 3.14, AS = 2 * small * small * 3.14;
+      if (Math.abs(AB - AS) < 10) return null;
+      const bigWins = AB > AS;
+      return dec(wordTask({
+        prompt: `In der Pizzeria gibt es eine große Pizza mit ${D} cm Durchmesser oder zwei kleine mit je ${d} cm Durchmesser. Beide Angebote kosten gleich viel. Bei welchem Angebot bekommst du mehr Pizza, und wie viel cm² mehr ist es? Rechne mit π ≈ ${PI}.`,
+        steps: [
+          { title: 'Große Pizza', ask: `Wie groß ist die Fläche der großen Pizza? Ihr Radius ist ${D} : 2 = ${big} cm.`, calc: `${big} · ${big} · ${PI}`, wrong: [`${D} · ${D} · ${PI}`, `${D} · ${PI}`], why: 'Fläche mit dem Radius: r · r · 3,14.', unit: 'cm²' },
+          { title: 'Eine kleine Pizza', ask: `Wie groß ist die Fläche einer kleinen Pizza? Ihr Radius ist ${small} cm.`, calc: `${small} · ${small} · ${PI}`, unit: 'cm²' },
+          { title: 'Zwei kleine Pizzen', ask: 'Wie viel Fläche haben die zwei kleinen Pizzen zusammen?', calc: `2 · ${dc(small * small * 3.14)}`, unit: 'cm²' },
+          { title: 'Vergleichen', ask: `Wie viel cm² mehr ${bigWins ? 'hat die große Pizza' : 'haben die zwei kleinen'}?`, calc: bigWins ? `${dc(AB)} − ${dc(AS)}` : `${dc(AS)} − ${dc(AB)}`, unit: 'cm²', hint: 'Größere Fläche minus kleinere Fläche.' },
+        ],
+        unit: 'cm²', sentence: v => `${bigWins ? 'Die große Pizza' : 'Die zwei kleinen Pizzen'} ${bigWins ? 'hat' : 'haben'} ${v} mehr.`,
+      }));
+    }
+    if (k === 1) {
+      const d = pick([24, 26, 28, 30]), a = pick([20, 21, 22, 24, 25]), r = d / 2, AT = r * r * 3.14, AQ = a * a;
+      if (Math.abs(AT - AQ) < 5) return null;
+      const torte = AT > AQ;
+      return dec(wordTask({
+        prompt: `Beim Bäcker gibt es eine runde Torte mit ${d} cm Durchmesser oder einen quadratischen Blechkuchen mit ${a} cm Seitenlänge. Beide sind gleich hoch und kosten gleich viel. Welcher Kuchen ist größer, und um wie viel cm²? Rechne mit π ≈ ${PI}.`,
+        steps: [
+          { title: 'Runde Torte', ask: `Wie groß ist die Fläche der Torte? Ihr Radius ist ${d} : 2 = ${r} cm.`, calc: `${r} · ${r} · ${PI}`, wrong: [`${d} · ${d} · ${PI}`, `${d} · ${PI}`], why: 'Kreisfläche mit dem Radius: r · r · 3,14.', unit: 'cm²' },
+          { title: 'Blechkuchen', ask: 'Wie groß ist die Fläche des Blechkuchens?', calc: `${a} · ${a}`, wrong: [`4 · ${a}`], why: 'Fläche vom Quadrat: Seite mal Seite.', unit: 'cm²' },
+          { title: 'Vergleichen', ask: `Um wie viel cm² ist ${torte ? 'die Torte' : 'der Blechkuchen'} größer?`, calc: torte ? `${dc(AT)} − ${AQ}` : `${AQ} − ${dc(AT)}`, unit: 'cm²', hint: 'Größere Fläche minus kleinere Fläche.' },
+        ],
+        unit: 'cm²', sentence: v => `${torte ? 'Die Torte' : 'Der Blechkuchen'} ist um ${v} größer.`,
+      }));
+    }
+    if (k === 2) {
+      const d = pick([4, 5, 6, 8, 10]), n = pick([2, 3, 4]), a = n * d, r = d / 2, one = r * r * 3.14;
+      if (a > 40) return null;
+      return dec(wordTask({
+        prompt: `${name} rollt Keksteig zu einem Quadrat mit ${a} cm Seitenlänge aus. Daraus sticht ${name} ${n * n} runde Kekse mit ${d} cm Durchmesser aus: ${n} Reihen mit je ${n} Keksen. Wie viel cm² Teig bleiben übrig? Rechne mit π ≈ ${PI}.`,
+        steps: [
+          { title: 'Der ganze Teig', ask: 'Wie groß ist das Teigquadrat?', calc: `${a} · ${a}`, wrong: [`4 · ${a}`], why: 'Fläche vom Quadrat: Seite mal Seite.', unit: 'cm²' },
+          { title: 'Ein Keks', ask: `Wie groß ist ein Keks? Sein Radius ist ${dc(r)} cm.`, calc: `${dc(r)} · ${dc(r)} · ${PI}`, wrong: [`${d} · ${d} · ${PI}`, `${d} · ${PI}`], why: 'Kreisfläche mit dem Radius: r · r · 3,14.', unit: 'cm²' },
+          { title: 'Alle Kekse', ask: `Wie viel Teig brauchen alle ${n * n} Kekse?`, calc: `${n * n} · ${dc(one)}`, unit: 'cm²' },
+          { title: 'Rest', ask: 'Wie viel Teig bleibt übrig?', calc: `${a * a} − ${dc(n * n * one)}`, wrong: [`${a * a} + ${dc(n * n * one)}`], why: 'Vom ganzen Teig ziehst du die Kekse ab.', unit: 'cm²' },
+        ],
+        unit: 'cm²', sentence: v => `Es bleiben ${v} Teig übrig.`,
+      }));
+    }
+    if (k === 3) {
+      const L = pick([80, 90, 100]), d = pick([50, 60, 70]), n = pick([2, 3, 4, 5]);
+      return dec(wordTask({
+        prompt: `Eine Laufbahn auf dem Sportplatz hat zwei gerade Stücke, jedes ${L} m lang. An den beiden Enden sind Halbkreise mit ${d} m Durchmesser. ${name} läuft ${n} Runden. Wie viele Meter sind das? Rechne mit π ≈ ${PI}.`,
+        steps: [
+          { title: 'Beide Halbkreise', ask: 'Zwei Halbkreise ergeben zusammen einen ganzen Kreis. Wie lang ist sein Umfang?', calc: `${d} · ${PI}`, wrong: [`${d} · ${PI} : 2`, `${d} · ${d} · ${PI}`], why: 'Zwei halbe Kreisbögen sind ein ganzer Umfang: u = d · 3,14.', unit: 'm' },
+          { title: 'Gerade Stücke', ask: 'Wie lang sind die beiden geraden Stücke zusammen?', calc: `2 · ${L}`, unit: 'm' },
+          { title: 'Eine Runde', ask: 'Wie lang ist eine Runde?', calc: `${dc(d * 3.14)} + ${2 * L}`, unit: 'm' },
+          { title: `${n} Runden`, ask: `Wie weit läuft ${name} in ${n} Runden?`, calc: `${dc(d * 3.14 + 2 * L)} · ${n}`, wrong: [`${dc(d * 3.14 + 2 * L)} + ${n}`], unit: 'm' },
+        ],
+        unit: 'm', sentence: v => `${name} läuft ${v}.`,
+      }));
+    }
+    if (k === 4) {
+      const d = pick([50, 60, 70]), n = R(3, 9) * 100, u = d * 3.14, dist = (u * n) / 100;
+      return dec(wordTask({
+        prompt: `Der Schulweg von ${name} ist ${dc(dist)} m lang. Das Fahrrad hat Räder mit ${d} cm Durchmesser. Wie oft dreht sich ein Rad auf dem ganzen Schulweg? Rechne mit π ≈ ${PI}.`,
+        steps: [
+          { title: 'Eine Umdrehung', ask: 'Wie weit kommt das Rad bei einer Umdrehung?', calc: `${d} · ${PI}`, wrong: [`${d} · ${d} · ${PI}`, `2 · ${d} · ${PI}`], why: 'Bei einer Umdrehung rollt das Rad seinen Umfang ab: u = d · 3,14.', unit: 'cm' },
+          { title: 'Schulweg in cm', ask: 'Wie viele Zentimeter ist der Schulweg lang?', calc: `${dc(dist)} · 100`, wrong: [`${dc(dist)} : 100`, `${dc(dist)} · 10`], why: '1 m = 100 cm: mal 100.', unit: 'cm' },
+          { title: 'Umdrehungen', ask: 'Wie oft dreht sich das Rad?', calc: `${dc(dist * 100)} : ${dc(u)}`, wrong: [`${dc(dist * 100)} · ${dc(u)}`], why: 'So oft passt eine Umdrehung in den Weg: geteilt.' },
+        ],
+        sentence: v => `Das Rad dreht sich ${v}-mal.`,
+      }));
+    }
+    const r = R(2, 6), b = R(1, 2), Rr = r + b;
+    return dec(wordTask({
+      prompt: `Um einen runden Teich mit ${r} m Radius wird ein ${b} m breiter Weg gepflastert. Wie groß ist die Fläche des Weges? Rechne mit π ≈ ${PI}.${circFig({ ring: [`${Rr} m`, `${r} m`] })}`,
       steps: [
-        { title: 'Große Pizza', ask: `Wie groß ist die Fläche der großen Pizza? Ihr Radius ist ${D} : 2 = ${big} cm.`, calc: `${big} · ${big} · ${PI}`, wrong: [`${D} · ${D} · ${PI}`, `${D} · ${PI}`], why: 'Fläche mit dem Radius: r · r · 3,14.', unit: 'cm²' },
-        { title: 'Eine kleine Pizza', ask: `Wie groß ist die Fläche einer kleinen Pizza? Ihr Radius ist ${small} cm.`, calc: `${small} · ${small} · ${PI}`, unit: 'cm²' },
-        { title: 'Zwei kleine Pizzen', ask: 'Wie viel Fläche haben die zwei kleinen Pizzen zusammen?', calc: `2 · ${dc(small * small * 3.14)}`, unit: 'cm²' },
-        { title: 'Vergleichen', ask: `Wie viel cm² mehr ${bigWins ? 'hat die große Pizza' : 'haben die zwei kleinen'}?`, calc: bigWins ? `${dc(AB)} − ${dc(AS)}` : `${dc(AS)} − ${dc(AB)}`, unit: 'cm²', hint: 'Größere Fläche minus kleinere Fläche.' },
+        { title: 'Großer Radius', ask: 'Wie groß ist der Radius vom Teich mit Weg?', calc: `${r} + ${b}`, wrong: [`${r} − ${b}`, `${r} + 2 · ${b}`], why: 'Der Weg kommt außen um den Teich dazu.', unit: 'm' },
+        { title: 'Teich mit Weg', ask: 'Wie groß ist die Fläche vom Teich mit Weg?', calc: `${Rr} · ${Rr} · ${PI}`, unit: 'm²' },
+        { title: 'Nur der Teich', ask: 'Wie groß ist die Fläche vom Teich?', calc: `${r} · ${r} · ${PI}`, unit: 'm²' },
+        { title: 'Der Weg', ask: 'Wie groß ist die Fläche des Weges?', calc: `${dc(Rr * Rr * 3.14)} − ${dc(r * r * 3.14)}`, wrong: [`${dc(Rr * Rr * 3.14)} + ${dc(r * r * 3.14)}`], why: 'Großer Kreis minus Teich.', unit: 'm²' },
       ],
-      unit: 'cm²', sentence: v => `${bigWins ? 'Die große Pizza' : 'Die zwei kleinen Pizzen'} ${bigWins ? 'hat' : 'haben'} ${v} mehr.`,
-    });
-    return { ...t, form: 'dec' as const };
+      unit: 'm²', sentence: v => `Der Weg ist ${v} groß.`,
+    }));
   }, t => t.guide.every(s => s.answer.sign() > 0)),
 };
 
@@ -763,11 +1034,13 @@ const EINH2: Topic = {
     }, t => t.answer.sign() > 0);
   },
   text: level => genFrom(() => {
+    const name = pick(KIDS);
     if (level === 4) {
-      if (Math.random() < 0.5) {
-        const a = R(2, 6) * 5, b = R(2, 8) * 10;
+      const k = R(0, 4);
+      if (k === 0) {
+        const x = R(2, 8) * 5, y = R(2, 8) * 10, a = Math.max(x, y), b = Math.min(x, y), fam = pick(['Huber', 'Yilmaz', 'Schneider', 'Nowak', 'Weber']);
         return wordTask({
-          prompt: `Familie Huber hat einen rechteckigen Garten, ${a} m lang und ${b} m breit. Wie viel Ar ist der Garten groß?`,
+          prompt: `Familie ${fam} hat einen rechteckigen Garten, ${a} m lang und ${b} m breit. Wie viel Ar ist der Garten groß?`,
           steps: [
             { title: 'Fläche in m²', ask: 'Wie groß ist der Garten in m²?', calc: `${a} · ${b}`, wrong: [`${a} + ${b}`, `2 · ${a} + 2 · ${b}`], why: 'Fläche vom Rechteck: Länge mal Breite.', unit: 'm²' },
             { title: 'In Ar', ask: 'Wie viel Ar sind das? (Gib nur die Zahl ein.)', calc: `${a * b} : 100`, wrong: [`${a * b} : 10`, `${a * b} · 100`], why: '1 a = 100 m². In die größere Einheit: geteilt durch 100.', unit: 'a' },
@@ -775,27 +1048,119 @@ const EINH2: Topic = {
           unit: 'a', sentence: v => `Der Garten ist ${v} groß.`,
         });
       }
-      const l = pick([50, 60, 80, 100]), b = pick([30, 40]), h = pick([30, 40, 50]);
+      if (k === 1) {
+        const l = pick([40, 50, 60, 80, 100, 120]), b = pick([25, 30, 40, 50]), h = pick([30, 40, 50, 60]);
+        return wordTask({
+          prompt: `Ein Aquarium ist ${l} cm lang, ${b} cm breit und ${h} cm hoch. Wie viele Liter Wasser passen hinein?`,
+          steps: [
+            { title: 'Volumen in cm³', ask: 'Wie groß ist das Volumen in cm³?', calc: `${l} · ${b} · ${h}`, wrong: [`${l} + ${b} + ${h}`, `${l} · ${b}`], why: 'Volumen vom Quader: Länge mal Breite mal Höhe.', unit: 'cm³' },
+            { title: 'In dm³', ask: 'Wie viel dm³ sind das?', calc: `${l * b * h} : 1000`, wrong: [`${l * b * h} : 100`, `${l * b * h} · 1000`], why: '1 dm³ = 1000 cm³. In die größere Einheit: geteilt.', unit: 'dm³' },
+            { title: 'In Liter', ask: '1 dm³ = 1 l. Wie viele Liter sind das?', calc: `${dc((l * b * h) / 1000)} · 1`, explain: `${dc((l * b * h) / 1000)} dm³ = ${dc((l * b * h) / 1000)} l`, unit: 'l' },
+          ],
+          unit: 'l', sentence: v => `In das Aquarium passen ${v} Wasser.`,
+        });
+      }
+      if (k === 2) {
+        const x = R(2, 5), y = R(2, 4), l = Math.max(x, y), b = Math.min(x, y), s = pick([20, 25, 50]), room = pick(['Badezimmer', 'Flur', 'Küche', 'Waschküche']);
+        return wordTask({
+          prompt: `Der Boden ${room === 'Küche' || room === 'Waschküche' ? 'der' : 'des'} ${room === 'Badezimmer' ? 'Badezimmers' : room === 'Flur' ? 'Flurs' : room} ist ${l} m lang und ${b} m breit. Er wird mit quadratischen Fliesen belegt. Jede Fliese ist ${s} cm lang und ${s} cm breit. Wie viele Fliesen braucht man?`,
+          steps: [
+            { title: 'Boden in m²', ask: 'Wie groß ist der Boden?', calc: `${l} · ${b}`, wrong: [`${l} + ${b}`], why: 'Länge mal Breite.', unit: 'm²' },
+            { title: 'Boden in cm²', ask: 'Wie viel cm² sind das?', calc: `${l * b} · 10000`, wrong: [`${l * b} · 100`, `${l * b} : 10000`], why: 'Von m² zu cm² sind es zwei Stufen: 100 · 100 = 10 000. In die kleinere Einheit: mal.', unit: 'cm²' },
+            { title: 'Eine Fliese', ask: 'Wie groß ist eine Fliese?', calc: `${s} · ${s}`, wrong: [`4 · ${s}`], why: 'Fläche vom Quadrat: Seite mal Seite.', unit: 'cm²' },
+            { title: 'Fliesen', ask: 'Wie viele Fliesen braucht man?', calc: `${l * b * 10000} : ${s * s}`, wrong: [`${l * b * 10000} · ${s * s}`], why: 'So oft passt eine Fliese in den Boden: geteilt.', unit: 'Fliesen' },
+          ],
+          unit: 'Fliesen', sentence: v => `Man braucht ${v}.`,
+        });
+      }
+      if (k === 3) {
+        const liter = R(2, 8), ml = pick([100, 125, 200, 250]), drink = pick(['Apfelsaft', 'Kakao', 'Tee', 'Orangensaft']);
+        return wordTask({
+          prompt: `Für das Klassenfest bringt ${name} ${liter} Liter ${drink} mit. Er wird in Becher gefüllt, in jeden Becher kommen ${ml} ml. Wie viele Becher werden voll?`,
+          steps: [
+            { title: 'In ml', ask: `Wie viele Milliliter sind ${liter} Liter?`, calc: `${liter} · 1000`, wrong: [`${liter} · 100`, `${liter} : 1000`], why: '1 l = 1000 ml. In die kleinere Einheit: mal.', unit: 'ml' },
+            { title: 'Becher', ask: 'Wie viele Becher werden voll?', calc: `${liter * 1000} : ${ml}`, wrong: [`${liter * 1000} · ${ml}`], why: `In jeden Becher kommen ${ml} ml: geteilt.`, unit: 'Becher' },
+          ],
+          unit: 'Becher', sentence: v => `Es werden ${v} voll.`,
+        });
+      }
+      const l = R(4, 9), b = R(3, 6), rain = pick([5, 10, 15, 20, 25]);
       return wordTask({
-        prompt: `Ein Aquarium ist ${l} cm lang, ${b} cm breit und ${h} cm hoch. Wie viele Liter Wasser passen hinein?`,
+        prompt: `Ein Garagendach ist ${l} m lang und ${b} m breit. Bei einem Gewitter fallen ${rain} Liter Regen auf jeden Quadratmeter. Das ganze Wasser läuft in eine Zisterne. Wie viele m³ Wasser sind das? (1 m³ = 1000 l)`,
         steps: [
-          { title: 'Volumen in cm³', ask: 'Wie groß ist das Volumen in cm³?', calc: `${l} · ${b} · ${h}`, wrong: [`${l} + ${b} + ${h}`, `${l} · ${b}`], why: 'Volumen vom Quader: Länge mal Breite mal Höhe.', unit: 'cm³' },
-          { title: 'In dm³', ask: 'Wie viel dm³ sind das?', calc: `${l * b * h} : 1000`, wrong: [`${l * b * h} : 100`, `${l * b * h} · 1000`], why: '1 dm³ = 1000 cm³. In die größere Einheit: geteilt.', unit: 'dm³' },
-          { title: 'In Liter', ask: '1 dm³ = 1 l. Wie viele Liter sind das?', calc: `${(l * b * h) / 1000} · 1`, explain: `${(l * b * h) / 1000} dm³ = ${(l * b * h) / 1000} l`, unit: 'l' },
+          { title: 'Dachfläche', ask: 'Wie groß ist das Dach?', calc: `${l} · ${b}`, wrong: [`${l} + ${b}`], why: 'Länge mal Breite.', unit: 'm²' },
+          { title: 'Regen in Liter', ask: 'Wie viele Liter Regen fallen auf das ganze Dach?', calc: `${l * b} · ${rain}`, wrong: [`${l * b} + ${rain}`], why: `Auf jeden m² fallen ${rain} Liter: mal.`, unit: 'l' },
+          { title: 'In m³', ask: 'Wie viele m³ sind das?', calc: `${l * b * rain} : 1000`, wrong: [`${l * b * rain} : 100`, `${l * b * rain} · 1000`], why: '1 m³ = 1000 l. In die größere Einheit: geteilt.', unit: 'm³' },
         ],
-        unit: 'l', sentence: v => `In das Aquarium passen ${v} Wasser.`,
+        unit: 'm³', sentence: v => `In die Zisterne laufen ${v} Wasser.`,
       });
     }
-    const a = pick([200, 250, 300, 400, 500]), b = pick([100, 200, 300, 400]), e = R(6, 9);
-    if ((a * b) % 10000) return null;
+    const k = R(0, 4);
+    if (k === 0) {
+      const a = pick([200, 250, 300, 400, 500, 600]), b = pick([100, 150, 200, 300, 400]), e = R(6, 9), farmer = pick(['Maier', 'Brenner', 'Hofmann', 'Keller']);
+      if ((a * b) % 10000) return null;
+      return wordTask({
+        prompt: `Bauer ${farmer} hat ein rechteckiges Weizenfeld, ${a} m lang und ${b} m breit. Pro Hektar erntet er ${e} t Weizen. Wie viele Tonnen erntet er auf dem ganzen Feld?`,
+        steps: [
+          { title: 'Fläche in m²', ask: 'Wie groß ist das Feld in m²?', calc: `${a} · ${b}`, wrong: [`${a} + ${b}`], why: 'Länge mal Breite.', unit: 'm²' },
+          { title: 'In Hektar', ask: 'Wie viel Hektar sind das? (Gib nur die Zahl ein.)', calc: `${a * b} : 10000`, wrong: [`${a * b} : 100`, `${a * b} : 1000`], why: '1 ha = 100 a = 10 000 m².', unit: 'ha' },
+          { title: 'Ernte', ask: 'Wie viele Tonnen Weizen erntet er?', calc: `${(a * b) / 10000} · ${e}`, wrong: [`${(a * b) / 10000} + ${e}`], why: `Auf jedem Hektar wachsen ${e} t.`, unit: 't' },
+        ],
+        unit: 't', sentence: v => `Er erntet ${v} Weizen.`,
+      });
+    }
+    if (k === 1) {
+      const ha = R(2, 6), street = R(2, 8) * 5, size = pick([4, 5, 6, 8]), total = ha * 100;
+      if ((total - street) % size) return null;
+      return wordTask({
+        prompt: `Die Gemeinde hat eine Wiese von ${ha} ha. Davon werden ${street} a für Straßen gebraucht. Der Rest wird in Bauplätze zu je ${size} a geteilt. Wie viele Bauplätze gibt es?`,
+        steps: [
+          { title: 'In Ar', ask: `Wie viel Ar sind ${ha} ha?`, calc: `${ha} · 100`, wrong: [`${ha} · 10`, `${ha} · 10000`], why: '1 ha = 100 a. In die kleinere Einheit: mal.', unit: 'a' },
+          { title: 'Ohne Straßen', ask: 'Wie viel Ar bleiben für die Bauplätze?', calc: `${total} − ${street}`, unit: 'a' },
+          { title: 'Bauplätze', ask: 'Wie viele Bauplätze gibt es?', calc: `${total - street} : ${size}`, wrong: [`${total - street} · ${size}`], why: `Jeder Bauplatz ist ${size} a groß: geteilt.`, unit: 'Bauplätze' },
+        ],
+        unit: 'Bauplätze', sentence: v => `Es gibt ${v}.`,
+      });
+    }
+    if (k === 2) {
+      const spoon = pick([5, 10]), times = R(2, 3), days = R(5, 12), ml = spoon * times * days;
+      if (ml % 50 || ml < 100) return null;
+      return wordTask({
+        prompt: `In einer Flasche Hustensaft sind ${dc(ml / 1000)} l. ${name} soll ${times}-mal am Tag einen Löffel mit ${spoon} ml nehmen. Wie viele Tage reicht die Flasche?`,
+        steps: [
+          { title: 'In ml', ask: `Wie viele Milliliter sind ${dc(ml / 1000)} l?`, calc: `${dc(ml / 1000)} · 1000`, wrong: [`${dc(ml / 1000)} · 100`, `${dc(ml / 1000)} : 1000`], why: '1 l = 1000 ml. In die kleinere Einheit: mal.', unit: 'ml' },
+          { title: 'Ein Tag', ask: 'Wie viele Milliliter braucht man an einem Tag?', calc: `${times} · ${spoon}`, unit: 'ml' },
+          { title: 'Tage', ask: 'Wie viele Tage reicht die Flasche?', calc: `${ml} : ${times * spoon}`, wrong: [`${ml} · ${times * spoon}`], why: `Jeden Tag gehen ${times * spoon} ml weg: geteilt.`, unit: 'Tage' },
+        ],
+        unit: 'Tage', sentence: v => `Die Flasche reicht ${v}.`,
+      });
+    }
+    if (k === 3) {
+      const l = pick([50, 60, 80]), b = pick([40, 50, 60]), h = pick([80, 100, 120]), can = pick([5, 8, 10, 12]), V = (l * b * h) / 1000;
+      if (V % can) return null;
+      return wordTask({
+        prompt: `Opa hat eine Regentonne in Form eines Quaders. Sie ist innen ${l} cm lang, ${b} cm breit und ${h} cm hoch und ganz voll. Seine Gießkanne fasst ${can} Liter. Wie oft kann er die Gießkanne füllen?`,
+        steps: [
+          { title: 'Volumen in cm³', ask: 'Wie viel cm³ passen in die Tonne?', calc: `${l} · ${b} · ${h}`, wrong: [`${l} + ${b} + ${h}`], why: 'Länge mal Breite mal Höhe.', unit: 'cm³' },
+          { title: 'In Liter', ask: 'Wie viele Liter sind das?', calc: `${l * b * h} : 1000`, wrong: [`${l * b * h} : 100`, `${l * b * h} · 1000`], why: '1000 cm³ = 1 dm³ = 1 l. In die größere Einheit: geteilt.', unit: 'l' },
+          { title: 'Gießkannen', ask: 'Wie oft kann er die Gießkanne füllen?', calc: `${V} : ${can}`, wrong: [`${V} · ${can}`], why: `In die Kanne passen ${can} Liter: geteilt.` },
+        ],
+        sentence: v => `Er kann die Gießkanne ${v}-mal füllen.`,
+      });
+    }
+    const l = pick([90, 100, 105, 110]), b = pick([60, 64, 68, 70]), kg = pick([2, 3]), sack = pick([10, 20]), pr = R(30, 60);
+    const ar = (l * b) / 100;
+    if ((ar * kg) % sack || !Number.isInteger(ar)) return null;
     return wordTask({
-      prompt: `Bauer Maier hat ein rechteckiges Weizenfeld, ${a} m lang und ${b} m breit. Pro Hektar erntet er ${e} t Weizen. Wie viele Tonnen erntet er auf dem ganzen Feld?`,
+      prompt: `Der Rasen auf dem Fußballplatz wird neu eingesät. Das Feld ist ${l} m lang und ${b} m breit. Für jedes Ar braucht man ${kg} kg Grassamen. Ein Sack mit ${sack} kg kostet ${pr} €. Wie viel kostet der Samen?`,
       steps: [
-        { title: 'Fläche in m²', ask: 'Wie groß ist das Feld in m²?', calc: `${a} · ${b}`, wrong: [`${a} + ${b}`], why: 'Länge mal Breite.', unit: 'm²' },
-        { title: 'In Hektar', ask: 'Wie viel Hektar sind das? (Gib nur die Zahl ein.)', calc: `${a * b} : 10000`, wrong: [`${a * b} : 100`, `${a * b} : 1000`], why: '1 ha = 100 a = 10 000 m².', unit: 'ha' },
-        { title: 'Ernte', ask: 'Wie viele Tonnen Weizen erntet er?', calc: `${(a * b) / 10000} · ${e}`, wrong: [`${(a * b) / 10000} + ${e}`], why: `Auf jedem Hektar wachsen ${e} t.`, unit: 't' },
+        { title: 'Fläche in m²', ask: 'Wie groß ist das Feld?', calc: `${l} · ${b}`, wrong: [`${l} + ${b}`], why: 'Länge mal Breite.', unit: 'm²' },
+        { title: 'In Ar', ask: 'Wie viel Ar sind das? (Gib nur die Zahl ein.)', calc: `${l * b} : 100`, wrong: [`${l * b} : 10`, `${l * b} : 10000`], why: '1 a = 100 m². In die größere Einheit: geteilt.', unit: 'a' },
+        { title: 'Samen', ask: 'Wie viel Kilogramm Samen braucht man?', calc: `${ar} · ${kg}`, unit: 'kg' },
+        { title: 'Säcke', ask: 'Wie viele Säcke sind das?', calc: `${ar * kg} : ${sack}`, wrong: [`${ar * kg} · ${sack}`], why: `In jedem Sack sind ${sack} kg.`, unit: 'Säcke' },
+        { title: 'Preis', ask: 'Was kosten alle Säcke?', calc: `${(ar * kg) / sack} · ${pr}`, wrong: [`${(ar * kg) / sack} + ${pr}`], unit: '€' },
       ],
-      unit: 't', sentence: v => `Er erntet ${v} Weizen.`,
+      unit: '€', sentence: v => `Der Samen kostet ${v}.`,
     });
   }, t => t.guide.every(s => s.answer.sign() > 0)),
 };
