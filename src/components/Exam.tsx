@@ -8,6 +8,8 @@ import { look } from '../ui/look';
 import { AnswerInput } from './Widgets';
 import { Html } from './Html';
 import type { Attempt, ExamLog } from '../journal';
+import { loadSeen, saveSeen } from '../storage';
+import { remember } from '../fresh';
 
 interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void; custom?: { name: string; topics: string[]; back: string }; onLog?: (tries: Attempt[], exam: ExamLog) => void }
 
@@ -39,7 +41,8 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom, onLog }:
   const marks: Mark[] = useMemo(() => (phase === 'result' ? tasks.map((t, k) => mark(t.task, answers[k] ?? '')) : []), [phase, tasks, answers]);
 
   const start = () => {
-    const t = buildExam(topics);
+    const t = buildExam(topics, loadSeen());
+    saveSeen(t.reduce((s, x) => remember(s, x.topic, x.task), loadSeen()));
     setTasks(t); setAnswers(t.map(() => '')); setI(0); setSecs(0); setConfirm(false); setPhase('run');
     window.scrollTo({ top: 0 });
   };

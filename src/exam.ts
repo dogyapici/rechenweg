@@ -3,20 +3,19 @@ import { MathError, parseAnswer } from './engine/index.js';
 import { makeTask } from './stages';
 import { TOPICS, type Task } from './topics';
 import { formIssue } from './gen';
+import { storyKey, taskKey, type Seen } from './fresh';
 
 export interface ExamTask { topic: string; task: Task }
 
 const shuffle = <T,>(a: T[]): T[] => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 
-/** Gleiche Geschichte mit anderen Zahlen zählt als Wiederholung. */
-const storyKey = (t: Task) => (t.word ? 'w:' : 'r:') + t.prompt.replace(/<[^>]*>/g, '').replace(/[\d.,]+/g, '#');
 
 /**
  * Wie eine echte Klassenarbeit: von leicht nach schwer, jedes Thema kommt vor,
  * zum Schluss Textaufgaben. 8 Aufgaben pro Kapitel, in der Abschlussprüfung eine pro Thema (12 bis 24,
  * bei mehr Themen eine zufällige Auswahl, damit die Prüfung in eine Sitzung passt).
  */
-export function buildExam(topicIds: string[], count = topicIds.length > 4 ? Math.min(24, Math.max(12, topicIds.length)) : 8): ExamTask[] {
+export function buildExam(topicIds: string[], seenBefore: Seen = {}, count = topicIds.length > 4 ? Math.min(24, Math.max(12, topicIds.length)) : 8): ExamTask[] {
   const levels = Array.from({ length: count }, (_, i) => (i < count * 0.3 ? 2 : i < count * 0.6 ? 3 : i < count * 0.85 ? 4 : 5));
   const order = shuffle(topicIds);
   const out: ExamTask[] = [];
@@ -24,11 +23,13 @@ export function buildExam(topicIds: string[], count = topicIds.length > 4 ? Math
   levels.forEach((lv, i) => {
     const t = TOPICS.find(x => x.id === order[i % order.length])!;
     let task: Task | null = null;
+    const old = new Set(seenBefore[t.id]?.k ?? []);
     for (let k = 0; k < 30; k++) {
       const c = makeTask(t, lv);
       if (!c) continue;
       task = c;
-      if (!seen.has(storyKey(c))) break;
+      // Andere Geschichte als in dieser Arbeit, und möglichst keine Aufgabe, die gerade geübt wurde.
+      if (!seen.has(storyKey(c)) && (k >= 20 || !old.has(taskKey(c)))) break;
     }
     if (task) { seen.add(storyKey(task)); out.push({ topic: t.id, task }); }
   });
