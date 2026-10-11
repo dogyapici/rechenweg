@@ -7,14 +7,15 @@ import { TOPICS } from '../topics';
 import { look } from '../ui/look';
 import { AnswerInput } from './Widgets';
 import { Html } from './Html';
+import type { Attempt, ExamLog } from '../journal';
 
-interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void; custom?: { name: string; topics: string[]; back: string } }
+interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void; custom?: { name: string; topics: string[]; back: string }; onLog?: (tries: Attempt[], exam: ExamLog) => void }
 
 const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? id;
 const num = (x: number) => String(Math.round(x * 10) / 10).replace('.', ',');
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom }: Props) {
+export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom, onLog }: Props) {
   const ch = CHAPTERS.find(c => c.id === id);
   const name = custom ? custom.name : ch ? `Klassenarbeit: ${ch.title}` : FINAL.title;
   const topics = custom ? custom.topics : ch ? ch.topics : FINAL.topics;
@@ -43,8 +44,13 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom }: Props)
     window.scrollTo({ top: 0 });
   };
   const submit = () => {
-    const pts = tasks.reduce((s, t, k) => s + mark(t.task, answers[k] ?? '').points, 0);
+    const ms = tasks.map((t, k) => mark(t.task, answers[k] ?? ''));
+    const pts = ms.reduce((s, m) => s + m.points, 0);
     const p = pts / tasks.length;
+    const now = Date.now(), per = secs / Math.max(1, tasks.length);
+    onLog?.(tasks.map((t, k) => ({ t: now, topic: t.topic, lv: 0, src: 'arbeit', q: t.task.prompt, a: t.task.sol.resultHTML,
+      wrong: ms[k].state === 'right' ? [] : [answerLabel(t.task.widget, answers[k] ?? '') || '(leer)'], ok: ms[k].state === 'right', first: ms[k].state === 'right', help: [], sec: per })),
+      { t: now, id, name, p, secs, n: tasks.length });
     onExams({ ...exams, [id]: { best: Math.max(prev?.best ?? 0, p), last: p, at: new Date().toISOString(), tries: (prev?.tries ?? 0) + 1 } });
     setPhase('result');
     window.scrollTo({ top: 0 });

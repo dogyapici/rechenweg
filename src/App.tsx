@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Home } from './components/Home';
 import { Path } from './components/Path';
 import { TopicPage } from './components/TopicPage';
@@ -10,15 +10,17 @@ import { Placement } from './components/Placement';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Progress } from './components/Progress';
 import { ProfilePage } from './components/ProfilePage';
+import { Eltern } from './components/Eltern';
+import { addAttempt, addExam, decodeSnapshot, SHARE_KEY, type Attempt, type ExamLog, type Journal, type Snapshot } from './journal';
 import { Celebrate, type Party } from './components/Celebrate';
-import { loadActivity, loadExams, loadFree, loadPlan, loadProfile, loadStats, loadUnlocked, saveActivity, saveExams, saveFree, saveLast, savePlan, saveProfile, saveStats, saveUnlocked, type Stats } from './storage';
+import { loadActivity, loadExams, loadFree, loadJournal, loadPlan, loadProfile, loadStats, loadUnlocked, saveActivity, saveExams, saveFree, saveJournal, saveLast, savePlan, saveProfile, saveStats, saveUnlocked, type Stats } from './storage';
 import { isoDay, type Plan } from './plan';
 import { reachable, type Profile } from './profile';
 import { DAILY_GOAL, isActive, logExam, logStats, newAchievements, streak, type Activity, type Unlocked } from './progress';
 import { CHAPTERS, type Exams } from './curriculum';
 import type { TutorContext } from './ai';
 
-export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' };
+export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' } | { name: 'eltern' };
 
 const ALL = CHAPTERS.flatMap(c => c.topics);
 const NAV = [['home', '🏠', 'Start'], ['path', '📚', 'Lernpfad'], ['plan', '📅', 'Klassenarbeit'], ['calc', '🧮', 'Rechner'], ['tutor', '💬', 'Fragen']] as const;
@@ -31,6 +33,22 @@ export function App() {
   const [plan, setPlan] = useState<Plan | null>(loadPlan);
   const [profile, setProfile] = useState<Profile | null>(loadProfile);
   const [tutorCtx, setTutorCtx] = useState<TutorContext | null>(null);
+  const [journal, setJournal] = useState<Journal>(loadJournal);
+  const jref = useRef(journal);
+  const logTry = useCallback((a: Attempt) => { const j = addAttempt(jref.current, a); jref.current = j; setJournal(j); saveJournal(j); }, []);
+  const logExam_ = useCallback((tries: Attempt[], e: ExamLog) => { let j = jref.current; for (const a of tries) j = addAttempt(j, a); j = addExam(j, e); jref.current = j; setJournal(j); saveJournal(j); }, []);
+  /** Ein geteilter Bericht kommt als #bericht=… in der Adresse und wird nur angezeigt, nie gespeichert. */
+  const [shared, setShared] = useState<Snapshot | 'bad' | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const m = location.hash.match(new RegExp(`^#${SHARE_KEY}=(.+)$`));
+      if (m) decodeSnapshot(m[1]).then(s => setShared(s ?? 'bad')); else setShared(null);
+    };
+    read();
+    window.addEventListener('hashchange', read);
+    return () => window.removeEventListener('hashchange', read);
+  }, []);
+  const closeShared = () => { history.replaceState(null, '', location.pathname + location.search); setShared(null); };
 
   const go = useCallback((v: View) => {
     if (v.name === 'topic') saveLast(v.id);
@@ -111,23 +129,26 @@ export function App() {
         </div>
       </header>
       <main>
-        <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' ? view.id : view.name}>
-        {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} profile={profile} act={act} unlocked={unlocked} onProfile={() => go({ name: 'profile' })} onProgress={() => go({ name: 'progress' })} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
+        {shared === 'bad' && <div className="card panel"><p>Dieser Bericht-Link ist leider beschädigt oder unvollständig. Bitte lassen Sie sich einen neuen Link schicken.</p><button className="btn" onClick={closeShared}>Zur App</button></div>}
+        {shared && shared !== 'bad' && <ErrorBoundary key="shared"><Eltern data={shared} shared onBack={closeShared} /></ErrorBoundary>}
+        {!shared && <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' ? view.id : view.name}>
+        {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} profile={profile} act={act} unlocked={unlocked} onProfile={() => go({ name: 'profile' })} onProgress={() => go({ name: 'progress' })} onParents={() => go({ name: 'eltern' })} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
           onPlan={() => go({ name: 'plan' })} onPlacement={placement} onPath={focus => go({ name: 'path', focus })} />}
         {view.name === 'path' && <Path key={view.focus} stats={stats} exams={exams} free={free} plan={plan} profile={profile} focus={view.focus} onFree={updateFree} onOpen={id => go({ name: 'topic', id, from: 'path' })} onExam={id => go({ name: 'exam', id })} onPlacement={placement} />}
-        {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onBack={() => go({ name: view.id === 'plan' ? 'plan' : 'path' })} onOpenTopic={id => go({ name: 'topic', id, from: view.id === 'plan' ? 'plan' : 'path' })}
+        {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onLog={logExam_} onBack={() => go({ name: view.id === 'plan' ? 'plan' : 'path' })} onOpenTopic={id => go({ name: 'topic', id, from: view.id === 'plan' ? 'plan' : 'path' })}
           custom={view.id === 'plan' && plan ? { name: `Probe-Klassenarbeit${plan.title ? ': ' + plan.title : ''}`, topics: plan.topics, back: 'Zurück zum Lernplan' } : undefined} />}
         {view.name === 'plan' && <Zettel plan={plan} stats={stats} exams={exams} onPlan={updatePlan} onOpen={id => go({ name: 'topic', id, from: 'plan' })} onExam={() => go({ name: 'exam', id: 'plan' })}
           onPlacement={topics => go({ name: 'placement', topics, back: 'plan' })} onBack={() => go({ name: 'home' })} />}
         {view.name === 'placement' && <Placement topics={view.topics} stats={stats} onStats={updateStats} onDone={() => go({ name: view.back })} />}
         {view.name === 'topic' && (
-          <TopicPage key={view.id} id={view.id} stats={stats} onStats={updateStats} onBack={() => go({ name: view.from ?? 'home' })} backLabel={view.from === 'plan' ? 'Zurück zum Lernplan' : view.from === 'path' ? 'Zurück zum Lernpfad' : 'Zur Startseite'} onAskTutor={askTutor} />
+          <TopicPage key={view.id} id={view.id} stats={stats} onStats={updateStats} onLog={logTry} onBack={() => go({ name: view.from ?? 'home' })} backLabel={view.from === 'plan' ? 'Zurück zum Lernplan' : view.from === 'path' ? 'Zurück zum Lernpfad' : 'Zur Startseite'} onAskTutor={askTutor} />
         )}
         {view.name === 'profile' && <ProfilePage profile={profile} onSave={p => { setProfile(p); saveProfile(p); go({ name: 'home' }); }} onBack={() => go({ name: 'home' })} />}
         {view.name === 'progress' && <Progress act={act} unlocked={unlocked} stats={stats} exams={exams} plan={plan} onBack={() => go({ name: 'home' })} />}
         {view.name === 'calc' && <Calculator onAskTutor={askTutor} />}
         {view.name === 'tutor' && <Tutor context={tutorCtx} onClearContext={() => setTutorCtx(null)} />}
-        </ErrorBoundary>
+        {view.name === 'eltern' && <Eltern data={{ profile, stats, exams, act, journal }} onBack={() => go({ name: 'home' })} onOpenTopic={id => go({ name: 'topic', id })} />}
+        </ErrorBoundary>}
       </main>
       {parties[0] && <Celebrate party={parties[0]} more={parties.length - 1} onClose={() => setParties(p => p.slice(1))} />}
     </>
