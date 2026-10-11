@@ -39,6 +39,16 @@ function ynTask(prompt: string, yes: boolean, steps: Steps, guide: GuideStep[], 
 }
 const table = (rows: [string, (string | number)[]][]) => `<table class="stellen">${rows.map(([h, c]) => `<tr><th>${h}</th>${c.map(x => `<td>${x}</td>`).join('')}</tr>`).join('')}</table>`;
 const merke = (items: string[]) => `<div class="merke"><span class="merke-l">Merke</span><ol>${items.map(i => `<li>${i}</li>`).join('')}</ol></div>`;
+/** Namen mit Pronomen für Textaufgaben */
+const KIDS: [string, string][] = [['Mia', 'sie'], ['Ben', 'er'], ['Lena', 'sie'], ['Tim', 'er'], ['Emre', 'er'], ['Sofia', 'sie'], ['Noah', 'er'], ['Lea', 'sie'], ['Jonas', 'er'], ['Aylin', 'sie']];
+const kid = () => pick(KIDS);
+const kids = (n: number) => shuffle(KIDS).slice(0, n);
+const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+/** Cent als Euro-Betrag mit zwei Stellen: 750 → "7,50" */
+const eur = (c: number) => (c / 100).toFixed(2).replace('.', ',');
+/** Cent als Zahl für die Recheneinheit: 750 → "7,5" */
+const eS = (c: number) => (c % 100 === 0 ? String(c / 100) : eur(c).replace(/0$/, ''));
+type Story = () => Task | null;
 
 /* =================================================================== */
 /* ---------- 1. Teilbarkeit und Primfaktoren ---------- */
@@ -244,11 +254,75 @@ function claimTask(): Task {
       { title: 'Durch b?', ask: `<p>Teile ${c} durch ${b}. Welcher Rest bleibt?</p>`, answer: q(c % b), explain: `${c} : ${b} = ${Math.floor(c / b)} Rest ${c % b}. ${c} ist also nicht durch ${b} teilbar. Das ist ein Gegenbeispiel.`, hint: `Wie viel bleibt übrig, wenn du ${b}er-Päckchen machst?`, placeholder: 'Rest' },
     ], { word: true });
 }
+const divsOf = (n: number) => Array.from({ length: n }, (_, i) => i + 1).filter(d => n % d === 0);
+const lcmN = (a: number, b: number) => (a * b) / gcd(a, b);
+const tischeStory: Story = () => {
+  const n = 4 * R(26, 99), L = n % 100;
+  if (L < 10) return null;
+  return wordTask({
+    prompt: `Für das Schulfest werden ${n} Stühle an Tische gestellt. An jeden Tisch kommen genau 4 Stühle. Prüfe zuerst mit der Regel für 4, ob kein Stuhl übrig bleibt. Wie viele Tische braucht man?`,
+    steps: [
+      { title: 'Letzte zwei Ziffern', ask: `Die letzten zwei Ziffern von ${n} bilden die Zahl ${L}. Teile ${L} durch 4.`, calc: `${L} : 4`, explain: `${L} : 4 = ${L / 4}. ${L} ist durch 4 teilbar, also auch ${n}. Kein Stuhl bleibt übrig.`, hint: 'Für die Teilbarkeit durch 4 reichen die letzten zwei Ziffern.' },
+      { title: 'Tische', ask: 'Wie viele Tische braucht man?', calc: `${n} : 4`, wrong: [`${n} · 4`, `${n} − 4`], why: `Wie oft passen 4 Stühle in ${n}? Das ist eine Division.` },
+    ],
+    sentence: v => `Man braucht ${v} Tische.`,
+  });
+};
+const BUS: [number, number][] = [[4, 6], [6, 8], [6, 9], [8, 12], [10, 15], [12, 15], [6, 10], [4, 10], [9, 12], [12, 18], [15, 20], [10, 12], [8, 10], [12, 20]];
+const busStory: Story = () => {
+  const [a, b] = shuffle(pick(BUS)), l = lcmN(a, b), [l1, l2] = shuffle([3, 5, 7, 8, 11, 14]);
+  const mult = Array.from({ length: l / b }, (_, i) => b * (i + 1)).join(', ');
+  return wordTask({
+    prompt: `Vor der Schule fährt die Buslinie ${l1} alle ${a} Minuten ab, die Linie ${l2} alle ${b} Minuten. Um 7 Uhr fahren beide gleichzeitig ab. Wie oft fährt die Linie ${l1} ab, bis beide wieder gleichzeitig abfahren? Die Abfahrt um 7 Uhr zählt nicht mit.`,
+    steps: [
+      { title: 'Gemeinsames Vielfaches', ask: `Nach wie vielen Minuten fahren beide wieder gleichzeitig ab? Suche die kleinste Zahl, die durch ${a} und durch ${b} teilbar ist.`, calc: `${b} · ${l / b}`, explain: `Vielfache von ${b}: ${mult}. ${l} ist auch durch ${a} teilbar. Nach ${l} Minuten fahren beide wieder gleichzeitig.`, hint: `Schreibe die Vielfachen von ${b} auf und prüfe, ob sie durch ${a} teilbar sind.`, unit: 'Minuten' },
+      { title: `Linie ${l1}`, ask: `Wie oft fährt die Linie ${l1} in ${l} Minuten ab?`, calc: `${l} : ${a}`, wrong: [`${l} : ${b}`, `${l} · ${a}`], why: `Die Linie ${l1} fährt alle ${a} Minuten. Wie oft passt ${a} in ${l}?` },
+    ],
+    sentence: v => `Die Linie ${l1} fährt ${v}-mal ab. Nach ${l} Minuten fahren beide wieder gleichzeitig.`,
+  });
+};
+const TUETE: [string, string][] = [['Bonbons', 'Gummibärchen'], ['Buntstifte', 'Radiergummis'], ['Sticker', 'Murmeln'], ['Mandarinen', 'Walnüsse'], ['Luftballons', 'Seifenblasen-Röhrchen']];
+function tuetenParts() {
+  for (;;) {
+    const g = R(3, 9), [m1, m2] = pick([[1, 2], [2, 3], [3, 4], [2, 5], [3, 5], [4, 5], [1, 3], [3, 7], [5, 6], [4, 7]]), x = g * m1, y = g * m2;
+    if (y <= 60 && x >= 6) return { g, m1, m2, x, y };
+  }
+}
+function tuetenStory(long: boolean): Task {
+  const { g, m1, m2, x, y } = tuetenParts(), [A, Bn] = pick(TUETE), [who, pr] = kid();
+  const ggt: WordStep = { title: 'Anzahl Tüten', ask: `Die Anzahl der Tüten muss ein Teiler von ${x} und von ${y} sein. Wie viele Tüten kann ${pr} höchstens packen?`, calc: String(g), explain: `Teiler von ${x}: ${divsOf(x).join(', ')}. Teiler von ${y}: ${divsOf(y).join(', ')}. Der größte gemeinsame Teiler ist ${g}. Also ${g} Tüten.`, hint: 'Schreibe alle Teiler beider Zahlen auf und suche den größten gemeinsamen.' };
+  const each = (n: number, what: string, other: number): WordStep => ({ title: what, ask: `Wie viele ${what} kommen in jede Tüte?`, calc: `${n} : ${g}`, wrong: [`${n} − ${g}`, `${other} : ${g}`], why: `${n} ${what} werden gleichmäßig auf ${g} Tüten verteilt.` });
+  const pre = `${who} packt Tüten für ein Kinderfest. ${cap(pr)} hat ${x} ${A} und ${y} ${Bn}. In jede Tüte sollen gleich viele ${A} und gleich viele ${Bn} kommen. Es soll nichts übrig bleiben, und es sollen möglichst viele Tüten werden.`;
+  if (!long) return wordTask({ prompt: `${pre} Wie viele ${Bn} kommen in jede Tüte?`, steps: [ggt, each(y, Bn, x)], sentence: v => `In jede der ${g} Tüten kommen ${v} ${Bn}.` });
+  return wordTask({
+    prompt: `${pre} Wie viele Teile sind dann in einer Tüte?`,
+    steps: [ggt, each(x, A, y), each(y, Bn, x), { title: 'Teile pro Tüte', ask: 'Wie viele Teile sind zusammen in einer Tüte?', calc: `${m1} + ${m2}`, wrong: [`${x} + ${y}`], why: `Gefragt ist eine Tüte, nicht alle ${g} Tüten.` }],
+    sentence: v => `In jeder der ${g} Tüten sind ${v} Teile: ${m1} ${A} und ${m2} ${Bn}.`,
+  });
+}
+const LAT: [number, number][] = [[2, 3], [2, 5], [3, 4], [3, 5], [4, 5], [4, 6], [6, 8], [6, 9], [4, 10], [6, 10]];
+const laternenStory: Story = () => {
+  const [a, b] = pick(LAT), l = lcmN(a, b), N = l * R(2, Math.floor(120 / l));
+  if (N < 30) return null;
+  const ra = N / a, rb = N / b, both = N / l;
+  return wordTask({
+    prompt: `Am Schulweg stehen ${N} Laternen mit den Nummern 1 bis ${N}. Zum Lichterfest bekommt jede Laterne, deren Nummer durch ${a} teilbar ist, ein rotes Band. Jede Laterne, deren Nummer durch ${b} teilbar ist, bekommt ein blaues Band. Wie viele Laternen bekommen mindestens ein Band?`,
+    steps: [
+      { title: 'Rote Bänder', ask: `Wie viele Nummern von 1 bis ${N} sind durch ${a} teilbar?`, calc: `${N} : ${a}`, wrong: [`${N} − ${a}`], why: `Jede ${a}. Laterne bekommt ein Band. Wie oft passt ${a} in ${N}?` },
+      { title: 'Blaue Bänder', ask: `Wie viele Nummern sind durch ${b} teilbar?`, calc: `${N} : ${b}` },
+      { title: 'Beide Bänder', ask: `Manche Laternen bekommen beide Bänder. Ihre Nummer ist durch ${a} und durch ${b} teilbar, also durch ${l}. Wie viele sind das?`, calc: `${N} : ${l}`, hint: `Die kleinste Zahl, die durch ${a} und durch ${b} teilbar ist, ist ${l}.` },
+      { title: 'Mindestens ein Band', ask: 'Wie viele Laternen bekommen mindestens ein Band?', calc: `${ra} + ${rb} − ${both}`, wrong: [`${ra} + ${rb}`], why: 'Die Laternen mit zwei Bändern hast du sonst doppelt gezählt.' },
+    ],
+    sentence: v => `${v} Laternen bekommen mindestens ein Band.`,
+  });
+};
 function primText(level: number): Task | null {
   return genFrom<Task>(() => {
     const r = Math.random();
+    if (level === 4 && r < 0.45) return pick([tischeStory, busStory, () => tuetenStory(false)])();
+    if (level === 5 && r < 0.4) return pick([laternenStory, () => tuetenStory(true)])();
     if (level === 4) {
-      if (r < 0.35) {
+      if (r < 0.65) {
         const n = R(18, 40), sizes = [3, 4, 5, 6], ok = sizes.filter(s => n % s === 0);
         if (ok.length !== 1) return null;
         const g = ok[0], w = pick(sizes.filter(s => s !== g)), rest = n % w;
@@ -261,7 +335,7 @@ function primText(level: number): Task | null {
           sentence: v => `Es gibt ${v} Gruppen mit je ${g} Kindern.`,
         });
       }
-      if (r < 0.7) {
+      if (r < 0.83) {
         const c = pick([6, 9]), n = c * R(15, 110);
         if (n < 100 || n > 999) return null;
         const s = qsum(n);
@@ -276,17 +350,18 @@ function primText(level: number): Task | null {
       }
       return claimTask();
     }
-    if (r < 0.35) return claimTask();
-    if (r < 0.7) {
-      const k = R(3, 12), n = 24 * k, s = qsum(n);
+    if (r < 0.6) return claimTask();
+    if (r < 0.8) {
+      const per = pick([3, 4, 5]), n = 6 * per * R(3, 14), s = qsum(n);
+      if (n > 999) return null;
       return wordTask({
-        prompt: `Eine Hühnerfarm hat ${n} Eier. Sie werden in Kartons zu je 6 Eiern gepackt. Je 4 Kartons kommen in eine Kiste. Wie viele Kisten werden voll? Prüfe zuerst, ob beim Packen kein Ei übrig bleibt.`,
+        prompt: `Eine Hühnerfarm hat ${n} Eier. Sie werden in Kartons zu je 6 Eiern gepackt. Je ${per} Kartons kommen in eine Kiste. Wie viele Kisten werden voll? Prüfe zuerst, ob beim Packen kein Ei übrig bleibt.`,
         steps: [
           { title: 'Quersumme', ask: `Berechne die Quersumme von ${n}.`, calc: digits(n).join(' + '), explain: `Quersumme ${s}: durch 3 teilbar. ${n} ist gerade. Also ist ${n} durch 6 teilbar.` },
-          { title: 'Kartons', ask: 'Wie viele Kartons werden gefüllt?', calc: `${n} : 6`, wrong: [`${n} : 4`, `${n} · 6`], why: 'Erst in 6er-Kartons packen.' },
-          { title: 'Kisten', ask: 'Wie viele Kisten werden voll?', calc: `${n / 6} : 4`, wrong: [`${n} : 4`, `${n / 6} · 4`], why: 'Je 4 Kartons in eine Kiste.' },
+          { title: 'Kartons', ask: 'Wie viele Kartons werden gefüllt?', calc: `${n} : 6`, wrong: [`${n} : ${per}`, `${n} · 6`], why: 'Erst in 6er-Kartons packen.' },
+          { title: 'Kisten', ask: 'Wie viele Kisten werden voll?', calc: `${n / 6} : ${per}`, wrong: [`${n} : ${per}`, `${n / 6} · ${per}`], why: `Je ${per} Kartons in eine Kiste.` },
         ],
-        sentence: v => `Es werden ${v} Kisten voll.`, term: `${n} : 6 : 4`,
+        sentence: v => `Es werden ${v} Kisten voll.`, term: `${n} : 6 : ${per}`,
       });
     }
     const f = Array.from({ length: 4 }, () => pick([2, 2, 3, 3, 5, 7])).sort((a, b) => a - b), n = prod(f);
@@ -454,31 +529,39 @@ function statementTask(): Task | null {
       { title: 'Alle zusammen', ask: '<p>Wie viele Kinder haben insgesamt abgestimmt?</p>', answer: q(S), explain: `${vals.join(' + ')} = ${S}. Prüfe jetzt jede Aussage mit deinen Werten.`, hint: 'Addiere alle Säulen.' },
     ]);
 }
+const TRICK: { pre: string; unit: string }[] = [
+  { pre: 'Der Sportverein zeigt in seiner Zeitung, wie viele Mitglieder er hat:', unit: 'Mitglieder' },
+  { pre: 'Die Stadtbücherei zeigt auf einem Plakat, wie viele Kinder einen Leseausweis haben:', unit: 'Kinder' },
+  { pre: 'Der Schulkiosk zeigt, wie viele Brezeln er in der ersten Märzwoche verkauft hat:', unit: 'Brezeln' },
+  { pre: 'Das Freibad zeigt in einer Anzeige, wie viele Kinder einen Schwimmkurs gemacht haben:', unit: 'Kinder' },
+  { pre: 'Der Tierpark zeigt in seinem Heft, wie viele Jahreskarten er verkauft hat:', unit: 'Karten' },
+];
 function trickTask(): Task | null {
-  const a = pick([20, 30, 40, 50, 60, 80]), r = pick([q(5, 4), q(3, 2), q(2)]), bQ = q(a).mul(r);
+  const a = pick([20, 30, 40, 50, 60, 80, 100, 120]), r = pick([q(5, 4), q(3, 2), q(2)]), bQ = q(a).mul(r);
   if (!bQ.isInt()) return null;
   const b = Number(bQ.n), starts: number[] = [];
   for (let s = 5; s < a; s += 5) { const vis = (b - s) / (a - s); if (Number.isInteger(vis) && vis >= 3 && vis <= 6) starts.push(s); }
   if (!starts.length) return null;
   const s = pick(starts), vis = (b - s) / (a - s), step = (b - s) / 5 <= 10 ? 5 : 10;
   if (s % step) return null;
-  const yrs = ['2023', '2024'], chart = barsSVG(yrs, [a, b], 'Mitglieder', s, step), rH = dH(r);
-  const pre = `Der Sportverein zeigt in seiner Zeitung, wie viele Mitglieder er hat:${chart}`;
-  const steps: Steps = [{ rule: 'Achse prüfen', lines: [`Die Achse beginnt bei ${s}, nicht bei 0.`, `Die Säule für 2024 ist ${vis}-mal so hoch wie die für 2023.`] }, { rule: 'Wirklich vergleichen', lines: [`${b} : ${a} = ${rH}`, `Es sind wirklich nur ${rH}-mal so viele Mitglieder.`] }];
+  const c = pick(TRICK), y0 = R(2019, 2024), [y1, y2] = [String(y0), String(y0 + 1)], u = c.unit;
+  const chart = barsSVG([y1, y2], [a, b], u, s, step), rH = dH(r);
+  const pre = `${c.pre}${chart}`;
+  const steps: Steps = [{ rule: 'Achse prüfen', lines: [`Die Achse beginnt bei ${s}, nicht bei 0.`, `Die Säule für ${y2} ist ${vis}-mal so hoch wie die für ${y1}.`] }, { rule: 'Wirklich vergleichen', lines: [`${b} : ${a} = ${rH}`, `Es sind wirklich nur ${rH}-mal so viele ${u}.`] }];
   if (Math.random() < 0.5) {
-    return pickTask(`${pre}Die Säule für 2024 sieht viel größer aus. <b>Warum täuscht das Diagramm?</b>`, `Die Achse beginnt bei ${s} und nicht bei 0. Dadurch sieht der Unterschied viel größer aus.`, [
-      { html: `Es täuscht nicht. 2024 gibt es wirklich ${vis}-mal so viele Mitglieder.`, why: `Lies die Werte ab: ${a} und ${b}. ${b} ist nicht das ${vis}-Fache von ${a}.` },
+    return pickTask(`${pre}Die Säule für ${y2} sieht viel größer aus. <b>Warum täuscht das Diagramm?</b>`, `Die Achse beginnt bei ${s} und nicht bei 0. Dadurch sieht der Unterschied viel größer aus.`, [
+      { html: `Es täuscht nicht. ${y2} sind es wirklich ${vis}-mal so viele ${u}.`, why: `Lies die Werte ab: ${a} und ${b}. ${b} ist nicht das ${vis}-Fache von ${a}.` },
       { html: 'Die Säulen sind zu schmal gezeichnet.', why: 'Die Breite ist egal. Es geht um die Höhe und darum, wo die Achse beginnt.' },
       { html: 'Die Jahre sind falsch herum aufgeschrieben.', why: 'Die Reihenfolge stimmt. Schau dir die Zahlen an der Achse an.' },
     ], steps, [
       { title: 'Achse ansehen', ask: '<p>Bei welcher Zahl beginnt die senkrechte Achse ganz unten?</p>', answer: q(s), explain: `Sie beginnt bei ${s}. Der Teil von 0 bis ${s} ist abgeschnitten.`, hint: 'Schau auf die unterste Zahl links.' },
-      { title: 'Wirklicher Wert', ask: '<p>Wie viele Mitglieder hatte der Verein 2024?</p>', answer: q(b), explain: `2024: ${b}, 2023: ${a}. Das ist kein ${vis}-Faches.` },
+      { title: 'Wirklicher Wert', ask: `<p>Wie viele ${u} waren es ${y2}?</p>`, answer: q(b), explain: `${y2}: ${b}, ${y1}: ${a}. Das ist kein ${vis}-Faches.` },
     ]);
   }
   const cands = uniq([String(vis), '2', '3', dec(Number(r.n) / Number(r.d) + 1), String(vis + 1)]).filter(x => x !== rH).slice(0, 3);
-  return pickTask(`${pre}Die Säule für 2024 ist ${vis}-mal so hoch wie die für 2023. <b>Wievielmal so viele Mitglieder</b> sind es 2024 wirklich?`, `${rH}-mal so viele`, cands.map(c => ({ html: `${c}-mal so viele`, why: c === String(vis) ? `So sieht es nur aus, weil die Achse bei ${s} beginnt. Rechne mit den echten Werten: ${b} : ${a}.` : `Rechne mit den echten Werten: ${b} : ${a}.` })), steps, [
-    { title: '2023', ask: '<p>Wie viele Mitglieder waren es 2023?</p>', answer: q(a), explain: `${a} Mitglieder` },
-    { title: '2024', ask: '<p>Wie viele Mitglieder waren es 2024?</p>', answer: q(b), explain: `${b} Mitglieder` },
+  return pickTask(`${pre}Die Säule für ${y2} ist ${vis}-mal so hoch wie die für ${y1}. <b>Wievielmal so viele ${u}</b> sind es ${y2} wirklich?`, `${rH}-mal so viele`, cands.map(c => ({ html: `${c}-mal so viele`, why: c === String(vis) ? `So sieht es nur aus, weil die Achse bei ${s} beginnt. Rechne mit den echten Werten: ${b} : ${a}.` : `Rechne mit den echten Werten: ${b} : ${a}.` })), steps, [
+    { title: y1, ask: `<p>Wie viele ${u} waren es ${y1}?</p>`, answer: q(a), explain: `${a} ${u}` },
+    { title: y2, ask: `<p>Wie viele ${u} waren es ${y2}?</p>`, answer: q(b), explain: `${b} ${u}` },
     { title: 'Teilen', ask: `<p>Wievielmal so viel ist ${b} wie ${a}?</p><div class="math big">${b} : ${a} = ?</div>`, answer: r, explain: `${b} : ${a} = ${rH}`, hint: 'Teile den größeren Wert durch den kleineren.' },
   ]);
 }
@@ -489,14 +572,15 @@ function compareTask(): Task | null {
   const p1 = (k1 * 100) / n1, p2 = (k2 * 100) / n2;
   if (Math.abs(p1 - p2) > 25) return null;
   if (p1 !== p2 && (k1 > k2) === (p1 > p2) && Math.random() < 0.7) return null; // meist eine Falle: mehr Kinder, aber kleinerer Anteil
-  const thing = pick(['ein Haustier', 'ein Musikinstrument', 'ein eigenes Handy']), ri = p1 > p2 ? 0 : p1 < p2 ? 1 : 2;
-  const L = ['In der 6a ist der Anteil größer.', 'In der 6b ist der Anteil größer.', 'Der Anteil ist in beiden Klassen gleich groß.'];
+  const thing = pick(['ein Haustier', 'ein Musikinstrument', 'ein eigenes Handy', 'ein Fahrrad', 'einen Büchereiausweis', 'eine Jahreskarte fürs Schwimmbad']), ri = p1 > p2 ? 0 : p1 < p2 ? 1 : 2;
+  const [ca, cb] = pick([['6a', '6b'], ['6c', '6d'], ['5a', '5b'], ['5c', '5d']]);
+  const L = [`In der ${ca} ist der Anteil größer.`, `In der ${cb} ist der Anteil größer.`, 'Der Anteil ist in beiden Klassen gleich groß.'];
   const trapWhy = 'Vergleiche die Anteile, nicht die Anzahlen. Die Klassen sind verschieden groß.';
-  return pickTask(`In der 6a haben ${k1} von ${n1} Kindern ${thing}. In der 6b sind es ${k2} von ${n2} Kindern. In welcher Klasse ist der <b>Anteil</b> größer?`, L[ri], L.filter((_, i) => i !== ri).map(h => ({ html: h, why: trapWhy })),
-    [{ rule: 'Anteile in Prozent', lines: [`6a: ${qH(q(k1, n1))} = ${p1} %`, `6b: ${qH(q(k2, n2))} = ${p2} %`] }, { rule: 'Vergleichen', lines: [L[ri]] }],
+  return pickTask(`In der ${ca} haben ${k1} von ${n1} Kindern ${thing}. In der ${cb} sind es ${k2} von ${n2} Kindern. In welcher Klasse ist der <b>Anteil</b> größer?`, L[ri], L.filter((_, i) => i !== ri).map(h => ({ html: h, why: trapWhy })),
+    [{ rule: 'Anteile in Prozent', lines: [`${ca}: ${qH(q(k1, n1))} = ${p1} %`, `${cb}: ${qH(q(k2, n2))} = ${p2} %`] }, { rule: 'Vergleichen', lines: [L[ri]] }],
     [
-      { title: 'Anteil 6a', ask: `<p>Wie viel Prozent sind ${k1} von ${n1}?</p>`, answer: q(p1), explain: `${qH(q(k1, n1))} = ${qH(q((k1 * 100) / n1, 100))} = ${p1} %`, hint: `Erweitere ${qH(q(k1, n1))} so, dass unten 100 steht.`, placeholder: 'Antwort in %' },
-      { title: 'Anteil 6b', ask: `<p>Wie viel Prozent sind ${k2} von ${n2}?</p>`, answer: q(p2), explain: `${qH(q(k2, n2))} = ${qH(q((k2 * 100) / n2, 100))} = ${p2} %`, placeholder: 'Antwort in %' },
+      { title: `Anteil ${ca}`, ask: `<p>Wie viel Prozent sind ${k1} von ${n1}?</p>`, answer: q(p1), explain: `${qH(q(k1, n1))} = ${qH(q((k1 * 100) / n1, 100))} = ${p1} %`, hint: `Erweitere ${qH(q(k1, n1))} so, dass unten 100 steht.`, placeholder: 'Antwort in %' },
+      { title: `Anteil ${cb}`, ask: `<p>Wie viel Prozent sind ${k2} von ${n2}?</p>`, answer: q(p2), explain: `${qH(q(k2, n2))} = ${qH(q((k2 * 100) / n2, 100))} = ${p2} %`, placeholder: 'Antwort in %' },
     ]);
 }
 function stripTask(): Task | null {
@@ -520,7 +604,7 @@ function stripTask(): Task | null {
       diag: x => (x.eq(q(pct[i])) ? `${pct[i]} ist der Anteil in Prozent. Gefragt ist die Anzahl der Kinder.` : null) };
   }
   const e = split(8, 3, 1); if (!e) return null;
-  const labels = PAUSE.slice(0, 3), i = R(0, 2), v = q(e[i], 8).red();
+  const labels = shuffle(PAUSE).slice(0, 3), i = R(0, 2), v = q(e[i], 8).red();
   return { prompt: `Das Kreisdiagramm zeigt, was die Kinder der 5b in der Pause essen.${circleSVG(labels, e)}Welcher Anteil der Kinder isst ${B(({ Apfel: 'einen Apfel', Brezel: 'eine Brezel', Brot: 'ein Brot', Müsli: 'Müsli' } as Record<string, string>)[labels[i]])}? Gib den Anteil als gekürzten Bruch an.`, answer: v, needReduced: true, form: 'frac', placeholder: 'z. B. 3/8',
     sol: list([{ rule: 'Teile zählen', lines: ['Der Kreis ist in 8 gleiche Teile geteilt.', `${labels[i]}: ${e[i]} Teile, also ${qH(q(e[i], 8))}${v.d !== 8n ? ` = ${qH(v)}` : ''}`] }], v),
     guide: [
@@ -538,60 +622,159 @@ function haeufGen(level: number): Task | null {
     return r < 0.35 ? trickTask() : r < 0.65 ? compareTask() : stripTask();
   }, t => !!t);
 }
+const schulwegStory: Story = () => {
+  const n = pick([20, 25, 50]), vals = split(n, 4, 2); if (!vals) return null;
+  const i = R(0, 3), labels = ['mit dem Rad', 'mit dem Bus', 'mit dem Auto', 'zu Fuß'];
+  return wordTask({
+    prompt: `${n === 50 ? 'In den beiden 6. Klassen' : 'In der Klasse 6b'} wurde gefragt, wie die Kinder zur Schule kommen. ${vals[0]} kommen mit dem Rad, ${vals[1]} mit dem Bus, ${vals[2]} mit dem Auto und ${vals[3]} zu Fuß. Wie viel Prozent der Kinder kommen ${labels[i]}?`,
+    steps: [
+      { title: 'Alle Kinder', ask: 'Wie viele Kinder wurden gefragt?', calc: vals.join(' + '), unit: 'Kinder' },
+      { title: 'Anteil in Prozent', ask: `Wie viel Prozent sind ${vals[i]} von ${n}?`, calc: `${vals[i]} : ${n} · 100`, wrong: [`${n} : ${vals[i]} · 100`, `${vals[i]} · ${n} : 100`], why: 'Anteil = Anzahl : Gesamtzahl. Mal 100 ergibt Prozent.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} der Kinder kommen ${labels[i]}.`,
+  });
+};
+const umfrageStory: Story = () => {
+  const n = pick([20, 25, 50]), p = pick([20, 30, 40, 60, 12, 24, 36, 44, 48]), c = (p * n) / 100;
+  if (!Number.isInteger(c) || c < 2) return null;
+  const thing = pick(['spielen ein Instrument', 'haben ein Haustier', 'sind im Sportverein']);
+  return wordTask({
+    prompt: `Bei einer Umfrage ${n === 50 ? 'in den 6. Klassen' : 'in der Klasse 6c'} mit ${n} Kindern kam heraus: ${p} % ${thing}. Wie viele Kinder sind das?`,
+    steps: [
+      { title: '1 Prozent', ask: `Wie viele Kinder sind 1 % von ${n}?`, calc: `${n} : 100`, wrong: [`${n} · 100`], why: '1 % ist ein Hundertstel: durch 100 teilen.', unit: 'Kinder' },
+      { title: `${p} Prozent`, ask: `Wie viele Kinder sind ${p} %?`, calc: `${dec(n / 100)} · ${p}`, unit: 'Kinder' },
+    ],
+    unit: 'Kinder', sentence: v => `${v} ${thing}.`,
+  });
+};
+const ZAHLW = ['Eins', 'Zwei', 'Drei', 'Vier', 'Fünf', 'Sechs'];
+const wuerfelStory: Story = () => {
+  const [who] = kid(), N = pick([20, 25, 50]), k = R(2, Math.floor(N / 3)), Z = pick(ZAHLW);
+  return wordTask({
+    prompt: `${who} würfelt ${N}-mal mit einem normalen Würfel. Dabei fällt ${k}-mal eine ${Z}. Wie viel Prozent der Würfe waren keine ${Z}?`,
+    steps: [
+      { title: `Keine ${Z}`, ask: `Wie viele Würfe waren keine ${Z}?`, calc: `${N} − ${k}`, wrong: [`${N} + ${k}`], why: `Alle Würfe minus die Würfe mit einer ${Z}.`, unit: 'Würfe' },
+      { title: 'In Prozent', ask: `Wie viel Prozent sind ${N - k} von ${N}?`, calc: `${N - k} : ${N} · 100`, wrong: [`${k} : ${N} · 100`, `${N} : ${N - k} · 100`], why: `Gefragt sind die Würfe ohne ${Z}. Anzahl : Gesamtzahl, dann mal 100.`, unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} der Würfe waren keine ${Z}.`,
+  });
+};
+const buecherStory: Story = () => {
+  const N = pick([80, 120, 150, 160, 200, 240, 250, 300]), p = pick([10, 15, 20, 25, 30, 35, 40, 45, 60]), c = (N * p) / 100;
+  if (!Number.isInteger(c)) return null;
+  const what = pick(['Comics', 'Sachbücher', 'Krimis', 'Tierbücher']);
+  return wordTask({
+    prompt: `Die Schulbücherei hat in einer Woche ${N} Bücher verliehen. ${p} % davon waren ${what}. Wie viele der verliehenen Bücher waren keine ${what}?`,
+    steps: [
+      { title: what, ask: `Wie viele ${what} wurden verliehen?`, calc: `${N} : 100 · ${p}`, wrong: [`${N} · ${p}`, `${N} : ${p}`], why: `Erst 1 % ausrechnen (durch 100), dann mal ${p}.`, unit: 'Bücher' },
+      { title: `Keine ${what}`, ask: `Wie viele Bücher waren keine ${what}?`, calc: `${N} − ${c}`, wrong: [`${N} + ${c}`], why: `Alle Bücher minus die ${what}.`, unit: 'Bücher' },
+    ],
+    unit: 'Bücher', sentence: v => `${v} waren keine ${what}.`,
+  });
+};
+const kreisStory: Story = () => {
+  const G = pick([24, 32, 40, 48, 56, 64, 72, 80]), e = pick([2, 3, 5, 6, 7]), obst = pick(['Äpfel', 'Bananen', 'Erdbeeren', 'Trauben', 'Kirschen']);
+  return wordTask({
+    prompt: `${G} Kinder der Klassenstufe 5 wurden nach ihrem Lieblingsobst gefragt. Im Kreisdiagramm nimmt der Teil für ${obst} genau ${e} Achtel des Kreises ein. Wie viele Kinder mögen ${obst} am liebsten?`,
+    steps: [
+      { title: 'Ein Achtel', ask: `Wie viele Kinder sind ein Achtel von ${G}?`, calc: `${G} : 8`, wrong: [`${G} · 8`, `${G} − 8`], why: 'Ein Achtel heißt: in 8 gleiche Teile teilen.', unit: 'Kinder' },
+      { title: `${e} Achtel`, ask: `Wie viele Kinder sind ${e} Achtel?`, calc: `${G / 8} · ${e}`, wrong: [`${G / 8} + ${e}`], why: `${e} Achtel sind ${e}-mal ein Achtel.`, unit: 'Kinder' },
+    ],
+    unit: 'Kinder', sentence: v => `${v} mögen ${obst} am liebsten.`,
+  });
+};
+const mensaStory: Story = () => {
+  const n1 = pick([20, 25]), n2 = n1 === 20 ? 25 : 20, k1 = R(4, n1 - 4), k2 = R(4, n2 - 4), p1 = (k1 * 100) / n1, p2 = (k2 * 100) / n2;
+  if (p1 === p2) return null;
+  const hi = p1 > p2 ? '6a' : '6b';
+  return wordTask({
+    prompt: `Die Klassen 6a und 6b wurden gefragt, ob sie in der Mittagspause in die Mensa gehen. In der 6a sagen ${k1} von ${n1} Kindern ja, in der 6b ${k2} von ${n2} Kindern. In welcher Klasse ist der Anteil größer, und um wie viele Prozentpunkte?`,
+    steps: [
+      { title: 'Anteil 6a', ask: 'Wie viel Prozent sind es in der 6a?', calc: `${k1} : ${n1} · 100`, wrong: [`${n1} : ${k1} · 100`], why: 'Anzahl : Gesamtzahl, dann mal 100.', unit: '%' },
+      { title: 'Anteil 6b', ask: 'Wie viel Prozent sind es in der 6b?', calc: `${k2} : ${n2} · 100`, unit: '%' },
+      { title: 'Unterschied', ask: 'Um wie viele Prozentpunkte ist der größere Anteil größer?', calc: `${Math.max(p1, p2)} − ${Math.min(p1, p2)}` },
+    ],
+    sentence: v => `In der ${hi} ist der Anteil größer, und zwar um ${v} Prozentpunkte.`,
+  });
+};
+const draussenStory: Story = () => {
+  const n = pick([20, 25, 50]), a = R(3, n / 2), b = R(3, n / 2), rest = n - a - b;
+  if (rest < 2 || !pctOk(rest, n)) return null;
+  return wordTask({
+    prompt: `In einer Umfrage unter ${n} Kindern geben ${a} Kinder an, dass sie am liebsten lesen, und ${b}, dass sie am liebsten Sport machen. Alle anderen spielen am liebsten draußen. Wie viel Prozent der Kinder spielen am liebsten draußen?`,
+    steps: [
+      { title: 'Lesen und Sport', ask: 'Wie viele Kinder lesen oder machen Sport?', calc: `${a} + ${b}`, unit: 'Kinder' },
+      { title: 'Draußen', ask: 'Wie viele Kinder spielen am liebsten draußen?', calc: `${n} − ${a + b}`, wrong: [`${n} + ${a + b}`], why: 'Der Rest: alle minus die anderen.', unit: 'Kinder' },
+      { title: 'In Prozent', ask: `Wie viel Prozent sind ${rest} von ${n}?`, calc: `${rest} : ${n} · 100`, wrong: [`${n} : ${rest} · 100`], why: 'Anzahl : Gesamtzahl, dann mal 100.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} der Kinder spielen am liebsten draußen.`,
+  });
+};
+const WURF: [string, string, string][] = [['Basketball-Training', 'wirft', 'auf den Korb'], ['Torwandschießen', 'schießt', 'auf die Torwand'], ['Sportfest', 'wirft', 'auf die Dosenpyramide']];
+const quoteStory: Story = () => {
+  const [[a], [b]] = kids(2), [n1, n2] = pick([[20, 30], [30, 20], [25, 25], [10, 40], [40, 10], [20, 80], [40, 60], [60, 40]]), p1 = pick([40, 45, 50, 55, 60, 65, 70, 75, 80]);
+  const k1 = (n1 * p1) / 100, k2 = R(Math.ceil(n2 * 0.3), n2 - 2), T = n1 + n2;
+  if (!Number.isInteger(k1)) return null;
+  const [ev, verb, target] = pick(WURF);
+  return wordTask({
+    prompt: `Beim ${ev} ${verb} ${a} ${n1}-mal ${target} und trifft bei ${p1} % der Versuche. ${b} ${verb} ${n2}-mal und trifft ${k2}-mal. Wie viel Prozent aller Versuche der beiden waren Treffer?`,
+    steps: [
+      { title: `Treffer von ${a}`, ask: `Wie oft trifft ${a}?`, calc: `${n1} : 100 · ${p1}`, wrong: [`${n1} · ${p1}`, `${p1} − ${n1}`], why: 'Erst 1 % ausrechnen (durch 100), dann mal die Prozentzahl.', unit: 'Treffer' },
+      { title: 'Alle Treffer', ask: 'Wie viele Treffer haben beide zusammen?', calc: `${k1} + ${k2}`, unit: 'Treffer' },
+      { title: 'Alle Versuche', ask: 'Wie viele Versuche haben beide zusammen?', calc: `${n1} + ${n2}`, unit: 'Versuche' },
+      { title: 'In Prozent', ask: `Wie viel Prozent sind ${k1 + k2} von ${T}?`, calc: `${k1 + k2} : ${T} · 100`, wrong: [`${T} : ${k1 + k2} · 100`], why: 'Anzahl : Gesamtzahl, dann mal 100.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} aller Versuche waren Treffer.`,
+  });
+};
+const TUN = ['fahren mit dem Rad zur Schule', 'spielen ein Instrument', 'haben ein Haustier', 'sind in einem Sportverein', 'gehen in die Mensa'];
+const zweiKlassenStory: Story = () => {
+  const [na, nb] = pick([[25, 25], [20, 30], [30, 20]]), pa = R(2, 9) * 10 - pick([0, 0, 5]), pb = R(2, 9) * 10 - pick([0, 0, 5]);
+  const ka = (na * pa) / 100, kb = (nb * pb) / 100, what = pick(TUN);
+  if (pa === pb || !Number.isInteger(ka) || !Number.isInteger(kb)) return null;
+  return wordTask({
+    prompt: `In der 6a sind ${na} Kinder. ${pa} % davon ${what}. In der 6b sind ${nb} Kinder, hier sind es ${pb} %. Wie viel Prozent aller Kinder aus beiden Klassen ${what}?`,
+    steps: [
+      { title: '6a', ask: `Wie viele Kinder sind ${pa} % von ${na}?`, calc: `${na} : 100 · ${pa}`, wrong: [`${na} · ${pa}`], why: 'Erst 1 % ausrechnen (durch 100), dann mal die Prozentzahl.', unit: 'Kinder' },
+      { title: '6b', ask: `Wie viele Kinder sind ${pb} % von ${nb}?`, calc: `${nb} : 100 · ${pb}`, unit: 'Kinder' },
+      { title: 'Zusammen', ask: 'Wie viele Kinder sind das in beiden Klassen zusammen?', calc: `${ka} + ${kb}`, unit: 'Kinder' },
+      { title: 'In Prozent', ask: `Beide Klassen haben zusammen ${na + nb} Kinder. Wie viel Prozent sind ${ka + kb} von ${na + nb}?`, calc: `${ka + kb} : ${na + nb} · 100`, wrong: [`${pa} + ${pb}`], why: 'Prozentsätze darfst du nicht einfach addieren. Rechne mit den Anzahlen und teile durch alle Kinder.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `${v} aller Kinder aus beiden Klassen ${what}.`,
+  });
+};
+const TAGE: [number, number, string][] = [[0, 1, 'am Montag und am Dienstag'], [3, 4, 'am Donnerstag und am Freitag'], [0, 4, 'am Montag und am Freitag'], [1, 2, 'am Dienstag und am Mittwoch']];
+const kioskStory: Story = () => {
+  const T = pick([100, 200]), v = split(T, 5, T === 100 ? 10 : 25); if (!v) return null;
+  const [i, j, lab] = pick(TAGE), s = v[i] + v[j];
+  if (!pctOk(s, T)) return null;
+  return wordTask({
+    prompt: `Der Schulkiosk zählt eine Woche lang die verkauften Brezeln: Montag ${v[0]}, Dienstag ${v[1]}, Mittwoch ${v[2]}, Donnerstag ${v[3]}, Freitag ${v[4]}. Wie viel Prozent der Brezeln dieser Woche wurden ${lab} verkauft?`,
+    steps: [
+      { title: 'Ganze Woche', ask: 'Wie viele Brezeln wurden in der ganzen Woche verkauft?', calc: v.join(' + '), unit: 'Brezeln' },
+      { title: 'Zwei Tage', ask: `Wie viele Brezeln wurden ${lab} verkauft?`, calc: `${v[i]} + ${v[j]}`, unit: 'Brezeln' },
+      { title: 'In Prozent', ask: `Wie viel Prozent sind ${s} von ${T}?`, calc: `${s} : ${T} · 100`, wrong: [`${T} : ${s} · 100`, `${s} · ${T} : 100`], why: 'Anzahl : Gesamtzahl, dann mal 100.', unit: '%' },
+    ],
+    unit: '%', sentence: v2 => `${v2} der Brezeln wurden ${lab} verkauft.`,
+  });
+};
+const gluecksradStory: Story = () => {
+  const [who, pr] = kid(), [N1, N2] = pick([[20, 30], [30, 20]]), r = R(3, N1 / 2), b = R(2, N1 / 2), g1 = N1 - r - b, k = R(3, N2 - 5);
+  if (g1 < 2) return null;
+  return wordTask({
+    prompt: `${who} dreht ein Glücksrad mit den Farben Rot, Blau und Grün. Zuerst dreht ${pr} ${N1}-mal: ${r}-mal kommt Rot, ${b}-mal Blau und sonst Grün. Danach dreht ${pr} noch ${N2}-mal, und es kommt ${k}-mal Grün. Bei wie viel Prozent aller Drehungen kam Grün?`,
+    steps: [
+      { title: 'Grün am Anfang', ask: `Wie oft kam bei den ersten ${N1} Drehungen Grün?`, calc: `${N1} − ${r} − ${b}`, wrong: [`${r} + ${b}`], why: 'Grün ist der Rest: alle Drehungen minus Rot und Blau.' },
+      { title: 'Grün insgesamt', ask: 'Wie oft kam Grün insgesamt?', calc: `${g1} + ${k}` },
+      { title: 'Alle Drehungen', ask: 'Wie oft hat sich das Glücksrad insgesamt gedreht?', calc: `${N1} + ${N2}` },
+      { title: 'In Prozent', ask: `Wie viel Prozent sind ${g1 + k} von ${N1 + N2}?`, calc: `${g1 + k} : ${N1 + N2} · 100`, wrong: [`${N1 + N2} : ${g1 + k} · 100`], why: 'Anzahl : Gesamtzahl, dann mal 100.', unit: '%' },
+    ],
+    unit: '%', sentence: v => `Bei ${v} aller Drehungen kam Grün.`,
+  });
+};
 function haeufText(level: number): Task | null {
-  return genFrom(() => {
-    const r = Math.random(), n = pick([20, 25, 50]);
-    if (level === 4) {
-      if (r < 0.5) {
-        const vals = split(n, 4, 2); if (!vals) return null;
-        const i = R(0, 3), labels = ['mit dem Rad', 'mit dem Bus', 'mit dem Auto', 'zu Fuß'];
-        return wordTask({
-          prompt: `${n === 50 ? 'In den beiden 6. Klassen' : 'In der Klasse 6b'} wurde gefragt, wie die Kinder zur Schule kommen. ${vals[0]} kommen mit dem Rad, ${vals[1]} mit dem Bus, ${vals[2]} mit dem Auto und ${vals[3]} zu Fuß. Wie viel Prozent der Kinder kommen ${labels[i]}?`,
-          steps: [
-            { title: 'Alle Kinder', ask: 'Wie viele Kinder wurden gefragt?', calc: vals.join(' + '), unit: 'Kinder' },
-            { title: 'Anteil in Prozent', ask: `Wie viel Prozent sind ${vals[i]} von ${n}?`, calc: `${vals[i]} : ${n} · 100`, wrong: [`${n} : ${vals[i]} · 100`, `${vals[i]} · ${n} : 100`], why: 'Anteil = Anzahl : Gesamtzahl. Mal 100 ergibt Prozent.', unit: '%' },
-          ],
-          unit: '%', sentence: v => `${v} der Kinder kommen ${labels[i]}.`,
-        });
-      }
-      const p = pick([20, 30, 40, 60, 12, 24, 36, 44, 48]), c = (p * n) / 100;
-      if (!Number.isInteger(c) || c < 2) return null;
-      const thing = pick(['spielen ein Instrument', 'haben ein Haustier', 'sind im Sportverein']);
-      return wordTask({
-        prompt: `Bei einer Umfrage ${n === 50 ? 'in den 6. Klassen' : 'in der Klasse 6c'} mit ${n} Kindern kam heraus: ${p} % ${thing}. Wie viele Kinder sind das?`,
-        steps: [
-          { title: '1 Prozent', ask: `Wie viele Kinder sind 1 % von ${n}?`, calc: `${n} : 100`, wrong: [`${n} · 100`], why: '1 % ist ein Hundertstel: durch 100 teilen.', unit: 'Kinder' },
-          { title: `${p} Prozent`, ask: `Wie viele Kinder sind ${p} %?`, calc: `${dec(n / 100)} · ${p}`, unit: 'Kinder' },
-        ],
-        unit: 'Kinder', sentence: v => `${v} ${thing}.`,
-      });
-    }
-    if (r < 0.5) {
-      const n1 = pick([20, 25]), n2 = n1 === 20 ? 25 : 20, k1 = R(4, n1 - 4), k2 = R(4, n2 - 4), p1 = (k1 * 100) / n1, p2 = (k2 * 100) / n2;
-      if (p1 === p2) return null;
-      const [hi, lo] = p1 > p2 ? ['6a', '6b'] : ['6b', '6a'];
-      return wordTask({
-        prompt: `Die Klassen 6a und 6b wurden gefragt, ob sie in der Mittagspause in die Mensa gehen. In der 6a sagen ${k1} von ${n1} Kindern ja, in der 6b ${k2} von ${n2} Kindern. In welcher Klasse ist der Anteil größer, und um wie viele Prozentpunkte?`,
-        steps: [
-          { title: 'Anteil 6a', ask: 'Wie viel Prozent sind es in der 6a?', calc: `${k1} : ${n1} · 100`, wrong: [`${n1} : ${k1} · 100`], why: 'Anzahl : Gesamtzahl, dann mal 100.', unit: '%' },
-          { title: 'Anteil 6b', ask: 'Wie viel Prozent sind es in der 6b?', calc: `${k2} : ${n2} · 100`, unit: '%' },
-          { title: 'Unterschied', ask: 'Um wie viele Prozentpunkte ist der größere Anteil größer?', calc: `${Math.max(p1, p2)} − ${Math.min(p1, p2)}` },
-        ],
-        sentence: v => `In der ${hi} ist der Anteil größer, und zwar um ${v} Prozentpunkte.`,
-      });
-    }
-    const a = R(3, n / 2), b = R(3, n / 2), rest = n - a - b;
-    if (rest < 2 || !pctOk(rest, n)) return null;
-    return wordTask({
-      prompt: `In einer Umfrage unter ${n} Kindern geben ${a} Kinder an, dass sie am liebsten lesen, und ${b}, dass sie am liebsten Sport machen. Alle anderen spielen am liebsten draußen. Wie viel Prozent der Kinder spielen am liebsten draußen?`,
-      steps: [
-        { title: 'Lesen und Sport', ask: 'Wie viele Kinder lesen oder machen Sport?', calc: `${a} + ${b}`, unit: 'Kinder' },
-        { title: 'Draußen', ask: 'Wie viele Kinder spielen am liebsten draußen?', calc: `${n} − ${a + b}`, wrong: [`${n} + ${a + b}`], why: 'Der Rest: alle minus die anderen.', unit: 'Kinder' },
-        { title: 'In Prozent', ask: `Wie viel Prozent sind ${rest} von ${n}?`, calc: `${rest} : ${n} · 100`, wrong: [`${n} : ${rest} · 100`], why: 'Anzahl : Gesamtzahl, dann mal 100.', unit: '%' },
-      ],
-      unit: '%', sentence: v => `${v} der Kinder spielen am liebsten draußen.`,
-    });
-  }, t => t.guide.every(s => s.answer.sign() > 0 && s.answer.isInt()));
+  const all: Story[] = level === 4 ? [schulwegStory, umfrageStory, wuerfelStory, buecherStory, kreisStory] : [mensaStory, draussenStory, quoteStory, zweiKlassenStory, kioskStory, gluecksradStory];
+  return genFrom(() => pick(all)(), t => !!t && !!t.guide && t.guide.every(s => s.answer.sign() > 0 && s.answer.isInt()));
 }
 const HAEUF: Topic = {
   id: 'haeuf', klasse: 6, title: 'Häufigkeiten und Diagramme', short: 'Daten auszählen, relative Häufigkeiten berechnen und Diagramme kritisch lesen.',
@@ -673,7 +856,7 @@ function thinkTask(n: number, word: boolean): Task | null {
       hint: 'Rückwärts: vom Ergebnis aus, den letzten Schritt zuerst.' });
     cur = nx;
   });
-  const [who, pr] = pick([['Mia', 'sie'], ['Ben', 'er'], ['Lina', 'sie'], ['Noah', 'er'], ['Emma', 'sie'], ['Paul', 'er']]);
+  const [who, pr] = kid();
   const chain = [t.x, ...ops.map((_, i) => ops.slice(0, i + 1).reduce(ap, t.x))].join(' → ');
   const w = wordTask({ prompt: `${who} sagt: ${story} Welche Zahl hat ${pr} sich gedacht?`, steps, sentence: v => `Die gedachte Zahl ist ${v}. Probe: ${chain} ✓` });
   return word ? w : { ...w, word: undefined };
@@ -795,70 +978,160 @@ function sticksSVG(kind: 'sq' | 'tri', upTo = 3): string {
   return `<svg class="fig" viewBox="0 0 ${x0} ${44 + s}" role="img" aria-label="Streichholzmuster: Figur 1 bis ${upTo} aus ${kind === 'sq' ? 'Quadraten' : 'Dreiecken'} in einer Reihe">${g}</svg>`;
 }
 const STICK = { sq: { a: 3, b: 1, what: 'Quadraten' }, tri: { a: 2, b: 1, what: 'Dreiecken' } } as const;
+const alter2Story: Story = () => {
+  const y = R(5, 14), d = R(2, 6), S = 2 * y + d, [o, j] = pick([['Lena', 'ihr Bruder Tim'], ['Jonas', 'seine Schwester Ella'], ['Mia', 'ihre Cousine Lou'], ['Emre', 'sein Bruder Can'], ['Sofia', 'ihre Schwester Lea']]);
+  return wordTask({
+    prompt: `${o} und ${j} sind zusammen ${S} Jahre alt. ${o} ist ${d} Jahre älter. Wie alt ist ${o}?`,
+    steps: [
+      { title: 'Unterschied abziehen', ask: `Nimm den Altersunterschied weg. Dann wären beide gleich alt. Wie viele Jahre bleiben zusammen übrig?`, calc: `${S} − ${d}`, wrong: [`${S} + ${d}`], why: `Ohne die ${d} Jahre Vorsprung sind beide gleich alt.`, unit: 'Jahre' },
+      { title: 'Der Jüngere', ask: `Wie alt ist ${j.split(' ').pop()}?`, calc: `${S - d} : 2`, wrong: [`${S} : 2`], why: 'Jetzt sind beide gleich alt: in zwei gleiche Teile teilen.', unit: 'Jahre' },
+      { title: 'Der Ältere', ask: `Wie alt ist ${o}?`, calc: `${y} + ${d}`, unit: 'Jahre' },
+    ],
+    unit: 'Jahre', sentence: v => `${o} ist ${v} alt. Probe: ${y + d} + ${y} = ${S} ✓`,
+  });
+};
+const alter3Story: Story = () => {
+  const y = R(3, 10), d = R(2, 4), S = 3 * y + 3 * d;
+  return wordTask({
+    prompt: `Drei Geschwister sind zusammen ${S} Jahre alt. Jedes Kind ist ${d} Jahre älter als das nächstjüngere. Wie alt ist das älteste Kind?`,
+    steps: [
+      { title: 'Vorsprung', ask: `Das mittlere Kind hat ${d} Jahre Vorsprung vor dem jüngsten, das älteste ${2 * d} Jahre. Wie viele Jahre Vorsprung sind das zusammen?`, calc: `${d} + ${2 * d}`, unit: 'Jahre' },
+      { title: 'Vorsprung abziehen', ask: 'Nimm den Vorsprung weg. Wie viele Jahre bleiben, wenn alle so alt wären wie das jüngste?', calc: `${S} − ${3 * d}`, wrong: [`${S} − ${d}`], why: 'Der ganze Vorsprung muss weg.', unit: 'Jahre' },
+      { title: 'Das jüngste', ask: 'Wie alt ist das jüngste Kind?', calc: `${S - 3 * d} : 3`, wrong: [`${S - 3 * d} : 2`], why: 'Drei gleich alte Kinder: durch 3 teilen.', unit: 'Jahre' },
+      { title: 'Das älteste', ask: 'Wie alt ist das älteste Kind?', calc: `${y} + ${2 * d}`, wrong: [`${y} + ${d}`], why: `Das älteste hat ${2 * d} Jahre Vorsprung.`, unit: 'Jahre' },
+    ],
+    unit: 'Jahre', sentence: v => `Das älteste Kind ist ${v} alt. Probe: ${y} + ${y + d} + ${y + 2 * d} = ${S} ✓`,
+  });
+};
+function stickPre() {
+  const kind = pick<'sq' | 'tri'>(['sq', 'tri']), { a, b, what } = STICK[kind], f = [1, 2, 3].map(n => a * n + b);
+  return { a, b, f, pre: `Ein Muster aus Streichhölzern mit ${what} in einer Reihe:${sticksSVG(kind)}Figur 1 braucht ${f[0]}, Figur 2 braucht ${f[1]} und Figur 3 braucht ${f[2]} Hölzer.` };
+}
+const stickNStory: Story = () => {
+  const { a, b, f, pre } = stickPre(), n = R(8, 20);
+  return wordTask({
+    prompt: `${pre} Wie viele Hölzer braucht Figur ${n}?`,
+    steps: [
+      { title: 'Was kommt dazu?', ask: 'Wie viele Hölzer kommen von einer Figur zur nächsten dazu?', calc: `${f[1]} − ${f[0]}` },
+      { title: 'Wie oft?', ask: `Wie oft kommen von Figur 1 bis Figur ${n} Hölzer dazu?`, calc: `${n} − 1`, wrong: [`${n} + 1`], why: `Von Figur 1 bis Figur ${n} sind es ${n - 1} Schritte.` },
+      { title: `Figur ${n}`, ask: `Wie viele Hölzer braucht Figur ${n}?`, calc: `${f[0]} + ${n - 1} · ${a}`, wrong: [`${n} · ${f[0]}`], why: `Figur 1 hat ${f[0]} Hölzer. Bei jedem Schritt kommen ${a} dazu.` },
+    ],
+    sentence: v => `Figur ${n} braucht ${v} Hölzer. Das passt zur Regel ${a} · ${n} + ${b}.`,
+  });
+};
+const stickInvStory: Story = () => {
+  const { a, b, pre } = stickPre(), n = R(12, 30), H = a * n + b;
+  return wordTask({
+    prompt: `${pre} Figur <i>n</i> braucht ${a} · <i>n</i> + ${b} Hölzer. Welche Figur braucht genau ${H} Hölzer?`,
+    steps: [
+      { title: `${b} wegnehmen`, ask: `Rechne rückwärts. Zieh zuerst das eine Extra-Holz ab.`, calc: `${H} − ${b}`, wrong: [`${H} : ${a}`], why: `Zuletzt wurde + ${b} gerechnet. Das machst du zuerst rückgängig.` },
+      { title: `Durch ${a}`, ask: 'Welche Figur ist es?', calc: `${H - b} : ${a}`, wrong: [`${H - b} · ${a}`], why: `· ${a} machst du mit : ${a} rückgängig.` },
+    ],
+    sentence: v => `Figur ${v} braucht ${H} Hölzer. Probe: ${a} · ${n} + ${b} = ${H} ✓`,
+  });
+};
+const stickRuleStory: Story = () => {
+  const { a, b, f, pre } = stickPre();
+  const ok = `Figur <i>n</i> braucht ${a} · <i>n</i> + ${b} Hölzer.`;
+  const cand: Choice[] = [
+    { html: `Figur <i>n</i> braucht ${a + b} · <i>n</i> Hölzer.`, why: `Prüfe Figur 2: ${a + b} · 2 = ${2 * (a + b)}, es sind aber ${f[1]}.` },
+    { html: `Figur <i>n</i> braucht <i>n</i> + ${a} Hölzer.`, why: `Prüfe Figur 1: 1 + ${a} = ${1 + a}, es sind aber ${f[0]}.` },
+    { html: `Figur <i>n</i> braucht ${a} · <i>n</i> Hölzer.`, why: `Prüfe Figur 1: ${a} · 1 = ${a}, es sind aber ${f[0]}. Es fehlt das Extra-Holz.` },
+  ];
+  return pickTask(`${pre} Welche Regel beschreibt das Muster?`, ok, cand, [{ rule: 'Muster beschreiben', lines: [`Pro Figur kommen ${a} Hölzer dazu, dazu kommt 1 Holz am Anfang.`, `Figur 1: ${a} · 1 + ${b} = ${f[0]}, Figur 2: ${a} · 2 + ${b} = ${f[1]}, Figur 3: ${a} · 3 + ${b} = ${f[2]}`] }], [
+    { title: 'Was kommt dazu?', ask: '<p>Wie viele Hölzer kommen von einer Figur zur nächsten dazu?</p>', answer: q(a), explain: `${f[1]} − ${f[0]} = ${a}. Also steht ${a} · <i>n</i> in der Regel.` },
+    { title: 'Regel prüfen', ask: `<p>Prüfe die Regel mit Figur 3: ${M(`${a} · 3 + ${b} = ?`)}</p>`, answer: q(f[2]), explain: `${f[2]}. Das passt zu Figur 3. Prüfe jede Regel genauso.` },
+  ], { word: true });
+};
+const FACH: Record<number, string> = { 2: 'doppelt', 3: 'dreimal', 4: 'viermal' };
+const teileStory: Story = () => {
+  const [[a], [b]] = kids(2), f = pick([2, 3, 4]), x = R(3, 25), S = x * (f + 1);
+  return wordTask({
+    prompt: `${a} und ${b} haben zusammen ${S} €. ${b} hat ${FACH[f]} so viel Geld wie ${a}. Wie viel Geld hat ${b}?`,
+    steps: [
+      { title: 'Teile zählen', ask: `${a} hat 1 Teil, ${b} hat ${f} Teile. Wie viele Teile sind es zusammen?`, calc: `1 + ${f}`, hint: `${FACH[f]} so viel heißt: ${f} gleich große Teile.` },
+      { title: 'Ein Teil', ask: `Wie viel Euro ist ein Teil? So viel hat ${a}.`, calc: `${S} : ${f + 1}`, wrong: [`${S} : ${f}`], why: `Es sind ${f + 1} Teile, nicht nur ${f}.`, unit: '€' },
+      { title: b, ask: `Wie viel Geld hat ${b}?`, calc: `${x} · ${f}`, wrong: [`${x} + ${f}`], why: `${b} hat ${f} Teile.`, unit: '€' },
+    ],
+    unit: '€', sentence: v => `${b} hat ${v}. Probe: ${x} € + ${x * f} € = ${S} € ✓`,
+  });
+};
+const SPARZIEL = ['ein Fahrrad', 'ein Skateboard', 'neue Inliner', 'ein Zelt', 'eine Gitarre'];
+const sparStory: Story = () => {
+  const [who, pr] = kid(), a = R(2, 6), d = R(1, 3), n = R(6, 12);
+  if (a === d) return null;
+  return wordTask({
+    prompt: `${who} spart für ${pick(SPARZIEL)}. In der 1. Woche legt ${pr} ${a} € in die Spardose. Danach legt ${pr} jede Woche ${d} € mehr hinein als in der Woche davor. Wie viel Euro legt ${pr} in der ${n}. Woche hinein?`,
+    steps: [
+      { title: 'Wie oft mehr?', ask: `Wie oft kommen von der 1. bis zur ${n}. Woche ${d} € dazu?`, calc: `${n} − 1`, wrong: [`${n} + 1`], why: `Von Woche 1 bis Woche ${n} sind es ${n - 1} Schritte.` },
+      { title: `${n}. Woche`, ask: `Wie viel Euro legt ${pr} in der ${n}. Woche hinein?`, calc: `${a} + ${n - 1} · ${d}`, wrong: [`${n} · ${d}`, `${a} · ${n}`], why: `Am Anfang ${a} €, dann ${n - 1}-mal ${d} € mehr.`, unit: '€' },
+    ],
+    unit: '€', sentence: v => `In der ${n}. Woche legt ${pr} ${v} in die Spardose.`,
+  });
+};
+const DREI: { pl: string; sg: string; c: number[] }[] = [
+  { pl: 'Hefte', sg: '1 Heft', c: [80, 90, 120, 150] },
+  { pl: 'Brezeln', sg: '1 Brezel', c: [60, 70, 80, 90] },
+  { pl: 'Kugeln Eis', sg: '1 Kugel Eis', c: [120, 140, 150, 180] },
+  { pl: 'Bleistifte', sg: '1 Bleistift', c: [50, 60, 75, 120] },
+  { pl: 'Postkarten', sg: '1 Postkarte', c: [50, 80, 120, 150] },
+];
+const dreiStory: Story = () => {
+  const c = pick(DREI), u = pick(c.c), [n1, n2] = shuffle([3, 4, 5, 6, 8, 10]), [who] = kid();
+  return wordTask({
+    prompt: `${who} kauft ${n1} ${c.pl} und bezahlt ${eur(n1 * u)} €. Wie viel kosten ${n2} ${c.pl}?`,
+    steps: [
+      { title: 'Für ' + c.sg, ask: `Rechne zuerst auf ${c.sg} zurück. Wie viel kostet ${c.sg}?`, calc: `${eS(n1 * u)} : ${n1}`, wrong: [`${eS(n1 * u)} · ${n1}`], why: 'Auf 1 zurückrechnen heißt: teilen.', unit: '€' },
+      { title: `Für ${n2}`, ask: `Wie viel kosten ${n2} ${c.pl}?`, calc: `${eS(u)} · ${n2}`, wrong: [`${eS(u)} : ${n2}`], why: `${n2}-mal so viele kosten ${n2}-mal so viel.`, unit: '€' },
+    ],
+    unit: '€', sentence: () => `${n2} ${c.pl} kosten ${eur(n2 * u)} €.`,
+  });
+};
+const sammelStory: Story = () => {
+  const [[a], [b], [c]] = kids(3), x = R(4, 20), e = R(2, 9), S = 4 * x + e;
+  return wordTask({
+    prompt: `${a}, ${b} und ${c} sammeln Geld für das Klassenfest. ${b} sammelt doppelt so viel wie ${a}. ${c} sammelt ${e} € mehr als ${a}. Zusammen sind es ${S} €. Wie viel Euro hat ${c} gesammelt?`,
+    steps: [
+      { title: 'Extra abziehen', ask: `Zieh zuerst die ${e} € ab, die ${c} mehr hat als ${a}. Wie viel bleibt?`, calc: `${S} − ${e}`, wrong: [`${S} + ${e}`], why: `Ohne die ${e} € Extra hat ${c} genauso viel wie ${a}.`, unit: '€' },
+      { title: 'Teile zählen', ask: `Jetzt hat ${a} 1 Teil, ${b} 2 Teile und ${c} 1 Teil. Wie viele Teile sind das?`, calc: '1 + 2 + 1' },
+      { title: 'Ein Teil', ask: `Wie viel Euro ist ein Teil? So viel hat ${a}.`, calc: `${S - e} : 4`, wrong: [`${S - e} : 3`], why: 'Es sind 4 Teile.', unit: '€' },
+      { title: c, ask: `Wie viel hat ${c} gesammelt?`, calc: `${x} + ${e}`, ...(x !== e ? { wrong: [`${x} · 2`], why: `${c} hat ${e} € mehr als ${a}.` } : {}), unit: '€' },
+    ],
+    unit: '€', sentence: v => `${c} hat ${v} gesammelt. Probe: ${x} € + ${2 * x} € + ${x + e} € = ${S} € ✓`,
+  });
+};
+const ORTE: [string, number[]][] = [['ins Schwimmbad', [250, 300, 350, 400]], ['in die Kletterhalle', [650, 750, 800, 900]], ['ins Kino', [550, 600, 650, 700]], ['in den Zoo', [800, 900, 950, 1000]]];
+const eintrittStory: Story = () => {
+  const [ort, ps] = pick(ORTE), u = pick(ps), [n1, n2] = shuffle([2, 3, 4, 5, 6]), [who] = kid(), cost = n2 * u, B = (Math.floor(cost / 500) + 1) * 500;
+  return wordTask({
+    prompt: `Für ${n1} Kinder kostet der Eintritt ${ort} ${eur(n1 * u)} €. ${who} geht mit ${n2 === 2 ? 'einem Freund' : `${n2 - 1} Freunden`} hin. Zusammen haben sie ${eur(B)} €. Wie viel Geld bleibt nach dem Eintritt übrig?`,
+    steps: [
+      { title: 'Für 1 Kind', ask: 'Wie viel kostet der Eintritt für 1 Kind?', calc: `${eS(n1 * u)} : ${n1}`, wrong: [`${eS(n1 * u)} · ${n1}`], why: 'Auf 1 zurückrechnen heißt: teilen.', unit: '€' },
+      { title: `Für ${n2} Kinder`, ask: `Es gehen ${n2} Kinder hin. Wie viel kostet der Eintritt für alle?`, calc: `${eS(u)} · ${n2}`, wrong: [`${eS(u)} · ${n2 - 1}`], why: `${who} geht selbst auch mit. Es sind ${n2} Kinder.`, unit: '€' },
+      { title: 'Rest', ask: 'Wie viel Geld bleibt übrig?', calc: `${eS(B)} − ${eS(cost)}`, wrong: [`${eS(B)} + ${eS(cost)}`], why: 'Übrig bleibt: alles Geld minus Eintritt.', unit: '€' },
+    ],
+    unit: '€', sentence: () => `Es bleiben ${eur(B - cost)} € übrig.`,
+  });
+};
+const WUNSCH = ['ein Spiel', 'einen Rucksack', 'eine Uhr', 'ein Paar Fußballschuhe', 'einen Bausatz'];
+const sparZielStory: Story = () => {
+  const [who, pr] = kid(), w = R(2, 6), m = R(4, 12), a = R(5, 30), t = w + R(1, 5), s = t - w, P = a + w * m;
+  return wordTask({
+    prompt: `${who} wünscht sich ${pick(WUNSCH)} für ${P} €. ${cap(pr)} hat schon ${a} € gespart. Jede Woche bekommt ${pr} ${t} € Taschengeld und gibt davon ${s} € aus. Den Rest spart ${pr}. Nach wie vielen Wochen hat ${pr} genug Geld?`,
+    steps: [
+      { title: 'Pro Woche', ask: `Wie viel Euro spart ${pr} pro Woche?`, calc: `${t} − ${s}`, wrong: [`${t} + ${s}`], why: 'Gespart wird, was vom Taschengeld übrig bleibt.', unit: '€' },
+      { title: 'Was fehlt', ask: 'Wie viel Euro fehlen noch?', calc: `${P} − ${a}`, wrong: [`${P} + ${a}`], why: 'Das schon gesparte Geld ziehst du vom Preis ab.', unit: '€' },
+      { title: 'Wochen', ask: `Nach wie vielen Wochen hat ${pr} genug?`, calc: `${P - a} : ${w}`, wrong: [`${P} : ${w}`], why: 'Nur das fehlende Geld muss noch gespart werden.', unit: 'Wochen' },
+    ],
+    unit: 'Wochen', sentence: v => `Nach ${v} hat ${who} genug Geld.`,
+  });
+};
+const thinkStory = (n: number): Story => () => thinkTask(n, true);
 function raetselText(level: number): Task | null {
-  return genFrom<Task>(() => {
-    const r = Math.random();
-    if (r < 0.3) {
-      if (level === 4) {
-        const y = R(5, 14), d = R(2, 6), S = 2 * y + d, [o, j] = pick([['Lena', 'ihr Bruder Tim'], ['Jonas', 'seine Schwester Ella'], ['Mia', 'ihre Cousine Lou']]);
-        return wordTask({
-          prompt: `${o} und ${j} sind zusammen ${S} Jahre alt. ${o} ist ${d} Jahre älter. Wie alt ist ${o}?`,
-          steps: [
-            { title: 'Unterschied abziehen', ask: `Nimm den Altersunterschied weg. Dann wären beide gleich alt. Wie viele Jahre bleiben zusammen übrig?`, calc: `${S} − ${d}`, wrong: [`${S} + ${d}`], why: `Ohne die ${d} Jahre Vorsprung sind beide gleich alt.`, unit: 'Jahre' },
-            { title: 'Der Jüngere', ask: `Wie alt ist ${j.split(' ').pop()}?`, calc: `${S - d} : 2`, wrong: [`${S} : 2`], why: 'Jetzt sind beide gleich alt: in zwei gleiche Teile teilen.', unit: 'Jahre' },
-            { title: 'Der Ältere', ask: `Wie alt ist ${o}?`, calc: `${y} + ${d}`, unit: 'Jahre' },
-          ],
-          unit: 'Jahre', sentence: v => `${o} ist ${v} alt. Probe: ${y + d} + ${y} = ${S} ✓`,
-        });
-      }
-      const y = R(3, 10), d = R(2, 4), S = 3 * y + 3 * d;
-      return wordTask({
-        prompt: `Drei Geschwister sind zusammen ${S} Jahre alt. Jedes Kind ist ${d} Jahre älter als das nächstjüngere. Wie alt ist das älteste Kind?`,
-        steps: [
-          { title: 'Vorsprung', ask: `Das mittlere Kind hat ${d} Jahre Vorsprung vor dem jüngsten, das älteste ${2 * d} Jahre. Wie viele Jahre Vorsprung sind das zusammen?`, calc: `${d} + ${2 * d}`, unit: 'Jahre' },
-          { title: 'Vorsprung abziehen', ask: 'Nimm den Vorsprung weg. Wie viele Jahre bleiben, wenn alle so alt wären wie das jüngste?', calc: `${S} − ${3 * d}`, wrong: [`${S} − ${d}`], why: 'Der ganze Vorsprung muss weg.', unit: 'Jahre' },
-          { title: 'Das jüngste', ask: 'Wie alt ist das jüngste Kind?', calc: `${S - 3 * d} : 3`, wrong: [`${S - 3 * d} : 2`], why: 'Drei gleich alte Kinder: durch 3 teilen.', unit: 'Jahre' },
-          { title: 'Das älteste', ask: 'Wie alt ist das älteste Kind?', calc: `${y} + ${2 * d}`, wrong: [`${y} + ${d}`], why: `Das älteste hat ${2 * d} Jahre Vorsprung.`, unit: 'Jahre' },
-        ],
-        unit: 'Jahre', sentence: v => `Das älteste Kind ist ${v} alt. Probe: ${y} + ${y + d} + ${y + 2 * d} = ${S} ✓`,
-      });
-    }
-    const kind = pick<'sq' | 'tri'>(['sq', 'tri']), { a, b, what } = STICK[kind], f = [1, 2, 3].map(n => a * n + b);
-    const pre = `Ein Muster aus Streichhölzern mit ${what} in einer Reihe:${sticksSVG(kind)}Figur 1 braucht ${f[0]}, Figur 2 braucht ${f[1]} und Figur 3 braucht ${f[2]} Hölzer.`;
-    if (r < 0.6 || (level === 4 && r < 0.8)) {
-      const n = R(8, 20);
-      return wordTask({
-        prompt: `${pre} Wie viele Hölzer braucht Figur ${n}?`,
-        steps: [
-          { title: 'Was kommt dazu?', ask: 'Wie viele Hölzer kommen von einer Figur zur nächsten dazu?', calc: `${f[1]} − ${f[0]}` },
-          { title: 'Wie oft?', ask: `Wie oft kommen von Figur 1 bis Figur ${n} Hölzer dazu?`, calc: `${n} − 1`, wrong: [`${n} + 1`], why: `Von Figur 1 bis Figur ${n} sind es ${n - 1} Schritte.` },
-          { title: `Figur ${n}`, ask: `Wie viele Hölzer braucht Figur ${n}?`, calc: `${f[0]} + ${n - 1} · ${a}`, wrong: [`${n} · ${f[0]}`], why: `Figur 1 hat ${f[0]} Hölzer. Bei jedem Schritt kommen ${a} dazu.` },
-        ],
-        sentence: v => `Figur ${n} braucht ${v} Hölzer. Das passt zur Regel ${a} · ${n} + ${b}.`,
-      });
-    }
-    if (level === 5 && r < 0.8) {
-      const n = R(12, 30), H = a * n + b;
-      return wordTask({
-        prompt: `${pre} Figur <i>n</i> braucht ${a} · <i>n</i> + ${b} Hölzer. Welche Figur braucht genau ${H} Hölzer?`,
-        steps: [
-          { title: `${b} wegnehmen`, ask: `Rechne rückwärts. Zieh zuerst das eine Extra-Holz ab.`, calc: `${H} − ${b}`, wrong: [`${H} : ${a}`], why: `Zuletzt wurde + ${b} gerechnet. Das machst du zuerst rückgängig.` },
-          { title: `Durch ${a}`, ask: 'Welche Figur ist es?', calc: `${H - b} : ${a}`, wrong: [`${H - b} · ${a}`], why: `· ${a} machst du mit : ${a} rückgängig.` },
-        ],
-        sentence: v => `Figur ${v} braucht ${H} Hölzer. Probe: ${a} · ${n} + ${b} = ${H} ✓`,
-      });
-    }
-    const ok = `Figur <i>n</i> braucht ${a} · <i>n</i> + ${b} Hölzer.`;
-    const cand: Choice[] = [
-      { html: `Figur <i>n</i> braucht ${a + b} · <i>n</i> Hölzer.`, why: `Prüfe Figur 2: ${a + b} · 2 = ${2 * (a + b)}, es sind aber ${f[1]}.` },
-      { html: `Figur <i>n</i> braucht <i>n</i> + ${a} Hölzer.`, why: `Prüfe Figur 1: 1 + ${a} = ${1 + a}, es sind aber ${f[0]}.` },
-      { html: `Figur <i>n</i> braucht ${a} · <i>n</i> Hölzer.`, why: `Prüfe Figur 1: ${a} · 1 = ${a}, es sind aber ${f[0]}. Es fehlt das Extra-Holz.` },
-    ];
-    return pickTask(`${pre} Welche Regel beschreibt das Muster?`, ok, cand, [{ rule: 'Muster beschreiben', lines: [`Pro Figur kommen ${a} Hölzer dazu, dazu kommt 1 Holz am Anfang.`, `Figur 1: ${a} · 1 + ${b} = ${f[0]}, Figur 2: ${a} · 2 + ${b} = ${f[1]}, Figur 3: ${a} · 3 + ${b} = ${f[2]}`] }], [
-      { title: 'Was kommt dazu?', ask: '<p>Wie viele Hölzer kommen von einer Figur zur nächsten dazu?</p>', answer: q(a), explain: `${f[1]} − ${f[0]} = ${a}. Also steht ${a} · <i>n</i> in der Regel.` },
-      { title: 'Regel prüfen', ask: `<p>Prüfe die Regel mit Figur 3: ${M(`${a} · 3 + ${b} = ?`)}</p>`, answer: q(f[2]), explain: `${f[2]}. Das passt zu Figur 3. Prüfe jede Regel genauso.` },
-    ], { word: true });
-  }, t => !t.guide || t.guide.every(s => s.answer.sign() > 0));
+  const all: Story[] = level === 4
+    ? [alter2Story, stickNStory, stickRuleStory, teileStory, sparStory, dreiStory, thinkStory(2)]
+    : [alter3Story, stickNStory, stickInvStory, stickRuleStory, thinkStory(3), sammelStory, eintrittStory, sparZielStory];
+  return genFrom<Task | null>(() => pick(all)(), t => !!t && (!t.guide || t.guide.every(s => s.answer.sign() > 0)));
 }
 const RAETSEL: Topic = {
   id: 'raetsel', klasse: 5, title: 'Zahlenrätsel, Folgen und Tabellen', short: 'Rätsel durch Probieren und Rückwärtsrechnen lösen, Folgen fortsetzen und Tabellen ergänzen.',
@@ -879,7 +1152,7 @@ const RAETSEL: Topic = {
       return r < 0.4 ? bracketTask() : r < 0.7 ? propCheck() : seqGrow();
     }, t => !!t && t.answer.sign() > 0);
   },
-  text: level => (level === 5 && Math.random() < 0.25 ? genFrom<Task>(() => thinkTask(3, true), t => !!t) : raetselText(level)),
+  text: raetselText,
 };
 
 export const MUSTER_TOPICS: Topic[] = [PRIM, HAEUF, RAETSEL];

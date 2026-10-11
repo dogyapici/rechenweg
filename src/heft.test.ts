@@ -79,3 +79,12 @@ describe('Heft', () => {
     expect(n).toBeGreaterThan(200);
   });
 });
+
+describe('Geldbeträge', () => {
+  it('zeigt Euro immer mit zwei Nachkommastellen', async () => {
+    const { wordTask } = await import('./guide');
+    const t = wordTask({ prompt: 'p', steps: [{ title: 'Rest', ask: 'a', calc: '50 − 6,6', unit: '€' }], sentence: v => `Es bleiben ${v}.` });
+    expect(t.sol.resultHTML).toBe('43,40 €');
+    expect(t.heft && heftText(t.heft).join(' ')).toContain('43,40 €');
+  });
+});

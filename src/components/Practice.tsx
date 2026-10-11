@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { MathError, hintHTML, htmlToText, parseAnswer, solHTML } from '../engine/index.js';
 import { pick, type Task, type Topic } from '../topics';
 import { formIssue } from '../gen';
-import { freshStats, type Stats, type TopicStats } from '../storage';
-import { MAX_LEVEL, STAGES, STREAK_UP, guideFor, makeTask } from '../stages';
+import { freshStats, loadSeen, saveSeen, type Stats, type TopicStats } from '../storage';
+import { freshTask, remember } from '../fresh';
+import { MAX_LEVEL, STAGES, STREAK_UP, guideFor } from '../stages';
 import type { TutorContext } from '../ai';
 import { StepReveal } from '../ui/bits';
 import { AnswerInput } from './Widgets';
@@ -25,7 +26,7 @@ interface TaskState {
 /** Die erste Aufgabe jeder neuen Stufe (ab Stufe 2) wird gemeinsam gelöst. */
 function newTask(topic: Topic, s: TopicStats, n = 0): TaskState {
   let task: Task | null = null;
-  for (let i = 0; i < 5 && !task; i++) task = makeTask(topic, s.level);
+  for (let i = 0; i < 5 && !task; i++) task = freshTask(topic, s.level, loadSeen());
   const guided = !!task && s.level >= 2 && !(s.atLevel ?? 0) && guideFor(task).length > 1 && !task.widget;
   return { task, tries: 0, hint: guided, revealed: false, done: false, guided, heft: false, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n, t0: Date.now(), wrongs: [], helps: [] };
 }
@@ -45,6 +46,8 @@ export function Practice({ topic, stats, onStats, onAskTutor, onLog }: Props) {
   // Nach dem Aufstieg erst das Lob zeigen, die Einführung der neuen Stufe kommt mit der nächsten Aufgabe.
   const showIntro = (s.intro ?? 0) < s.level && !T.done;
   useEffect(() => { if (!T.done && !T.guided) inputRef.current?.focus(); }, [T.task, T.done, T.guided]);
+  // Gestellte Aufgabe merken, damit sie so bald nicht wieder drankommt.
+  useEffect(() => { if (T.task) saveSeen(remember(loadSeen(), topic.id, T.task)); }, [T.task, topic.id]);
 
   /** Stufe anpassen: 3 richtige in Folge ohne Hilfe → nächste Stufe, 2 nicht gelöste Aufgaben → eine Stufe zurück. */
   const finish = (right: boolean, state: TaskState): string => {
