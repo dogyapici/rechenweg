@@ -15,11 +15,11 @@ const pct = (s: { right: number; total: number }) => s.total ? s.right / s.total
 
 interface Props {
   stats: Stats; exams: Exams; free: boolean; plan: Plan | null; profile: Profile | null; act: Activity; unlocked: Unlocked
-  onProfile: () => void; onProgress: () => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void; onPath: (chapter?: string) => void
+  onProfile: () => void; onProgress: () => void; onParents: () => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void; onPath: (chapter?: string) => void
 }
 
 /** Startseite: was als Nächstes dran ist und wie es bisher läuft. */
-export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfile, onProgress, onOpen, onExam, onPlan, onPlacement, onPath }: Props) {
+export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfile, onProgress, onParents, onOpen, onExam, onPlan, onPlacement, onPath }: Props) {
   const today = isoDay(new Date());
   const nodes = pathNodes(stats, exams, free, title, [...(plan?.topics ?? []), ...reachable(profile)]);
   const next = nextNode(nodes, n => n.kind === 'topic' && !!profile && fitOf(n.id, profile) === 'now');
@@ -103,6 +103,11 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
       <Strengths stats={stats} onOpen={onOpen} />
       <ExamList exams={exams} onExam={onExam} />
       <Badges unlocked={unlocked} onClick={onProgress} />
+      <button className="card parents-link" onClick={onParents}>
+        <span aria-hidden="true">👪</span>
+        <span><b>Für Eltern und Nachhilfe</b><small>Fortschritt, Fehler und wo es hakt</small></span>
+        <span aria-hidden="true">›</span>
+      </button>
     </>
   );
 }

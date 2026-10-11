@@ -2,6 +2,7 @@ import type { Exams } from './curriculum';
 import type { Plan } from './plan';
 import type { Profile } from './profile';
 import type { Activity, Unlocked } from './progress';
+import { emptyJournal, type Journal } from './journal';
 
 /** Fortschritt und Zugangscode bleiben nur in diesem Browser gespeichert. */
 /** `intro`: höchste Stufe, deren Einführung schon gezeigt wurde. `atLevel`: erledigte Aufgaben auf der aktuellen Stufe. */
@@ -39,3 +40,6 @@ export const loadUnlocked = (): Unlocked => read<Unlocked>('rechenweg-unlocked',
 export const saveUnlocked = (u: Unlocked) => write('rechenweg-unlocked', u);
 export const loadProfile = (): Profile | null => read<Profile | null>('rechenweg-profile', null);
 export const saveProfile = (p: Profile) => write('rechenweg-profile', p);
+/** Lerntagebuch für die Eltern-Ansicht */
+export const loadJournal = (): Journal => ({ ...emptyJournal(), ...read<Partial<Journal>>('rechenweg-journal', {}) });
+export const saveJournal = (j: Journal) => write('rechenweg-journal', j);

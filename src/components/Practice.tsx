@@ -11,11 +11,15 @@ import { AiExplain } from './AiExplain';
 import { Guide } from './Guide';
 import { Html } from './Html';
 import { HeftView } from './HeftView';
+import { answerLabel } from '../widgets';
+import type { Attempt, Help } from '../journal';
 
 type Feedback = { state: 'right' | 'wrong' | 'almost' | 'invalid'; msg: string };
 interface TaskState {
   task: Task | null; tries: number; hint: boolean; revealed: boolean; done: boolean; guided: boolean; heft: boolean;
   fb: Feedback | null; lastWrong: string | null; lastDiag: string | null; levelMsg: string; n: number;
+  /** fürs Lerntagebuch: Startzeit, falsche Eingaben, genutzte Hilfen */
+  t0: number; wrongs: string[]; helps: Help[];
 }
 
 /** Die erste Aufgabe jeder neuen Stufe (ab Stufe 2) wird gemeinsam gelöst. */
@@ -23,14 +27,15 @@ function newTask(topic: Topic, s: TopicStats, n = 0): TaskState {
   let task: Task | null = null;
   for (let i = 0; i < 5 && !task; i++) task = makeTask(topic, s.level);
   const guided = !!task && s.level >= 2 && !(s.atLevel ?? 0) && guideFor(task).length > 1 && !task.widget;
-  return { task, tries: 0, hint: guided, revealed: false, done: false, guided, heft: false, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n };
+  return { task, tries: 0, hint: guided, revealed: false, done: false, guided, heft: false, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n, t0: Date.now(), wrongs: [], helps: [] };
 }
+const addHelp = (h: Help[], x: Help) => (h.includes(x) ? h : [...h, x]);
 const PARTY = ['🎉', '⭐', '✨', '🎈', '⭐', '🎉'];
 const ICON = { right: '✓', wrong: '✗', almost: '≈', invalid: '?' };
 
-interface Props { topic: Topic; stats: Stats; onStats: (s: Stats) => void; onAskTutor: (ctx: TutorContext) => void }
+interface Props { topic: Topic; stats: Stats; onStats: (s: Stats) => void; onAskTutor: (ctx: TutorContext) => void; onLog?: (a: Attempt) => void }
 
-export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
+export function Practice({ topic, stats, onStats, onAskTutor, onLog }: Props) {
   const s: TopicStats = { ...freshStats(), ...stats[topic.id] };
   const [T, setT] = useState<TaskState>(() => newTask(topic, s));
   const [input, setInput] = useState('');
@@ -59,6 +64,9 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
       if (n.miss >= 2 && n.level > 1) { n.level--; n.miss = 0; n.atLevel = 0; n.intro = Math.max(n.intro ?? 0, n.level); msg = 'Wir üben erst noch ein paar Aufgaben auf der Stufe davor. Das ist ganz normal!'; }
     }
     onStats({ ...stats, [topic.id]: n });
+    const k = state.task!;
+    onLog?.({ t: Date.now(), topic: topic.id, lv: s.level, src: 'ueben', q: k.prompt, a: k.sol.resultHTML, wrong: state.wrongs, ok: right, first: right && state.tries === 1 && !state.helps.length,
+      help: state.helps, diag: state.lastDiag ? htmlToText(state.lastDiag) : undefined, sec: (Date.now() - state.t0) / 1000 });
     return msg;
   };
 
@@ -85,18 +93,18 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
     } else {
       const m = k.diag ? k.diag(a.v) : null;
       const tries = T.tries + 1;
-      setT({ ...T, tries, lastWrong: input, lastDiag: m, fb: { state: 'wrong', msg: (m || 'Das stimmt noch nicht.') + (tries >= 2 ? ' Lösen wir sie gemeinsam? 🧭' : ' Versuch es noch einmal!') } });
+      setT({ ...T, tries, lastWrong: input, lastDiag: m ?? T.lastDiag, wrongs: [...T.wrongs, answerLabel(k.widget, input)], fb: { state: 'wrong', msg: (m || 'Das stimmt noch nicht.') + (tries >= 2 ? ' Lösen wir sie gemeinsam? 🧭' : ' Versuch es noch einmal!') } });
       inputRef.current?.select();
     }
   };
   const guidedDone = () => {
     // Bei Zeichen- und Klickaufgaben bereiten die Schritte nur vor. Die Antwort setzt man danach selbst.
     if (T.task?.widget) { setT({ ...T, guided: false, hint: true, fb: { state: 'almost', msg: 'Gut vorbereitet! Jetzt setz es oben um und prüfe deine Antwort.' } }); return; }
-    const next = { ...T, tries: T.tries + 1, hint: true, done: true };
+    const next = { ...T, tries: T.tries + 1, hint: true, done: true, helps: addHelp(T.helps, 'gemeinsam') };
     const lm = finish(true, next);
     setT({ ...next, levelMsg: lm, fb: { state: 'right', msg: 'Super, gemeinsam geschafft! Die nächste Aufgabe probierst du allein.' } });
   };
-  const reveal = () => { if (T.done) return; const lm = finish(false, T); setT({ ...T, revealed: true, done: true, guided: false, levelMsg: lm }); };
+  const reveal = () => { if (T.done) return; const lm = finish(false, { ...T, helps: addHelp(T.helps, 'loesung') }); setT({ ...T, revealed: true, done: true, guided: false, levelMsg: lm }); };
   const next = () => { setT(newTask(topic, { ...freshStats(), ...stats[topic.id] }, T.n + 1)); setInput(''); };
   const reset = () => { const n = { ...stats }; delete n[topic.id]; onStats(n); setT(newTask(topic, freshStats())); setInput(''); };
   const startStage = () => onStats({ ...stats, [topic.id]: { ...s, intro: s.level } });
@@ -172,9 +180,9 @@ export function Practice({ topic, stats, onStats, onAskTutor }: Props) {
         {T.hint && !T.done && !T.guided && <Html className="hintbox" html={'💡 ' + (guide[0]?.hint ? `<b>${guide[0].title}:</b> ${guide[0].hint}` : hintHTML(k.sol))} />}
         {!T.done && !T.guided && (
           <div className={`helpers ${k.heft ? 'four' : 'three'}`}>
-            <button className="btn quiet" onClick={() => setT({ ...T, hint: true })} disabled={T.hint}>💡 Tipp</button>
-            {k.heft && <button className="btn quiet" onClick={() => setT({ ...T, hint: true, heft: true })} disabled={T.heft}>📝 Im Heft</button>}
-            {guide.length > 0 && <button className={`btn ${T.tries >= 1 ? 'soft' : 'quiet'}`} onClick={() => setT({ ...T, hint: true, guided: true, fb: null })}>🧭 Gemeinsam lösen</button>}
+            <button className="btn quiet" onClick={() => setT({ ...T, hint: true, helps: addHelp(T.helps, 'tipp') })} disabled={T.hint}>💡 Tipp</button>
+            {k.heft && <button className="btn quiet" onClick={() => setT({ ...T, hint: true, heft: true, helps: addHelp(T.helps, 'heft') })} disabled={T.heft}>📝 Im Heft</button>}
+            {guide.length > 0 && <button className={`btn ${T.tries >= 1 ? 'soft' : 'quiet'}`} onClick={() => setT({ ...T, hint: true, guided: true, fb: null, helps: addHelp(T.helps, 'gemeinsam') })}>🧭 Gemeinsam lösen</button>}
             <button className="btn quiet" onClick={reveal}>👀 Lösung</button>
           </div>
         )}
