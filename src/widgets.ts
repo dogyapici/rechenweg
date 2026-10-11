@@ -13,7 +13,11 @@ export type Widget =
   /** Winkel mit dem Geodreieck zeichnen. */
   | { kind: 'angle'; max: 180 | 360 }
   /** Eine von mehreren Abbildungen auswählen. */
-  | { kind: 'pick'; options: string[] };
+  | { kind: 'pick'; options: string[] }
+  /** Säulendiagramm ergänzen: die Säule ohne Wert (null) auf die richtige Höhe ziehen. */
+  | { kind: 'bar'; labels: string[]; vals: (number | null)[]; top: number; step: number; unit: string }
+  /** Zahlengerade: einen Punkt an die richtige Stelle setzen. Antwort ist die Strich-Nummer + 1 (1 = ganz links). */
+  | { kind: 'line'; n: number; label: string; ticks: string[] };
 
 /* Punkte: (x|y) wird zu einer ganzen Zahl, damit die Recheneinheit vergleichen kann. */
 export const encodePoint = (x: number, y: number): number => (x + 50) * 1000 + (y + 50);
@@ -113,6 +117,8 @@ export function answerLabel(w: Widget | undefined, input: string): string {
   if (w.kind === 'point') { const [x, y] = decodePoint(Number(s)); return `Punkt ${pointH(x, y)}`.replace(/&#8239;/g, ' '); }
   if (w.kind === 'angle') return `${s}°`;
   if (w.kind === 'pick') return LETTERS[Number(s) - 1] ?? s;
+  if (w.kind === 'bar') return `${s} ${w.unit}`;
+  if (w.kind === 'line') return w.ticks[Number(s) - 1] ? `Strich bei ${w.ticks[Number(s) - 1]}` : 'dein Punkt';
   return 'deine Zeichnung';
 }
 export const qBig = (v: bigint): Q => q(v);

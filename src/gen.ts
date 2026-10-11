@@ -10,6 +10,8 @@ export interface Task {
   answer: Q;
   sol: Solution;
   needReduced?: boolean;
+  /** Verlangte Schreibweise: 'dec' = als Kommazahl (kein Bruchstrich), 'frac' = als Bruch, 'mixed' = als gemischte Zahl wie 3 2/5. */
+  form?: 'dec' | 'frac' | 'mixed';
   diag?: (v: Q) => string | null;
   placeholder?: string;
   int?: Q;
@@ -44,3 +46,11 @@ export function exprTask(s: string, o: { prompt?: string; needReduced?: boolean;
 }
 export function genFrom<T>(make: () => T | null, ok: (t: T) => boolean, tries = 400): T | null { for (let i = 0; i < tries; i++) { try { const t = make(); if (t && ok(t)) return t; } catch (e) { if (!(e instanceof MathError)) throw e; } } return null; }
 export const list = (steps: ListSolution['steps'], v: Q, h = qH(v, true), extra?: string[]): ListSolution => ({ kind: 'list', steps, result: v, resultHTML: h, extra });
+
+/** Stimmt der Wert, aber nicht die verlangte Schreibweise? Dann ein Hinweis, sonst null. */
+export function formIssue(task: Pick<Task, 'form'>, input: string): string | null {
+  if (task.form === 'dec' && /\//.test(input)) return 'Der Wert stimmt! Schreib ihn aber als <b>Kommazahl</b>, zum Beispiel 0,75.';
+  if (task.form === 'frac' && !/\//.test(input)) return 'Der Wert stimmt! Schreib ihn aber als <b>Bruch</b>, zum Beispiel 3/4.';
+  if (task.form === 'mixed' && !/^\s*-?\d+\s+\d+\s*\/\s*\d+\s*$/.test(input) && /\//.test(input)) return 'Der Wert stimmt! Schreib ihn aber als <b>gemischte Zahl</b>, zum Beispiel 3 2/5.';
+  return null;
+}

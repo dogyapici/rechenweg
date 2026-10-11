@@ -19,6 +19,8 @@ export function AnswerInput({ task, value, onChange, inputRef, locked }: { task:
   if (w.kind === 'point') return <PointWidget w={w} value={value} onChange={onChange} locked={locked} />;
   if (w.kind === 'mirror') return <MirrorWidget w={w} value={value} onChange={onChange} locked={locked} />;
   if (w.kind === 'angle') return <AngleWidget w={w} value={value} onChange={onChange} locked={locked} />;
+  if (w.kind === 'bar') return <BarWidget w={w} value={value} onChange={onChange} locked={locked} />;
+  if (w.kind === 'line') return <LineWidget w={w} value={value} onChange={onChange} locked={locked} />;
   return <PickWidget w={w} value={value} onChange={onChange} locked={locked} />;
 }
 
@@ -140,13 +142,88 @@ function AngleWidget({ w, value, onChange, locked }: P<'angle'>) {
 
 /* Auswahl aus Bildern */
 function PickWidget({ w, value, onChange, locked }: P<'pick'>) {
+  // Sätze als Antworten (z. B. Begründungen) brauchen die ganze Breite.
+  const long = w.options.some(o => !o.includes('<svg') && o.replace(/<[^>]*>/g, '').length > 24);
   return (
-    <div className="pick-grid" role="radiogroup" aria-label="Antwort auswählen">
+    <div className={`pick-grid${long ? ' long' : ''}`} role="radiogroup" aria-label="Antwort auswählen">
       {w.options.map((o, k) => (
         <button key={k} type="button" role="radio" aria-checked={value === String(k + 1)} className={`pick${value === String(k + 1) ? ' on' : ''}`} disabled={locked} onClick={() => onChange(String(k + 1))}>
           <span className="pick-l">{LETTERS[k]}</span><Html as="span" className="pick-c" html={o} />
         </button>
       ))}
+    </div>
+  );
+}
+
+/* Säulendiagramm: die fehlende Säule hochziehen */
+function BarWidget({ w, value, onChange, locked }: P<'bar'>) {
+  const ref = useRef<SVGSVGElement>(null);
+  const [drag, setDrag] = useState(false);
+  const H = 180, top0 = 20, bw = 240 / w.labels.length, i = w.vals.indexOf(null);
+  const cur = value ? Number(value) : 0;
+  const y = (v: number) => top0 + H - (v / w.top) * H;
+  const set = (e: RPointerEvent<SVGSVGElement>) => {
+    if (locked) return;
+    const [, py] = svgPos(ref.current!, e);
+    const v = Math.max(0, Math.min(w.top, Math.round(((top0 + H - py) / H) * w.top / w.step) * w.step));
+    onChange(v ? String(v) : '');
+  };
+  const key = (e: React.KeyboardEvent) => {
+    const d = e.key === 'ArrowUp' || e.key === 'ArrowRight' ? w.step : e.key === 'ArrowDown' || e.key === 'ArrowLeft' ? -w.step : 0;
+    if (!d || locked) return; e.preventDefault();
+    const n = Math.max(0, Math.min(w.top, cur + d)); onChange(n ? String(n) : '');
+  };
+  const grid = [];
+  for (let v = 0; v <= w.top; v += w.step) grid.push(<g key={v}><line className="gl" x1={40} y1={y(v)} x2={290} y2={y(v)} /><text className="tk" x={34} y={y(v) + 4} textAnchor="end">{v}</text></g>);
+  return (
+    <div className="widget">
+      <svg ref={ref} className={`chart bar-w${drag ? ' drag' : ''}`} viewBox={`0 0 300 ${H + 50}`} role="slider" tabIndex={0}
+        aria-label={`Säule für ${w.labels[i]} ziehen`} aria-valuemin={0} aria-valuemax={w.top} aria-valuenow={cur} aria-valuetext={`${cur} ${w.unit}`}
+        onPointerDown={e => { setDrag(true); ref.current!.setPointerCapture(e.pointerId); set(e); }} onPointerMove={e => drag && set(e)} onPointerUp={() => setDrag(false)} onKeyDown={key}>
+        {grid}
+        <text className="tk" x={40} y={10} textAnchor="end">{w.unit}</text>
+        {w.labels.map((l, k) => {
+          const x = 48 + k * bw, v = k === i ? cur : w.vals[k]!;
+          return (
+            <g key={l}>
+              {k === i && <rect className="bar-slot" x={x} y={top0} width={bw - 10} height={H} rx={4} />}
+              {v > 0 && <rect className={k === i ? 'bar-r mine' : 'bar-r'} x={x} y={y(v)} width={bw - 10} height={H + top0 - y(v)} />}
+              {k === i && <circle className="knob" cx={x + (bw - 10) / 2} cy={y(cur)} r={8} />}
+              <text className="tk" x={x + (bw - 10) / 2} y={H + top0 + 18} textAnchor="middle">{l.length > 7 ? l.slice(0, 6) + '.' : l}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <p className="widget-read">{cur ? <>Deine Säule für <b>{w.labels[i]}</b>: <b>{cur} {w.unit}</b></> : `Zieh die leere Säule für ${w.labels[i]} nach oben.`}</p>
+    </div>
+  );
+}
+
+/* Zahlengerade: Punkt an einen Strich setzen */
+function LineWidget({ w, value, onChange, locked }: P<'line'>) {
+  const ref = useRef<SVGSVGElement>(null);
+  const L = 20, Rr = 300, dx = (Rr - L) / w.n;
+  const cur = value ? Number(value) - 1 : null;
+  const set = (k: number) => { if (!locked) onChange(String(Math.max(0, Math.min(w.n, k)) + 1)); };
+  const click = (e: RPointerEvent<SVGSVGElement>) => { const [px] = svgPos(ref.current!, e); set(Math.round((px - L) / dx)); };
+  const key = (e: React.KeyboardEvent) => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 0;
+    if (!d) return; e.preventDefault(); set((cur ?? Math.floor(w.n / 2)) + d);
+  };
+  return (
+    <div className="widget">
+      <svg ref={ref} className="numline" viewBox="0 0 320 80" onPointerDown={click} onKeyDown={key} tabIndex={0} role="application"
+        aria-label={`Zahlengerade. Tippe auf die Stelle für ${w.label} oder benutze die Pfeiltasten.${cur !== null ? ` Gesetzt bei Strich ${cur + 1}.` : ''}`}>
+        <line className="ax" x1={L - 10} y1={40} x2={Rr + 12} y2={40} />
+        {Array.from({ length: w.n + 1 }, (_, k) => (
+          <g key={k}>
+            <line className={w.ticks[k] ? 'tick big' : 'tick'} x1={L + k * dx} y1={w.ticks[k] ? 30 : 34} x2={L + k * dx} y2={w.ticks[k] ? 50 : 46} />
+            {w.ticks[k] && <foreignObject x={L + k * dx - 22} y={52} width={44} height={26}><div className="nl-l" dangerouslySetInnerHTML={{ __html: w.ticks[k] }} /></foreignObject>}
+          </g>
+        ))}
+        {cur !== null && <g className="pt mine"><circle cx={L + cur * dx} cy={40} r={8} /><text x={L + cur * dx} y={22} textAnchor="middle">{w.label}</text></g>}
+      </svg>
+      <p className="widget-read">{cur !== null ? <>Dein Punkt <b>{w.label}</b> sitzt auf Strich {cur + 1} von links.</> : `Tippe auf die Stelle, an der ${w.label} liegt.`}</p>
     </div>
   );
 }

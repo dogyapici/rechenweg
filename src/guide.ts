@@ -90,7 +90,8 @@ export function wordTask(o: { prompt: string; steps: WordStep[]; sentence: (v: s
   let last: Q | null = null, lastH = '';
   for (const w of o.steps) {
     const sol = evalExpr(w.calc);
-    const dec = /,/.test(w.calc);
+    // Kommazahl zeigen, wenn die Rechnung eine hat oder ohne Bruchstrich ein endliches Ergebnis entsteht (z. B. 9 · 50 : 100 = 4,5).
+    const dec = /,/.test(w.calc) || !/\//.test(w.calc);
     const vH = qH(sol.result, dec && sol.result.terminating());
     const u = w.unit ? ' ' + w.unit : '';
     const line = `${M(sol.inputHTML)} = ${M(vH)}${u}`;

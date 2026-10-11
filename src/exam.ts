@@ -2,6 +2,7 @@
 import { MathError, parseAnswer } from './engine/index.js';
 import { makeTask } from './stages';
 import { TOPICS, type Task } from './topics';
+import { formIssue } from './gen';
 
 export interface ExamTask { topic: string; task: Task }
 
@@ -12,9 +13,10 @@ const storyKey = (t: Task) => (t.word ? 'w:' : 'r:') + t.prompt.replace(/<[^>]*>
 
 /**
  * Wie eine echte Klassenarbeit: von leicht nach schwer, jedes Thema kommt vor,
- * zum Schluss Textaufgaben. 8 Aufgaben pro Kapitel, in der Abschlussprüfung eine pro Thema (mindestens 12).
+ * zum Schluss Textaufgaben. 8 Aufgaben pro Kapitel, in der Abschlussprüfung eine pro Thema (12 bis 24,
+ * bei mehr Themen eine zufällige Auswahl, damit die Prüfung in eine Sitzung passt).
  */
-export function buildExam(topicIds: string[], count = topicIds.length > 4 ? Math.max(12, topicIds.length) : 8): ExamTask[] {
+export function buildExam(topicIds: string[], count = topicIds.length > 4 ? Math.min(24, Math.max(12, topicIds.length)) : 8): ExamTask[] {
   const levels = Array.from({ length: count }, (_, i) => (i < count * 0.3 ? 2 : i < count * 0.6 ? 3 : i < count * 0.85 ? 4 : 5));
   const order = shuffle(topicIds);
   const out: ExamTask[] = [];
@@ -40,7 +42,7 @@ export function mark(task: Task, input: string): Mark {
   try {
     const a = parseAnswer(input);
     if (!task.answer.eq(a.v)) return { points: 0, state: 'wrong' };
-    if (task.needReduced && a.raw && !a.v.isRed()) return { points: 0.5, state: 'half' };
+    if ((task.needReduced && a.raw && !a.v.isRed()) || formIssue(task, input)) return { points: 0.5, state: 'half' };
     return { points: 1, state: 'right' };
   } catch (e) {
     if (e instanceof MathError) return { points: 0, state: 'wrong' };

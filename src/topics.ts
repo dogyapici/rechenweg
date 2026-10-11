@@ -170,12 +170,13 @@ export function groeMixTask(p: Pair, a: number, b: number): Task {
 }
 
 /* Umfang und Flächeninhalt */
-type Shape = 'rect' | 'square' | 'tri' | 'para';
-const SH: Record<Shape, string> = { rect: 'Rechteck', square: 'Quadrat', tri: 'Dreieck', para: 'Parallelogramm' };
+type Shape = 'rect' | 'square' | 'tri' | 'para' | 'trap';
+const SH: Record<Shape, string> = { rect: 'Rechteck', square: 'Quadrat', tri: 'Dreieck', para: 'Parallelogramm', trap: 'Trapez' };
 const svgFig = (body: string, label: string) => `<svg class="fig" viewBox="0 0 240 150" role="img" aria-label="${label}">${body}</svg>`;
 const tx = (x: number, y: number, s: string, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}">${s}</text>`;
 function figure(s: Shape, l: Record<string, string>): string {
   if (s === 'rect' || s === 'square') return svgFig(`<rect class="sh" x="40" y="20" width="${s === 'square' ? 100 : 160}" height="100" />${tx(s === 'square' ? 90 : 120, 140, l.a)}${tx(s === 'square' ? 146 : 206, 75, l.b ?? l.a, 'start')}`, `${SH[s]} mit ${Object.values(l).join(', ')}`);
+  if (s === 'trap') return svgFig(`<polygon class="sh" points="20,120 220,120 165,25 70,25" /><line class="hl" x1="70" y1="25" x2="70" y2="120" />${tx(120, 140, l.a)}${tx(118, 17, l.c)}${tx(76, 80, l.h, 'start')}${l.b ? tx(198, 70, l.b, 'start') : ''}${l.d ? tx(40, 70, l.d, 'end') : ''}`, `Trapez mit ${Object.values(l).join(', ')}`);
   if (s === 'para') return svgFig(`<polygon class="sh" points="30,120 170,120 210,25 70,25" /><line class="hl" x1="70" y1="25" x2="70" y2="120" />${tx(100, 140, l.g)}${tx(76, 80, l.h, 'start')}${l.b ? tx(198, 80, l.b, 'start') : ''}`, `Parallelogramm mit ${Object.values(l).join(', ')}`);
   return svgFig(`<polygon class="sh" points="20,120 200,120 120,20" />${l.h ? `<line class="hl" x1="120" y1="20" x2="120" y2="120" />${tx(126, 85, l.h, 'start')}` : ''}${tx(110, 140, l.g)}${l.b ? tx(168, 62, l.b, 'start') : ''}${l.c ? tx(60, 62, l.c, 'end') : ''}`, `Dreieck mit ${Object.values(l).join(', ')}`);
 }
@@ -192,12 +193,19 @@ export function flaeTask(s: Shape, what: 'A' | 'U', a: number, b: number, unit =
   if (s === 'square') { lab = { a: `a = ${U}` }; expr = what === 'A' ? `${a} · ${a}` : `4 · ${a}`; other = what === 'A' ? `4 · ${a}` : `${a} · ${a}`; formula = what === 'A' ? 'a · a' : '4 · a'; wrong = [what === 'A' ? '4 · a' : 'a · a', 'a + a']; }
   else if (s === 'rect') { lab = { a: `a = ${U}`, b: `b = ${V}` }; expr = what === 'A' ? `${a} · ${b}` : `2 · ${a} + 2 · ${b}`; other = what === 'A' ? `2 · ${a} + 2 · ${b}` : `${a} · ${b}`; formula = what === 'A' ? 'a · b' : '2 · a + 2 · b'; wrong = [what === 'A' ? '2 · a + 2 · b' : 'a · b', 'a + b']; }
   else if (s === 'para') { const h = Math.max(1, b - R(1, Math.max(1, b - 1))); lab = what === 'A' ? { g: `g = ${U}`, h: `h = ${h} ${unit}` } : { g: `a = ${U}`, h: `h = ${h} ${unit}`, b: `b = ${V}` }; expr = what === 'A' ? `${a} · ${h}` : `2 · ${a} + 2 · ${b}`; other = what === 'A' ? `${a} · ${b}` : `${a} · ${h}`; formula = what === 'A' ? 'g · h' : '2 · a + 2 · b'; wrong = what === 'A' ? ['g · h : 2', '2 · g + 2 · h'] : ['a · h', 'a + b + h']; }
+  else if (s === 'trap') {
+    // a unten, c oben (kürzer), parallel. h steht senkrecht dazwischen.
+    const c = R(Math.max(2, Math.ceil(a / 3)), a - 1), h = Math.max(2, b), sb = h + R(0, 3), sd = h + R(1, 4), W = `${c} ${unit}`;
+    lab = what === 'A' ? { a: `a = ${U}`, c: `c = ${W}`, h: `h = ${h} ${unit}` } : { a: `a = ${U}`, c: `c = ${W}`, b: `b = ${sb} ${unit}`, d: `d = ${sd} ${unit}` };
+    expr = what === 'A' ? `(${a} + ${c}) · ${h} : 2` : `${a} + ${sb} + ${c} + ${sd}`; other = what === 'A' ? `(${a} + ${c}) · ${h}` : `(${a} + ${c}) · ${h} : 2`;
+    formula = what === 'A' ? '(a + c) · h : 2' : 'a + b + c + d'; wrong = what === 'A' ? ['a · c · h', '(a + c) · h'] : ['(a + c) · h : 2', 'a · b · c · d'];
+  }
   else { const c = R(Math.abs(a - b) + 1, a + b - 1); lab = what === 'A' ? { g: `g = ${U}`, h: `h = ${V}` } : { g: `a = ${U}`, b: `b = ${V}`, c: `c = ${c} ${unit}` }; expr = what === 'A' ? `${a} · ${b} : 2` : `${a} + ${b} + ${c}`; other = what === 'A' ? `${a} · ${b}` : `${a} · ${b}`; formula = what === 'A' ? 'g · h : 2' : 'a + b + c'; wrong = what === 'A' ? ['g · h', 'g + h'] : ['a · b · c', '2 · a + 2 · b']; }
   const ask = what === 'A' ? 'den Flächeninhalt' : 'den Umfang';
   const t = exprTask(expr, { prompt: `Berechne ${ask} vom ${SH[s]}.${figure(s, lab)}`, placeholder: `Antwort in ${u}` });
   const ov = evalExpr(other).result;
   t.plain = `${SH[s]}: ${Object.values(lab).join(', ')}. Gesucht: ${what === 'A' ? 'Flächeninhalt' : 'Umfang'}`;
-  t.diag = v => (v.eq(ov) && !ov.eq(t.answer) ? (what === 'A' ? 'Das passt zu einer anderen Formel. Gesucht ist die <b>Fläche</b> (innen drin).' : 'Das ist die Fläche. Gesucht ist der <b>Umfang</b>, also einmal außen herum.') : s === 'tri' && what === 'A' && v.eq(t.answer.mul(q(2))) ? 'Fast! Beim Dreieck musst du noch <b>durch 2</b> teilen.' : null);
+  t.diag = v => (v.eq(ov) && !ov.eq(t.answer) ? (what === 'A' ? 'Das passt zu einer anderen Formel. Gesucht ist die <b>Fläche</b> (innen drin).' : 'Das ist die Fläche. Gesucht ist der <b>Umfang</b>, also einmal außen herum.') : (s === 'tri' || s === 'trap') && what === 'A' && v.eq(t.answer.mul(q(2))) ? `Fast! Beim ${SH[s]} musst du noch <b>durch 2</b> teilen.` : null);
   return withChoose(t, { ask: `Welche Formel passt für ${ask}?`, options: opts(formula, wrong), why: what === 'A' ? `Fläche vom ${SH[s]}: ${formula}` : `Umfang: alle Seiten außen herum, ${formula}` });
 }
 function lshapeTask(): Task {
@@ -296,22 +304,25 @@ export const TOPICS: Topic[] = [
     },
   },
   {
-    id: 'flae', klasse: 5, title: 'Umfang und Flächeninhalt', short: 'Rechteck, Quadrat, Dreieck und Parallelogramm: einmal außen herum und wie viel Fläche.',
+    id: 'flae', klasse: 5, title: 'Umfang und Flächeninhalt', short: 'Rechteck, Quadrat, Dreieck, Parallelogramm und Trapez: einmal außen herum und wie viel Fläche.',
     exampleSol: () => { const t = flaeTask('rect', 'A', 6, 4); return { prompt: t.prompt, sol: t.sol }; },
     theory: `
       <p>Der <b>Umfang</b> ist der Weg einmal <b>außen herum</b>, wie ein Zaun um einen Garten. Du addierst alle Seiten. Die Einheit ist eine Länge, zum Beispiel cm.</p>
       <p>Der <b>Flächeninhalt</b> sagt, wie viel <b>Fläche</b> innen drin ist, wie viele Fliesen auf den Boden passen. Die Einheit ist eine Fläche, zum Beispiel cm² (Quadratzentimeter, ein Kästchen von 1 cm mal 1 cm).</p>
       <table class="stellen"><tr><th></th><th>Umfang u</th><th>Flächeninhalt A</th></tr>
         <tr><th>Rechteck</th><td>2 · a + 2 · b</td><td>a · b</td></tr><tr><th>Quadrat</th><td>4 · a</td><td>a · a</td></tr>
-        <tr><th>Parallelogramm</th><td>2 · a + 2 · b</td><td>g · h</td></tr><tr><th>Dreieck</th><td>a + b + c</td><td>g · h : 2</td></tr></table>
+        <tr><th>Parallelogramm</th><td>2 · a + 2 · b</td><td>g · h</td></tr><tr><th>Dreieck</th><td>a + b + c</td><td>g · h : 2</td></tr>
+        <tr><th>Trapez</th><td>a + b + c + d</td><td>(a + c) · h : 2</td></tr></table>
       <p>Beim Dreieck ist die Fläche genau die <b>Hälfte</b> von einem Rechteck mit derselben Grundseite g und Höhe h. Darum steht dort „: 2“.</p>
+      <p>Ein <b>Trapez</b> hat zwei parallele Seiten a und c. Legst du zwei gleiche Trapeze verkehrt herum aneinander, entsteht ein Parallelogramm mit der Grundseite a + c. Ein Trapez ist davon die Hälfte: ${M('(a + c) · h : 2')}.</p>
       <p>Bei zusammengesetzten Figuren zerlegst du in Rechtecke und addierst die Flächen, oder du rechnest das große Rechteck und ziehst das fehlende Stück ab.</p>
       <div class="merke"><span class="merke-l">Merke</span><ol><li>Umfang: alle Seiten außen addieren, Einheit cm.</li><li>Fläche: Formel, Einheit cm².</li><li>Alle Längen vorher in dieselbe Einheit bringen.</li></ol></div>`,
     gen(level: number) {
       return genFrom(() => {
         if (level === 1) return flaeTask(pick(['rect', 'square'] as const), pick(['A', 'U'] as const), R(2, 12), R(2, 9));
         if (level === 2) return flaeTask(pick(['tri', 'para', 'rect', 'square'] as const), pick(['A', 'A', 'U'] as const), R(3, 12), R(2, 10), pick(['cm', 'm']));
-        return Math.random() < 0.5 ? lshapeTask() : sideTask();
+        const k = Math.random();
+        return k < 0.35 ? flaeTask('trap', pick(['A', 'A', 'U'] as const), R(6, 14), R(3, 9)) : k < 0.7 ? lshapeTask() : sideTask();
       }, t => t.answer.sign() > 0 && t.answer.isInt());
     },
   },

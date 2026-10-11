@@ -25,6 +25,16 @@ const LOOKS: Record<string, Look> = {
   koerper: { icon: '🧊', color: '#0b7285', teaser: 'Würfel zum Drehen' },
   koord: { icon: '📍', color: '#5c940d', teaser: 'Erst gehen, dann steigen' },
   gl: { icon: '⚖️', color: '#c2255c', teaser: 'Finde das x' },
+  brvgl: { icon: '⚖️', color: '#ae3ec9', teaser: 'Welcher Bruch ist größer?' },
+  umw: { icon: '🔄', color: '#0b7285', teaser: '0,75 = 3/4 = 75 %' },
+  rat: { icon: '❄️', color: '#1864ab', teaser: 'Minus mit Komma und Bruch' },
+  geschickt: { icon: '🧠', color: '#f76707', teaser: 'Rechne geschickt' },
+  schrift: { icon: '✍️', color: '#495057', teaser: 'Untereinander rechnen' },
+  kreis: { icon: '⭕', color: '#e03131', teaser: 'Rund mit π' },
+  einh2: { icon: '🧃', color: '#f59f00', teaser: 'm², ha und Liter' },
+  prim: { icon: '🧩', color: '#3b5bdb', teaser: 'Zahlen in Bausteine zerlegen' },
+  haeuf: { icon: '📈', color: '#1c7ed6', teaser: 'Umfragen auswerten' },
+  raetsel: { icon: '🔍', color: '#862e9c', teaser: 'Knobeln und rückwärts rechnen' },
 };
 const FALLBACK: Look = { icon: '📘', color: '#1d47c9', teaser: '' };
 export const look = (id: string): Look => LOOKS[id] ?? FALLBACK;

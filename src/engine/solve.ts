@@ -311,7 +311,7 @@ export interface Answer { v: Q; raw: boolean }
 export function parseAnswer(input: string): Answer {
   const s = String(input || '').trim()
     .replace(/^x\s*=\s*/i, '')
-    .replace(/°\s*c?|[%€°]|\b(kg|g|t|mm|dm|cm|km|m|l|ml|ct|cent|euro|eur|stück|stücke|schüler|kinder|min|minuten|h|s|sek|sekunden|jahre|jahr|tage|liter|personen|stunden|std|seiten|punkte|plätze|gläser|tüten|hefte|stifte|pakete|packungen|grad)[²³]?(?![a-zäöüß])\.?/gi, '')
+    .replace(/°\s*c?|[%€°]|\b(kg|g|t|mm|dm|cm|km|m|l|ml|ct|cent|euro|eur|stück|stücke|schüler|kinder|min|minuten|h|s|sek|sekunden|jahre|jahr|tage|liter|personen|stunden|std|seiten|punkte|plätze|gläser|tüten|hefte|stifte|pakete|packungen|grad|ha|hektar|ar|a|dt)[²³23]?(?![a-zäöüß])\.?/gi, '')
     .trim();
   if (!s) throw new MathError('Gib zuerst eine Antwort ein.');
   // Große Zahlen mit Tausenderpunkten oder Leerzeichen: 4.382.615 oder 4 382 615

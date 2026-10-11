@@ -14,12 +14,12 @@ describe('Lernpfad-Kapitel', () => {
   it('schaltet der Reihe nach frei', () => {
     let n = pathNodes({}, {}, false, title);
     expect(n.filter(x => x.state === 'open').map(x => x.id)).toEqual(['zahl']);
-    const s: Stats = { zahl: st(4), rund: st(4), pvs: st(4), pot: st(4), teil: st(4) };
+    const s: Stats = { zahl: st(4), rund: st(4), schrift: st(4), pvs: st(4), geschickt: st(4), pot: st(4) };
     n = pathNodes(s, {}, false, title);
     expect(nextNode(n)?.id).toBe('k1');
-    expect(n.find(x => x.id === 'groe')!.state).toBe('locked');
+    expect(n.find(x => x.id === 'teil')!.state).toBe('locked');
     n = pathNodes(s, { k1: { best: 0.75, last: 0.75, at: '', tries: 1 } }, false, title);
-    expect(nextNode(n)?.id).toBe('groe');
+    expect(nextNode(n)?.id).toBe('teil');
   });
   it('Zettel-Themen sind offen', () => {
     expect(pathNodes({}, {}, false, title, ['gl']).find(x => x.id === 'gl')!.state).toBe('open');
@@ -43,11 +43,12 @@ describe('Lernpfad-Kapitel', () => {
 
 describe('Klassenarbeit', () => {
   for (const ch of [...CHAPTERS, FINAL]) {
-    it(`${ch.id}: vollständige Aufgaben, alle Themen kommen vor`, () => {
+    it(`${ch.id}: vollständige Aufgaben, genug Aufgaben, alle Themen (Abschluss: 24 verschiedene)`, () => {
       for (let r = 0; r < 10; r++) {
         const e = buildExam(ch.topics);
-        expect(e.length).toBe(ch.topics.length > 4 ? Math.max(12, ch.topics.length) : 8);
-        for (const id of ch.topics) expect(e.some(x => x.topic === id)).toBe(true);
+        const n = ch.topics.length > 4 ? Math.min(24, Math.max(12, ch.topics.length)) : 8;
+        expect(e.length).toBe(n);
+        expect(new Set(e.map(x => x.topic)).size).toBe(Math.min(n, ch.topics.length));
         for (const x of e) expect(mark(x.task, '').state).toBe('empty');
       }
     });
