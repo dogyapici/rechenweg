@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseAnswer } from './engine/index.js';
+import { parseAnswer, solveAny } from './engine/index.js';
 import { TOPICS } from './topics';
 import { MAX_LEVEL, guideFor, makeTask } from './stages';
 
 describe('Lernpfad', () => {
   for (const t of TOPICS) {
+    if (t.example) it(`${t.id}: Beispiel lässt sich rechnen`, () => { expect(() => solveAny(t.example!)).not.toThrow(); });
     for (let level = 1; level <= MAX_LEVEL; level++) {
       it(`${t.id} Stufe ${level}: Aufgaben und Schritte passen zusammen`, () => {
         for (let i = 0; i < 40; i++) {

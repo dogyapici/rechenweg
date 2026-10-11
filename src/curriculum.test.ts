@@ -54,8 +54,9 @@ describe('Klassenarbeit', () => {
     });
   }
   it('bewertet richtig, halb und falsch', () => {
-    const e = buildExam(['kuerzen']);
-    const t = e[0].task;
+    let t = buildExam(['kuerzen'])[0].task;
+    for (let k = 0; k < 200 && !(t.needReduced && !t.widget); k++) t = buildExam(['kuerzen'])[0].task;
+    expect(t.needReduced).toBe(true);
     const a = t.answer;
     expect(mark(t, `${a.n}/${a.d}`).points).toBe(1);
     expect(mark(t, `${a.n * 2n}/${a.d * 2n}`).points).toBe(0.5);

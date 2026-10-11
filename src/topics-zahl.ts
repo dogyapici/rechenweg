@@ -281,6 +281,7 @@ function propGen(level: number): Task | null {
     if (a === b) return null;
     const one = st.one(level);
     const ya = anti ? one.div(q(a)) : one.mul(q(a));
+    if (st.int && !ya.isInt()) return null;
     return dreisatz({ a, b, ya, anti, x: st.x, y: st.y, xu: st.xu, yu: st.yu }, st.s(a, b, st.yu === '€' ? eur(ya) : dH(ya)));
   }, t => t.answer.sign() > 0 && t.answer.terminating() && t.guide!.every(s => s.answer.terminating() && (s.answer.mul(q(100)).isInt())) && (!st.int || t.guide!.every(s => s.answer.isInt())) && (level > 1 || t.guide!.every(s => s.answer.isInt())));
 }

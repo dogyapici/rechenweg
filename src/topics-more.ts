@@ -5,5 +5,6 @@ import { ZAHL_TOPICS } from './topics-zahl.js';
 import { BRUCH2_TOPICS } from './topics-bruch2.js';
 import { RECHNEN_TOPICS } from './topics-rechnen.js';
 import { MUSTER_TOPICS } from './topics-muster.js';
+import { ANTEIL_TOPICS } from './topics-anteil.js';
 
-export const MORE: Topic[] = [...ZAHL_TOPICS, ...GEO_TOPICS, ...BRUCH2_TOPICS, ...RECHNEN_TOPICS, ...MUSTER_TOPICS];
+export const MORE: Topic[] = [...ZAHL_TOPICS, ...GEO_TOPICS, ...BRUCH2_TOPICS, ...RECHNEN_TOPICS, ...MUSTER_TOPICS, ...ANTEIL_TOPICS];
