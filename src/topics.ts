@@ -1,41 +1,14 @@
 /* ===== Themen, Theorie und Aufgaben-Generatoren ===== */
 import { autoGuide, type GuideChoice, type GuideStep } from './guide.js';
+import { B, M, R, divisors, exprTask, genFrom, list, pick, type Task, type Topic } from './gen.js';
+import { MORE } from './topics-more.js';
+export { M, R, pick, type Task, type Topic };
 import { MathError, Q, q, dp, gcd, lcm, qH, fracH, evalExpr, solveEq, tokenize, type Solution, type ExprSolution, type ListSolution } from './engine/index.js';
 
-/** Eine Übungsaufgabe. `answer` und `sol` kommen immer aus der Recheneinheit. */
-export interface Task {
-  prompt: string;
-  plain?: string;
-  answer: Q;
-  sol: Solution;
-  needReduced?: boolean;
-  diag?: (v: Q) => string | null;
-  placeholder?: string;
-  int?: Q;
-  /** Eigene Schritte für „Gemeinsam lösen“ (sonst aus dem Rechenweg abgeleitet). */
-  guide?: GuideStep[];
-  /** Textaufgabe */
-  word?: boolean;
-}
-export interface Topic {
-  id: string;
-  klasse: number;
-  title: string;
-  short: string;
-  theory: string;
-  example?: string;
-  exampleSol?: () => { prompt: string; sol: Solution };
-  gen: (level: number) => Task | null;
-}
-
-export const R = (a: number, b: number): number => a + Math.floor(Math.random() * (b - a + 1));
-export const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
-export const M = (s: string): string => `<span class="math">${s}</span>`;
 export function barH(n: number, d: number, label: string): string {
   let cells = ''; for (let i = 0; i < d; i++) cells += `<span class="${i < n ? 'on' : ''}"></span>`;
   return `<div class="barwrap"><div class="bar" style="--d:${d}" role="img" aria-label="${n} von ${d} Teilen">${cells}</div><span class="barlabel">${label}</span></div>`;
 }
-const divisors = (n: number): number[] => { const r: number[] = []; for (let i = 1; i <= n; i++) if (n % i === 0) r.push(i); return r; };
 
 function kuerzenSol(n: number, d: number): ListSolution {
   const raw = q(n, d), g = Number(gcd(BigInt(n), BigInt(d))), r = raw.red();
@@ -97,11 +70,6 @@ function percentGuide(kind: 'W' | 'p' | 'G', G: Q, p: Q, W: Q, unit: string): Gu
 }
 
 /* Hilfen für Generatoren */
-function exprTask(s: string, o: { prompt?: string; needReduced?: boolean; diag?: (v: Q) => string | null; placeholder?: string } = {}): Task & { sol: ExprSolution } {
-  const sol = evalExpr(s);
-  return { prompt: o.prompt || `Berechne: ${M(sol.inputHTML)}`, plain: s, answer: sol.result, sol, needReduced: !!o.needReduced, diag: o.diag, placeholder: o.placeholder || 'Deine Lösung' };
-}
-function genFrom<T>(make: () => T | null, ok: (t: T) => boolean, tries = 400): T | null { for (let i = 0; i < tries; i++) { try { const t = make(); if (t && ok(t)) return t; } catch (e) { if (!(e instanceof MathError)) throw e; } } return null; }
 const allInt = (sol: ExprSolution) => sol.vals.every(v => v.isInt() && v.sign() > 0) && sol.result.isInt() && sol.result.sign() >= 0;
 function leftToRight(s: string): Q | null {
   if (/[()]/.test(s)) return null;
@@ -112,12 +80,10 @@ function leftToRight(s: string): Q | null {
 const fr = (n: number, d: number) => `${n}/${d}`;
 function coprimeFrac(maxD: number, minD = 2): [number, number] { const d = R(minD, maxD); let n: number; do { n = R(1, d - 1); } while (gcd(BigInt(n), BigInt(d)) !== 1n); return [n, d]; }
 
-const B = (s: string) => `<b>${s}</b>`;
 /* Teiler, ggT, kgV */
 export const isPrime = (n: number) => n > 1 && divisors(n).length === 2;
 const smallestFactor = (n: number) => { for (let p = 2; p * p <= n; p++) if (n % p === 0) return p; return n; };
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
-const list = (steps: ListSolution['steps'], v: Q, h = qH(v, true), extra?: string[]): ListSolution => ({ kind: 'list', steps, result: v, resultHTML: h, extra });
 const pairs = (n: number) => divisors(n).filter(a => a * a <= n).map(a => [a, n / a]);
 
 function quersummeTask(n: number): Task {
@@ -532,4 +498,5 @@ export const TOPICS: Topic[] = [
       }, t => t.answer.isInt());
     },
   },
+  ...MORE,
 ];

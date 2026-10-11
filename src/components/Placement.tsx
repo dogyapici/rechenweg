@@ -5,7 +5,7 @@ import { makeTask, STAGES } from '../stages';
 import { freshStats, type Stats } from '../storage';
 import { TOPICS, type Task } from '../topics';
 import { look } from '../ui/look';
-import { Keypad } from '../ui/bits';
+import { AnswerInput } from './Widgets';
 import { Html } from './Html';
 
 const title = (id: string) => CATALOG.find(c => c.id === id)?.title ?? id;
@@ -81,8 +81,7 @@ export function Placement({ topics, stats, onStats, onDone }: Props) {
             <>
               <Html as="p" className={`prompt${task.word ? ' story' : ''}`} html={task.prompt} />
               <form className="answer" autoComplete="off" onSubmit={e => { e.preventDefault(); answer(mark(task, input).points === 1); }}>
-                <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} placeholder={task.placeholder || 'Deine Lösung'} aria-label="Deine Lösung" />
-                <Keypad inputRef={inputRef} value={input} onChange={setInput} />
+                <AnswerInput task={task} value={input} onChange={setInput} inputRef={inputRef} />
                 <button className="btn big wide" type="submit" disabled={!input.trim()}>Weiter 👉</button>
               </form>
             </>

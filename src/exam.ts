@@ -12,9 +12,9 @@ const storyKey = (t: Task) => (t.word ? 'w:' : 'r:') + t.prompt.replace(/<[^>]*>
 
 /**
  * Wie eine echte Klassenarbeit: von leicht nach schwer, jedes Thema kommt vor,
- * zum Schluss Textaufgaben. 8 Aufgaben pro Kapitel, 12 in der Abschlussprüfung.
+ * zum Schluss Textaufgaben. 8 Aufgaben pro Kapitel, in der Abschlussprüfung eine pro Thema (mindestens 12).
  */
-export function buildExam(topicIds: string[], count = topicIds.length > 4 ? 12 : 8): ExamTask[] {
+export function buildExam(topicIds: string[], count = topicIds.length > 4 ? Math.max(12, topicIds.length) : 8): ExamTask[] {
   const levels = Array.from({ length: count }, (_, i) => (i < count * 0.3 ? 2 : i < count * 0.6 ? 3 : i < count * 0.85 ? 4 : 5));
   const order = shuffle(topicIds);
   const out: ExamTask[] = [];

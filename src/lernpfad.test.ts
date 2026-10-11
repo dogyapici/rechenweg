@@ -13,7 +13,8 @@ describe('Lernpfad', () => {
           if (level >= 4) expect(k!.word, 'Textaufgabe ab Stufe 4').toBe(true);
           const g = guideFor(k!);
           if (level >= 2) expect(g.length, 'Gemeinsam lösen hat Schritte').toBeGreaterThan(0);
-          if (g.length) expect(g[g.length - 1].answer.eq(k!.answer), 'letzter Schritt = Ergebnis').toBe(true);
+          // Bei Zeichen- und Klickaufgaben bereiten die Schritte nur vor, die Antwort gibt man im Widget.
+          if (g.length && !k!.widget) expect(g[g.length - 1].answer.eq(k!.answer), 'letzter Schritt = Ergebnis').toBe(true);
           for (const s of g) {
             if (k!.word && t.id !== 'neg') expect(s.answer.sign()).toBe(1);
             if (s.choose) expect(s.choose.options.filter(o => o.ok).length).toBe(1);
@@ -29,5 +30,9 @@ describe('Lernpfad', () => {
     expect(parseAnswer('12 Jahre').v.n).toBe(12n);
     expect(parseAnswer('4,50 €').v.eq(parseAnswer('4,5').v)).toBe(true);
     expect(parseAnswer('20 Plätze').v.n).toBe(20n);
+    expect(parseAnswer('4 382 615').v.n).toBe(4382615n);
+    expect(parseAnswer('4.382.615').v.n).toBe(4382615n);
+    expect(parseAnswer('12 cm³').v.n).toBe(12n);
+    expect(parseAnswer('45°').v.n).toBe(45n);
   });
 });
