@@ -50,6 +50,7 @@ function ZettelForm({ plan, onSave, onCancel }: { plan: Plan | null; onSave: (p:
   const [extra, setExtra] = useState<string[]>(plan?.extra ?? []);
   const [found, setFound] = useState<{ text: string; topic: string | null }[]>([]);
   const file = useRef<HTMLInputElement>(null);
+  const lib = useRef<HTMLInputElement>(null);
   const last = useRef<{ text?: string; image?: { data: string; type: string } }>({});
 
   const run = async (req: { text?: string; image?: { data: string; type: string } }) => {
@@ -72,6 +73,7 @@ function ZettelForm({ plan, onSave, onCancel }: { plan: Plan | null; onSave: (p:
     try { await run({ image: await shrink(f) }); }
     catch { setRead({ status: 'error', msg: 'Das Foto konnte nicht gelesen werden. Versuch ein anderes oder tippe die Themen ab.' }); }
     if (file.current) file.current.value = '';
+    if (lib.current) lib.current.value = '';
   };
   const toggle = (id: string) => setTopics(sortTopics(topics.includes(id) ? topics.filter(t => t !== id) : [...topics, id]));
 
@@ -81,7 +83,10 @@ function ZettelForm({ plan, onSave, onCancel }: { plan: Plan | null; onSave: (p:
         <h2 className="h2">Was steht auf deinem Themenzettel?</h2>
         <p>Deine Lehrerin oder dein Lehrer gibt dir vor der Klassenarbeit oft einen Zettel mit allen Themen. Zeig ihn mir, dann mache ich dir einen Lernplan.</p>
         <input ref={file} type="file" accept="image/*" capture="environment" hidden onChange={e => onFile(e.target.files?.[0])} />
+        {/* Ohne capture öffnet das Handy die Mediathek, so geht auch ein Foto, das schon da ist. */}
+        <input ref={lib} type="file" accept="image/*" hidden onChange={e => onFile(e.target.files?.[0])} />
         <button className="btn big wide" onClick={() => file.current?.click()} disabled={read.status === 'loading'}>📷 Zettel fotografieren</button>
+        <button className="btn soft wide" onClick={() => lib.current?.click()} disabled={read.status === 'loading'}>🖼️ Foto aus der Mediathek</button>
         <div className="or"><span>oder</span></div>
         <label className="zt-l" htmlFor="zt">Themen abtippen</label>
         <textarea id="zt" rows={5} value={text} onChange={e => setText(e.target.value)} placeholder={'z. B.\nBrüche kürzen und erweitern\nBrüche addieren\nTextaufgaben mit Brüchen'} />
