@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decide, loginEmail, type CloudData } from './cloud';
+import { decide, loginEmail, loginError, type CloudData } from './cloud';
 import { suggestUser, newPassword } from './components/Schueler';
 
 const server = (at: number) => ({ v: 1, at } as CloudData);
@@ -31,5 +31,14 @@ describe('Anmeldenamen', () => {
   it('schlägt einfache Namen und Passwörter vor', () => {
     expect(suggestUser('Jörg Müller-Weiß')).toBe('joerg.mueller.weiss');
     for (let i = 0; i < 20; i++) expect(newPassword()).toMatch(/^[a-z]{4,7}\d{4}$/);
+  });
+});
+
+describe('Fehler beim Anmelden', () => {
+  it('unterscheidet falsches Passwort und falschen Schlüssel', () => {
+    expect(loginError('Invalid login credentials')).toMatch(/Passwort stimmt nicht/);
+    expect(loginError('Invalid API key')).toMatch(/VITE_SUPABASE_ANON_KEY/);
+    expect(loginError('Email not confirmed')).toMatch(/Auto Confirm/);
+    expect(loginError('Failed to fetch')).toMatch(/VITE_SUPABASE_URL/);
   });
 });
