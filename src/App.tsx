@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Home } from './components/Home';
 import { Path } from './components/Path';
 import { TopicPage } from './components/TopicPage';
@@ -11,6 +11,9 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Progress } from './components/Progress';
 import { ProfilePage } from './components/ProfilePage';
 import { Eltern } from './components/Eltern';
+import { Konto } from './components/Konto';
+import { Schueler } from './components/Schueler';
+import { useSync } from './useSync';
 import { addAttempt, addExam, decodeSnapshot, SHARE_KEY, type Attempt, type ExamLog, type Journal, type Snapshot } from './journal';
 import { Celebrate, type Party } from './components/Celebrate';
 import { loadActivity, loadExams, loadFree, loadJournal, loadPlan, loadProfile, loadStats, loadUnlocked, saveActivity, saveExams, saveFree, saveJournal, saveLast, savePlan, saveProfile, saveStats, saveUnlocked, type Stats } from './storage';
@@ -20,7 +23,7 @@ import { DAILY_GOAL, isActive, logExam, logStats, newAchievements, streak, type 
 import { CHAPTERS, type Exams } from './curriculum';
 import type { TutorContext } from './ai';
 
-export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' } | { name: 'eltern' };
+export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' } | { name: 'eltern' } | { name: 'konto' } | { name: 'schueler' };
 
 const ALL = CHAPTERS.flatMap(c => c.topics);
 const NAV = [['home', '🏠', 'Start'], ['path', '📚', 'Lernpfad'], ['plan', '📅', 'Klassenarbeit'], ['calc', '🧮', 'Rechner'], ['tutor', '💬', 'Fragen']] as const;
@@ -100,6 +103,11 @@ export function App() {
     }
     setPlan(p); savePlan(p);
   }, [plan, exams]);
+  const changed = useMemo(() => [stats, exams, act, unlocked, journal, plan, profile], [stats, exams, act, unlocked, journal, plan, profile]);
+  const { account, status, signOut } = useSync(changed);
+  const [outErr, setOutErr] = useState('');
+  const doLogout = async () => { setOutErr(''); if (await signOut()) go({ name: 'home' }); else setOutErr('Gerade keine Verbindung. Bitte erst wieder online gehen, damit nichts verloren geht.'); };
+
   const placement = () => go({ name: 'placement', topics: profile && reachable(profile).length ? reachable(profile) : ALL, back: 'home' });
   const askTutor = useCallback((ctx: TutorContext | null) => { setTutorCtx(ctx); go({ name: 'tutor' }); }, [go]);
 
@@ -132,7 +140,7 @@ export function App() {
         {shared === 'bad' && <div className="card panel"><p>Dieser Bericht-Link ist leider beschädigt oder unvollständig. Bitte lassen Sie sich einen neuen Link schicken.</p><button className="btn" onClick={closeShared}>Zur App</button></div>}
         {shared && shared !== 'bad' && <ErrorBoundary key="shared"><Eltern data={shared} shared onBack={closeShared} /></ErrorBoundary>}
         {!shared && <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' ? view.id : view.name}>
-        {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} profile={profile} act={act} unlocked={unlocked} onProfile={() => go({ name: 'profile' })} onProgress={() => go({ name: 'progress' })} onParents={() => go({ name: 'eltern' })} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
+        {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} profile={profile} act={act} unlocked={unlocked} onProfile={() => go({ name: 'profile' })} onProgress={() => go({ name: 'progress' })} onParents={() => go({ name: 'eltern' })} account={account} onAccount={() => go({ name: 'konto' })} onStudents={() => go({ name: 'schueler' })} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
           onPlan={() => go({ name: 'plan' })} onPlacement={placement} onPath={focus => go({ name: 'path', focus })} />}
         {view.name === 'path' && <Path key={view.focus} stats={stats} exams={exams} free={free} plan={plan} profile={profile} focus={view.focus} onFree={updateFree} onOpen={id => go({ name: 'topic', id, from: 'path' })} onExam={id => go({ name: 'exam', id })} onPlacement={placement} />}
         {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onLog={logExam_} onBack={() => go({ name: view.id === 'plan' ? 'plan' : 'path' })} onOpenTopic={id => go({ name: 'topic', id, from: view.id === 'plan' ? 'plan' : 'path' })}
@@ -147,7 +155,9 @@ export function App() {
         {view.name === 'progress' && <Progress act={act} unlocked={unlocked} stats={stats} exams={exams} plan={plan} onBack={() => go({ name: 'home' })} />}
         {view.name === 'calc' && <Calculator onAskTutor={askTutor} />}
         {view.name === 'tutor' && <Tutor context={tutorCtx} onClearContext={() => setTutorCtx(null)} />}
-        {view.name === 'eltern' && <Eltern data={{ profile, stats, exams, act, journal }} onBack={() => go({ name: 'home' })} onOpenTopic={id => go({ name: 'topic', id })} />}
+        {view.name === 'konto' && <Konto account={account} sync={outErr || status} onBack={() => go({ name: 'home' })} onLogout={doLogout} onStudents={() => go({ name: 'schueler' })} />}
+        {view.name === 'schueler' && account && account.role !== 'schueler' && <Schueler me={account} onBack={() => go({ name: 'home' })} />}
+        {view.name === 'eltern' && <Eltern data={{ profile, stats, exams, act, journal }} synced={account?.role === 'schueler'} onBack={() => go({ name: 'home' })} onOpenTopic={id => go({ name: 'topic', id })} />}
         </ErrorBoundary>}
       </main>
       {parties[0] && <Celebrate party={parties[0]} more={parties.length - 1} onClose={() => setParties(p => p.slice(1))} />}

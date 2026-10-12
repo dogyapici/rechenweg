@@ -27,16 +27,20 @@ interface Props {
   data: Omit<Snapshot, 'v' | 'made'> & { made?: number };
   /** true, wenn der Bericht über einen geteilten Link geöffnet wurde */
   shared?: boolean;
+  /** Fortschritt eines Schülers aus dem Konto (für Lehrer und Eltern) */
+  remote?: { name: string; updated: string | null; onRefresh: () => void; loading?: boolean };
+  /** Der Lernstand wird ins Konto übertragen */
+  synced?: boolean;
   onBack: () => void;
   onOpenTopic?: (id: string) => void;
 }
 
 /** Eltern-Ansicht: Wie viel geübt wurde, was sitzt und wo das Kind Hilfe braucht. */
-export function Eltern({ data, shared, onBack, onOpenTopic }: Props) {
+export function Eltern({ data, shared, remote, synced, onBack, onOpenTopic }: Props) {
   const r = useMemo(() => buildReport(data.journal, data.stats, data.act, data.exams, data.profile, data.made ?? Date.now()), [data]);
   const [filter, setFilter] = useState<string>('');
   const [more, setMore] = useState(false);
-  const who = r.name || 'Ihr Kind';
+  const who = r.name || remote?.name || 'Ihr Kind';
   const mistakes = r.mistakes.filter(m => !filter || m.topic === filter);
   const practiced = r.topics.filter(t => t.state !== 'neu');
 
@@ -48,8 +52,12 @@ export function Eltern({ data, shared, onBack, onOpenTopic }: Props) {
       <div className="thead">
         <button className="back" onClick={onBack} aria-label={shared ? 'Bericht schließen' : 'Zurück'}>←</button>
         <span className="ticon" aria-hidden="true">👪</span>
-        <h1>Eltern-Ansicht{r.name ? `: ${r.name}` : ''}</h1>
+        <h1>{remote ? 'Fortschritt' : 'Eltern-Ansicht'}{who !== 'Ihr Kind' ? `: ${who}` : ''}</h1>
       </div>
+      {remote && (
+        <p className="el-shared">{remote.updated ? `Zuletzt vom Gerät übertragen: ${when(new Date(remote.updated).getTime())}.` : 'Von diesem Konto ist noch kein Fortschritt angekommen.'}{' '}
+          <button className="linkbtn" onClick={remote.onRefresh} disabled={remote.loading}>{remote.loading ? 'Lädt …' : 'Aktualisieren'}</button></p>
+      )}
       {shared && <p className="el-shared">Geteilter Bericht, Stand {when(r.made)}. Für einen neuen Stand schickt Ihr Kind einfach einen neuen Link.</p>}
 
       <section className="card panel el-sum">
@@ -144,8 +152,8 @@ export function Eltern({ data, shared, onBack, onOpenTopic }: Props) {
         <p className="lead">Hilfe zu nutzen ist gut. Wenn die Lösung aber oft direkt angesehen wird, lohnt es sich, gemeinsam zu üben.</p>
       </section>
 
-      {!shared && <Share data={data} who={who} />}
-      <p className="foot-note">Alle Daten bleiben auf diesem Gerät. Nur ein geteilter Link enthält eine Kopie des Berichts.</p>
+      {!shared && !remote && <Share data={data} who={who} />}
+      <p className="foot-note">{remote ? `Diese Daten kommen aus dem Konto von ${remote.name}. Nur Sie als Lehrer und verbundene Eltern sehen sie.` : synced ? 'Der Fortschritt wird im Konto gespeichert, damit Lehrer und Eltern ihn sehen. Ein geteilter Link enthält eine Kopie des Berichts.' : 'Alle Daten bleiben auf diesem Gerät. Nur ein geteilter Link enthält eine Kopie des Berichts.'}</p>
     </div>
   );
 }

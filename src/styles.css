@@ -783,3 +783,27 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .el-tt { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .el-tt small { color: var(--muted); font-size: 13px; }
 .ex-heft-h { font-size: 19px; margin: 4px 0 -6px; }
+
+/* ===== Konto und Meine Schüler ===== */
+.konto, .schueler { display: grid; gap: 16px; }
+.kt-form { display: grid; gap: 14px; }
+.kt-err { background: var(--red-soft); color: var(--red); border-radius: 12px; padding: 10px 14px; margin: 0; font-weight: 700; }
+.kt-who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 19px; margin: 0; }
+.kt-who small { color: var(--muted); font-size: 15px; }
+.kt-sync { background: var(--blue-soft); border-radius: 12px; padding: 10px 14px; margin: 0; }
+.kt-confirm { display: grid; gap: 10px; }
+.kt-confirm p { margin: 0; }
+.kt-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.kt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.kt-kid { display: grid; gap: 6px; padding: 16px 18px; }
+.kt-kid-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 19px; }
+.kt-kid .kt-form { border-top: 2px solid var(--line); padding-top: 14px; margin-top: 8px; }
+.kt-pw { display: flex; gap: 8px; }
+.kt-pw .btn { flex: none; padding-inline: 14px; }
+.kt-done { display: grid; gap: 8px; border: 3px solid var(--green); }
+.kt-done p { margin: 0; }
+.kt-done dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
+.kt-done dt { color: var(--muted); }
+.kt-done dd { margin: 0; }
+.kt-done code { font-size: 19px; font-weight: 700; word-break: break-all; }
+.kt-adult { border: 3px solid var(--blue); }

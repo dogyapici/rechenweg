@@ -4,7 +4,7 @@ import { aiError, json, readJson, unauthorized } from '../server/http.js';
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export async function POST(req: Request): Promise<Response> {
-  const denied = unauthorized(req);
+  const denied = await unauthorized(req);
   if (denied) return denied;
   const body = await readJson<ZettelInput>(req);
   const text = typeof body?.text === 'string' ? body.text.slice(0, 4000) : '';
