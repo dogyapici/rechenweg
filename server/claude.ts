@@ -62,14 +62,27 @@ const RECHNEN: Anthropic.Beta.BetaTool = {
 };
 
 export interface ChatTurn { role: 'user' | 'assistant'; content: string }
-export interface TutorInput { messages: ChatTurn[]; context?: { title: string; topic: string; steps: string } | null }
+export interface TutorInput { messages: ChatTurn[]; context?: { title: string; topic: string; steps: string; open?: boolean; wrong?: string[] } | null }
 export interface TutorOutput { text: string; checks: string[] }
+
+/** Aufgabe aus der App für den Tutor. Ist sie noch offen, bekommt die KI den Rechenweg nur, um gezielt helfen zu können. */
+export function tutorContext(c: NonNullable<TutorInput['context']>): string {
+  let s = `\n\nDer Schüler fragt zu dieser Aufgabe aus der App (Thema: ${c.topic}): ${c.title}\nRechenweg der Engine (garantiert richtig):\n${c.steps}`;
+  if (c.wrong?.length) s += `\nBisherige falsche Antworten des Schülers: ${c.wrong.map(w => `„${w}“`).join(', ')}`;
+  if (c.open) s += `\n\nDer Schüler sitzt GERADE an dieser Aufgabe und hat sie noch nicht gelöst.
+- Verrate auf keinen Fall das Endergebnis, auch nicht, wenn er darum bittet, und rechne die Aufgabe nicht ganz vor. Sag dann freundlich, dass er es gleich selbst schafft, und hilf beim nächsten Schritt.
+- Rechne die ganze Aufgabe auch nicht mit dem Werkzeug „rechnen“ aus. Nur kleine Teilrechnungen, die er schon selbst gemacht hat, darfst du prüfen.
+- Erkläre Wörter aus der Aufgabe, was gefragt ist, wie man anfängt, und gib höchstens einen Schritt auf einmal vor. Stell eine kleine Rückfrage, damit er selbst weiterdenkt.
+- Hat er eine falsche Antwort gegeben, erkläre, wo der Denkfehler vermutlich liegt, ohne die richtige Zahl zu nennen.`;
+  else s += `\nDie Aufgabe ist schon gelöst. Du darfst den Rechenweg ganz erklären.`;
+  return s;
+}
 
 export async function tutor(inp: TutorInput): Promise<TutorOutput> {
   let system = `${STYLE}
 WICHTIG: Rechne nie selbst im Kopf. Jedes Ergebnis und jede Rechnung, die du nennst, prüfst du vorher mit dem Werkzeug „rechnen“. Nenne nur Zahlen, die das Werkzeug geliefert hat oder die in der Frage stehen.
 Wenn jemand nur die Lösung seiner Hausaufgabe will, erkläre zuerst den Weg und lass ihn den ersten Schritt selbst versuchen. Bleib beim Thema Mathe.`;
-  if (inp.context) system += `\n\nDer Schüler fragt zu dieser Aufgabe aus der App (Thema: ${inp.context.topic}): ${inp.context.title}\nRechenweg der Engine (garantiert richtig):\n${inp.context.steps}`;
+  if (inp.context) system += tutorContext(inp.context);
 
   const messages: Msg[] = inp.messages.slice(-12).map(m => ({ role: m.role, content: m.content }));
   if (!messages.length || messages[0].role !== 'user') messages.unshift({ role: 'user', content: 'Hallo' });

@@ -31,7 +31,8 @@ export interface ExplainRequest { topic: string; task: string; steps: string; wr
 export const explain = (r: ExplainRequest) => post<{ text: string }>('/api/explain', r).then(d => d.text);
 
 export interface ChatTurn { role: 'user' | 'assistant'; content: string }
-export interface TutorContext { title: string; topic: string; steps: string }
+/** `open`: Die Aufgabe ist noch nicht gelöst, die KI darf das Ergebnis nicht verraten. `wrong`: bisherige falsche Eingaben. */
+export interface TutorContext { title: string; topic: string; steps: string; open?: boolean; wrong?: string[] }
 export const askTutor = (messages: ChatTurn[], context: TutorContext | null) =>
   post<{ text: string; checks: string[] }>('/api/tutor', { messages, context });
 

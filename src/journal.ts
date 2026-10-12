@@ -6,7 +6,7 @@ import type { Profile } from './profile';
 import type { Stats } from './storage';
 
 /** Welche Hilfe das Kind bei einer Aufgabe genutzt hat. */
-export type Help = 'tipp' | 'heft' | 'gemeinsam' | 'loesung';
+export type Help = 'tipp' | 'heft' | 'gemeinsam' | 'loesung' | 'ki';
 
 /** Eine Aufgabe aus „Üben“ oder einer Klassenarbeit. */
 export interface Attempt {
@@ -139,8 +139,8 @@ export function buildReport(j: Journal, stats: Stats, act: Activity, exams: Exam
   topics.sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state) || (b.lastAt ?? 0) - (a.lastAt ?? 0));
 
   const ue = j.tries.filter(a => a.src === 'ueben');
-  const helpUse: Record<Help, number> = { tipp: 0, heft: 0, gemeinsam: 0, loesung: 0 };
-  for (const a of ue) for (const h of a.help) helpUse[h]++;
+  const helpUse: Record<Help, number> = { tipp: 0, heft: 0, gemeinsam: 0, loesung: 0, ki: 0 };
+  for (const a of ue) for (const h of a.help) if (h in helpUse) helpUse[h]++;
 
   const last14: DaySum[] = Array.from({ length: 14 }, (_, i) => {
     const day = back(13 - i);

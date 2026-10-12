@@ -808,3 +808,13 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .kt-done code { font-size: 19px; font-weight: 700; word-break: break-all; }
 .kt-adult { border: 3px solid var(--blue); }
 .btn.danger { background: var(--red); box-shadow: 0 3px 0 color-mix(in srgb, var(--red) 55%, #000); }
+
+/* ===== KI-Fragen in der Aufgabe ===== */
+.ask-btn { margin-top: 2px; }
+.askai { display: grid; gap: 12px; min-width: 0; border-top: 2px dashed var(--line); padding-top: 14px; margin-top: 4px; }
+.askai-h { display: flex; justify-content: space-between; align-items: center; font-size: 18px; }
+.askai .ai-note { margin: 0; }
+.askai .chat { min-height: 0; }
+.askai .chip { white-space: normal; text-align: left; }
+.askai .chatform .btn { flex: none; }
+.askai .chatform textarea { flex: 1 1 0; width: 0; font-size: 17px; }
