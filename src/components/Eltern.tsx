@@ -21,7 +21,7 @@ const STATE: Record<TopicState, { label: string; cls: string }> = {
   stark: { label: 'Sicher', cls: 'top' },
   neu: { label: 'Noch nicht geübt', cls: '' },
 };
-const HELP: Record<Help, string> = { tipp: '💡 Tipp', heft: '📝 Im Heft', gemeinsam: '🧭 Gemeinsam gelöst', loesung: '👀 Lösung angesehen' };
+const HELP: Record<Help, string> = { tipp: '💡 Tipp', heft: '📝 Im Heft', gemeinsam: '🧭 Gemeinsam gelöst', loesung: '👀 Lösung angesehen', ki: '💬 KI gefragt' };
 
 interface Props {
   data: Omit<Snapshot, 'v' | 'made'> & { made?: number };

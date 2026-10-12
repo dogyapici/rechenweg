@@ -5,10 +5,10 @@ import { formIssue } from '../gen';
 import { freshStats, loadSeen, saveSeen, type Stats, type TopicStats } from '../storage';
 import { freshTask, remember } from '../fresh';
 import { MAX_LEVEL, STAGES, STREAK_UP, guideFor } from '../stages';
-import type { TutorContext } from '../ai';
 import { StepReveal } from '../ui/bits';
 import { AnswerInput } from './Widgets';
 import { AiExplain } from './AiExplain';
+import { AskAi } from './AskAi';
 import { Guide } from './Guide';
 import { Html } from './Html';
 import { HeftView } from './HeftView';
@@ -23,6 +23,8 @@ interface TaskState {
   mastered?: boolean;
   /** fürs Lerntagebuch: Startzeit, falsche Eingaben, genutzte Hilfen */
   t0: number; wrongs: string[]; helps: Help[];
+  /** Fragen an die KI zu dieser Aufgabe offen */
+  ask: boolean;
 }
 
 /** Die erste Aufgabe jeder neuen Stufe (ab Stufe 2) wird gemeinsam gelöst. */
@@ -30,15 +32,15 @@ function newTask(topic: Topic, s: TopicStats, n = 0): TaskState {
   let task: Task | null = null;
   for (let i = 0; i < 5 && !task; i++) task = freshTask(topic, s.level, loadSeen());
   const guided = !!task && s.level >= 2 && !(s.atLevel ?? 0) && guideFor(task).length > 1 && !task.widget;
-  return { task, tries: 0, hint: guided, revealed: false, done: false, guided, heft: false, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n, t0: Date.now(), wrongs: [], helps: [] };
+  return { task, tries: 0, hint: guided, revealed: false, done: false, guided, heft: false, fb: null, lastWrong: null, lastDiag: null, levelMsg: '', n, t0: Date.now(), wrongs: [], helps: [], ask: false };
 }
 const addHelp = (h: Help[], x: Help) => (h.includes(x) ? h : [...h, x]);
 const PARTY = ['🎉', '⭐', '✨', '🎈', '⭐', '🎉'];
 const ICON = { right: '✓', wrong: '✗', almost: '≈', invalid: '?' };
 
-interface Props { topic: Topic; stats: Stats; onStats: (s: Stats) => void; onAskTutor: (ctx: TutorContext) => void; onLog?: (a: Attempt) => void; onBack?: () => void; backLabel?: string }
+interface Props { topic: Topic; stats: Stats; onStats: (s: Stats) => void; onLog?: (a: Attempt) => void; onBack?: () => void; backLabel?: string }
 
-export function Practice({ topic, stats, onStats, onAskTutor, onLog, onBack, backLabel }: Props) {
+export function Practice({ topic, stats, onStats, onLog, onBack, backLabel }: Props) {
   const s: TopicStats = { ...freshStats(), ...stats[topic.id] };
   const [T, setT] = useState<TaskState>(() => newTask(topic, s));
   const [input, setInput] = useState('');
@@ -57,7 +59,7 @@ export function Practice({ topic, stats, onStats, onAskTutor, onLog, onBack, bac
     let msg = '';
     if (right) {
       n.right++; n.miss = 0;
-      if (state.tries === 1 && !state.hint) {
+      if (state.tries === 1 && !state.hint && !state.helps.length) {
         n.streak++;
         if (n.streak >= STREAK_UP && n.level < MAX_LEVEL) {
           n.level++; n.streak = 0; n.atLevel = 0;
@@ -214,6 +216,11 @@ export function Practice({ topic, stats, onStats, onAskTutor, onLog, onBack, bac
             <button className="btn quiet" onClick={reveal}>👀 Lösung</button>
           </div>
         )}
+        {!T.done && !T.guided && !T.ask && <button className="btn quiet wide ask-btn" onClick={() => setT({ ...T, ask: true })}>💬 Frag die KI zu dieser Aufgabe</button>}
+        {T.ask && (
+          <AskAi key={T.n} open={!T.done} onUsed={() => setT(t => (t.done ? t : { ...t, helps: addHelp(t.helps, 'ki') }))} onClose={() => setT(t => ({ ...t, ask: false }))}
+            context={{ title: htmlToText(k.prompt), topic: topic.title, steps: htmlToText(solution), open: !T.done, wrong: T.wrongs }} />
+        )}
         {T.done && <button className="btn big wide" onClick={next}>Nächste Aufgabe 👉</button>}
       </section>
 
@@ -228,7 +235,7 @@ export function Practice({ topic, stats, onStats, onAskTutor, onLog, onBack, bac
       {T.done && (
         <AiExplain
           req={{ topic: topic.title, task: htmlToText(k.prompt), steps: htmlToText(solution), wrong: T.lastWrong, diag: T.lastDiag ? htmlToText(T.lastDiag) : null }}
-          onAskTutor={onAskTutor}
+          onAskTutor={() => setT({ ...T, ask: true })}
         />
       )}
       <p className="foot-note">

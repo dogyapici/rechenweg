@@ -815,3 +815,13 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .mastered .ms-stars { font-size: 28px; margin: 0; letter-spacing: 4px; }
 .mastered p { margin: 0; }
 .mastered .ms-actions { display: grid; gap: 10px; width: 100%; }
+
+/* ===== KI-Fragen in der Aufgabe ===== */
+.ask-btn { margin-top: 2px; }
+.askai { display: grid; gap: 12px; min-width: 0; border-top: 2px dashed var(--line); padding-top: 14px; margin-top: 4px; }
+.askai-h { display: flex; justify-content: space-between; align-items: center; font-size: 18px; }
+.askai .ai-note { margin: 0; }
+.askai .chat { min-height: 0; }
+.askai .chip { white-space: normal; text-align: left; }
+.askai .chatform .btn { flex: none; }
+.askai .chatform textarea { flex: 1 1 0; width: 0; font-size: 17px; }
