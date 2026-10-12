@@ -120,7 +120,7 @@ export function TopicPage({ id, stats, onStats, onBack, backLabel = 'Zurück zur
         </>
       )}
 
-      {tab === 'ueben' && <Practice topic={t} stats={stats} onStats={onStats} onAskTutor={onAskTutor} onLog={onLog} />}
+      {tab === 'ueben' && <Practice topic={t} stats={stats} onStats={onStats} onLog={onLog} />}
     </div>
   );
 }

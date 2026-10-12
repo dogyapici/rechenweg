@@ -40,6 +40,20 @@ describe('Tutor', () => {
   });
 });
 
+describe('Fragen während der Aufgabe', () => {
+  it('verbietet das Ergebnis, solange die Aufgabe offen ist, und kennt die falschen Antworten', async () => {
+    create.mockReset().mockResolvedValueOnce({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Schau dir die Nenner an.' }] });
+    const ctx = { title: 'Berechne: 1/2 + 1/3', topic: 'Brüche addieren', steps: '1/2 + 1/3 = 3/6 + 2/6 = 5/6', open: true, wrong: ['2/5'] };
+    await tutor({ messages: [{ role: 'user', content: 'Was kommt raus?' }], context: ctx });
+    const sys = create.mock.calls[0][0].system as string;
+    expect(sys).toMatch(/Verrate auf keinen Fall das Endergebnis/);
+    expect(sys).toContain('„2/5“');
+    create.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Ok.' }] });
+    await tutor({ messages: [{ role: 'user', content: 'Warum?' }], context: { ...ctx, open: false } });
+    expect(create.mock.calls[1][0].system).not.toMatch(/Verrate auf keinen Fall/);
+  });
+});
+
 describe('Themenzettel', () => {
   it('übernimmt nur bekannte Themen und gültige Daten', async () => {
     const { zettel } = await import('./claude.js');
