@@ -1,5 +1,5 @@
 import { json, readJson } from '../server/http.js';
-import { USERNAME_RE, caller, createAccount, notConfigured, profileOf, setPassword, supaConfig } from '../server/supa.js';
+import { USERNAME_RE, caller, createAccount, notConfigured, profileOf, resetProgress, setPassword, supaConfig } from '../server/supa.js';
 
 const UUID_RE = /^[0-9a-f-]{36}$/;
 interface Body { action?: string; username?: string; password?: string; name?: string; role?: string; childId?: string; id?: string }
@@ -12,6 +12,13 @@ export async function POST(req: Request): Promise<Response> {
   if (me.role !== 'lehrer') return json({ error: 'Nur Lehrer dürfen Konten verwalten.' }, 403);
   const b = await readJson<Body>(req);
   if (!b) return json({ error: 'Ungültige Anfrage.' }, 400);
+
+  if (b.action === 'zuruecksetzen') {
+    if (typeof b.id !== 'string' || !UUID_RE.test(b.id)) return json({ error: 'Ungültige Anfrage.' }, 400);
+    const p = await profileOf(b.id);
+    if (!p || p.teacher_id !== me.id || p.role !== 'schueler') return json({ error: 'Dieses Konto gehört nicht zu dir.' }, 403);
+    return resetProgress(b.id);
+  }
   const pw = typeof b.password === 'string' ? b.password : '';
   if (pw.length < 6 || pw.length > 72) return json({ error: 'Das Passwort braucht mindestens 6 Zeichen.' }, 400);
 

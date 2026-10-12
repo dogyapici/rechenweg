@@ -12,7 +12,7 @@ export const suggestUser = (name: string) =>
 
 const when = (iso: string) => { const d = new Date(iso); return `${d.getDate()}.${d.getMonth() + 1}. um ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
-type Form = { kind: 'kind' } | { kind: 'eltern'; child: StudentRow } | { kind: 'passwort'; id: string; name: string };
+type Form = { kind: 'kind' } | { kind: 'eltern'; child: StudentRow } | { kind: 'passwort'; id: string; name: string } | { kind: 'reset'; id: string; name: string };
 interface Done { title: string; user: string; password: string }
 
 interface Props { me: Account; onBack: () => void }
@@ -84,8 +84,10 @@ export function Schueler({ me, onBack }: Props) {
                 <button className="btn" onClick={() => show(r)}>📊 Fortschritt ansehen</button>
                 {teacher && <button className="btn quiet" onClick={() => { setDone(null); setForm({ kind: 'passwort', id: r.id, name: r.name }); }}>🔑 Passwort</button>}
                 {teacher && <button className="btn quiet" onClick={() => { setDone(null); setForm({ kind: 'eltern', child: r }); }}>👪 Eltern-Konto</button>}
+                {teacher && <button className="btn quiet" onClick={() => { setDone(null); setForm({ kind: 'reset', id: r.id, name: r.name }); }}>🧹 Zurücksetzen</button>}
               </div>
-              {form && form.kind !== 'kind' && (form.kind === 'eltern' ? form.child.id : form.id) === r.id &&
+              {form?.kind === 'reset' && form.id === r.id && <ResetForm id={r.id} name={r.name} onCancel={() => setForm(null)} onDone={() => { setForm(null); load(); setErr(''); }} />}
+              {form && (form.kind === 'eltern' || form.kind === 'passwort') && (form.kind === 'eltern' ? form.child.id : form.id) === r.id &&
                 <AccountForm form={form} onCancel={() => setForm(null)} onDone={d => { setForm(null); setDone(d); load(); window.scrollTo({ top: 0 }); }} />}
             </li>
           ))}
@@ -144,5 +146,28 @@ function AccountForm({ form, onCancel, onDone }: { form: Form; onCancel: () => v
         <button type="button" className="btn quiet" onClick={onCancel}>Abbrechen</button>
       </div>
     </form>
+  );
+}
+
+/** Alles Geübte löschen, zum Beispiel nach einem Test. Profil und Lernplan bleiben. */
+function ResetForm({ id, name, onCancel, onDone }: { id: string; name: string; onCancel: () => void; onDone: () => void }) {
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true); setErr('');
+    const r = await manage({ action: 'zuruecksetzen', id }).catch(x => ({ error: String(x) }));
+    setBusy(false);
+    if (r.error) setErr(r.error); else onDone();
+  };
+  return (
+    <div className="kt-form" role="alertdialog" aria-label={`Fortschritt von ${name} zurücksetzen`}>
+      <b>Fortschritt von {name} zurücksetzen?</b>
+      <p className="muted">Alle Aufgaben, Stufen, Klassenarbeiten, Lerntage und Erfolge werden gelöscht. Profil und Lernplan bleiben. Das lässt sich nicht rückgängig machen. Auf dem Gerät des Kindes ist der Stand nach dem nächsten Speichern auch leer.</p>
+      {err && <p className="kt-err" role="alert">{err}</p>}
+      <div className="kt-row">
+        <button className="btn danger" disabled={busy} onClick={go}>{busy ? 'Einen Moment …' : 'Ja, alles löschen'}</button>
+        <button type="button" className="btn quiet" onClick={onCancel}>Abbrechen</button>
+      </div>
+    </div>
   );
 }

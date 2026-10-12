@@ -59,3 +59,21 @@ export async function setPassword(id: string, password: string): Promise<Respons
   if (!res.ok) { console.error('supabase password', res.status, await res.text().catch(() => '')); return json({ error: 'Das Passwort konnte nicht geändert werden.' }, 502); }
   return json({ ok: true });
 }
+
+/**
+ * Lernstand eines Schülers auf null setzen. Profil und Lernplan bleiben.
+ * Es wird ein leerer, neuerer Stand geschrieben (nicht gelöscht), damit Geräte ihn beim nächsten Abgleich übernehmen.
+ */
+export async function resetProgress(id: string, now = Date.now()): Promise<Response> {
+  const c = supaConfig(); if (!c) return notConfigured();
+  const old = await fetch(`${c.url}/rest/v1/progress?user_id=eq.${id}&select=data`, { headers: admin(c.key) });
+  const rows = old.ok ? ((await old.json()) as { data?: { profile?: unknown; plan?: unknown } }[]) : [];
+  const keep = rows[0]?.data ?? {};
+  const data = { v: 1, at: now, stats: {}, exams: {}, act: {}, unlocked: {}, journal: { tries: [], exams: [] }, plan: keep.plan ?? null, profile: keep.profile ?? null, seen: {} };
+  const res = await fetch(`${c.url}/rest/v1/progress`, {
+    method: 'POST', headers: { ...admin(c.key), prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify({ user_id: id, data, updated_at: new Date(now).toISOString() }),
+  });
+  if (!res.ok) { console.error('supabase reset', res.status, await res.text().catch(() => '')); return json({ error: 'Der Fortschritt konnte nicht zurückgesetzt werden.' }, 502); }
+  return json({ ok: true });
+}

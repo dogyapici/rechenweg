@@ -28,6 +28,14 @@ export function useSync(changed: unknown) {
     if (meta.user !== user || meta.at <= meta.pushed) return true;
     setStatus('Wird gespeichert …');
     try {
+      // Wurde der Stand inzwischen woanders geändert (zum Beispiel vom Lehrer zurückgesetzt), gilt der vom Konto.
+      const server = await pull(user);
+      if (server && meta.pushed && server.at > meta.pushed) {
+        applyData(server);
+        saveSyncMeta({ user, at: server.at, pushed: server.at });
+        location.reload();
+        return true;
+      }
       await push(user, { v: 1, at: meta.at, ...localData() });
       saveSyncMeta({ ...loadSyncMeta(), pushed: meta.at });
       setStatus(`Im Konto gespeichert um ${time(Date.now())}.`);
