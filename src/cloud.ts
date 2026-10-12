@@ -1,6 +1,7 @@
 /* ===== Konten und Synchronisation über Supabase ===== */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Exams } from './curriculum';
+import { supaKey, supaUrl } from './supaUrl';
 import type { Seen } from './fresh';
 import type { Journal } from './journal';
 import type { Plan } from './plan';
@@ -26,8 +27,8 @@ export const LOGIN_DOMAIN = 'schueler.rechenweg.app';
 /** Kinder melden sich mit Benutzernamen an, Erwachsene auch mit E-Mail. */
 export const loginEmail = (name: string) => (name.includes('@') ? name.trim() : `${name.trim().toLowerCase()}@${LOGIN_DOMAIN}`);
 
-const URL_ = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const URL_ = supaUrl(import.meta.env.VITE_SUPABASE_URL as string | undefined);
+const KEY = supaKey(import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined);
 /** Ohne Supabase-Einstellungen läuft die App wie bisher nur auf dem Gerät. */
 export const cloudReady = !!(URL_ && KEY);
 
@@ -52,8 +53,11 @@ export async function currentAccount(): Promise<Account | null> {
 }
 export function onAuthChange(cb: () => void): () => void {
   if (!cloudReady) return () => {};
-  const { data } = sb().auth.onAuthStateChange((_e, s) => { token = s?.access_token ?? null; cb(); });
-  return () => data.subscription.unsubscribe();
+  // Eine kaputte Einstellung darf nie die ganze App lahmlegen.
+  try {
+    const { data } = sb().auth.onAuthStateChange((_e, s) => { token = s?.access_token ?? null; cb(); });
+    return () => data.subscription.unsubscribe();
+  } catch { return () => {}; }
 }
 
 export async function login(name: string, password: string): Promise<string | null> {
