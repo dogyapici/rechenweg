@@ -807,3 +807,4 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .kt-done dd { margin: 0; }
 .kt-done code { font-size: 19px; font-weight: 700; word-break: break-all; }
 .kt-adult { border: 3px solid var(--blue); }
+.btn.danger { background: var(--red); box-shadow: 0 3px 0 color-mix(in srgb, var(--red) 55%, #000); }

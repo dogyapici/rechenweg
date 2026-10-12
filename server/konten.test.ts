@@ -13,6 +13,8 @@ function supabase(role: string, profiles: Record<string, { role: string; teacher
     if (m) return Response.json(m[1] === T ? [{ id: T, role, teacher_id: null }] : profiles[m[1]] ? [{ id: m[1], ...profiles[m[1]] }] : []);
     if (url.endsWith('/auth/v1/admin/users')) return Response.json({ id: S });
     if (url.includes('/auth/v1/admin/users/')) return Response.json({});
+    if (url.includes('/rest/v1/progress?')) return Response.json([{ data: { profile: { name: 'Mia' }, plan: null, stats: { bradd: {} } } }]);
+    if (url.endsWith('/rest/v1/progress')) return new Response('', { status: 201 });
     return new Response('', { status: 404 });
   });
 }
@@ -51,5 +53,16 @@ describe('Konten', () => {
     vi.stubGlobal('fetch', supabase('schueler'));
     expect(await unauthorized(new Request('http://x', { headers: { authorization: 'Bearer tok' } }))).toBeNull();
     expect((await unauthorized(new Request('http://x', { headers: { authorization: 'Bearer falsch' } })))?.status).toBe(401);
+  });
+  it('setzt den Fortschritt eines eigenen Schülers zurück, Profil bleibt', async () => {
+    const f = supabase('lehrer', { [S]: { role: 'schueler', teacher_id: T } }); vi.stubGlobal('fetch', f);
+    expect((await POST(req({ action: 'zuruecksetzen', id: S }))).status).toBe(200);
+    const call = f.mock.calls.find(c => String(c[0]).endsWith('/rest/v1/progress'))!;
+    const body = JSON.parse(String(call[1]!.body));
+    expect(body.user_id).toBe(S);
+    expect(body.data).toMatchObject({ stats: {}, journal: { tries: [] }, profile: { name: 'Mia' } });
+    expect(body.data.at).toBeGreaterThan(0);
+    vi.stubGlobal('fetch', supabase('lehrer', { [S]: { role: 'schueler', teacher_id: 'someone-else' } }));
+    expect((await POST(req({ action: 'zuruecksetzen', id: S }))).status).toBe(403);
   });
 });
