@@ -1,4 +1,5 @@
 /* ===== Supabase auf dem Server: Konten anlegen und angemeldete Nutzer prüfen ===== */
+import { supaKey, supaUrl } from '../src/supaUrl.js';
 import { json } from './http.js';
 
 export interface Caller { id: string; role: 'lehrer' | 'schueler' | 'eltern' }
@@ -9,7 +10,7 @@ export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 export const emailFor = (username: string) => `${username.toLowerCase()}@${LOGIN_DOMAIN}`;
 
 export function supaConfig(): { url: string; key: string } | null {
-  const url = process.env.SUPABASE_URL?.replace(/\/+$/, ''), key = process.env.SUPABASE_SERVICE_KEY;
+  const url = supaUrl(process.env.SUPABASE_URL), key = supaKey(process.env.SUPABASE_SERVICE_KEY);
   return url && key ? { url, key } : null;
 }
 export const notConfigured = () => json({ error: 'Auf dem Server fehlt SUPABASE_URL oder SUPABASE_SERVICE_KEY. Die Konten sind noch nicht eingerichtet.' }, 501);
