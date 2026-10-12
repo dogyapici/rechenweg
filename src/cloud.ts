@@ -62,8 +62,15 @@ export function onAuthChange(cb: () => void): () => void {
 
 export async function login(name: string, password: string): Promise<string | null> {
   const { error } = await sb().auth.signInWithPassword({ email: loginEmail(name), password });
-  if (!error) return null;
-  return /invalid/i.test(error.message) ? 'Benutzername oder Passwort stimmt nicht.' : `Anmelden hat nicht geklappt: ${error.message}`;
+  return error ? loginError(error.message) : null;
+}
+/** Supabase-Meldung auf Deutsch. Ein falscher Schlüssel klingt sonst wie ein falsches Passwort. */
+export function loginError(msg: string): string {
+  if (/invalid login credentials/i.test(msg)) return 'Benutzername oder Passwort stimmt nicht.';
+  if (/api key/i.test(msg)) return 'Die App kommt nicht in die Datenbank: Der Schlüssel VITE_SUPABASE_ANON_KEY in Vercel stimmt nicht (der „anon public“-Key unter Legacy API Keys).';
+  if (/not confirmed/i.test(msg)) return 'Dieses Konto ist noch nicht bestätigt. In Supabase beim Anlegen „Auto Confirm User“ anhaken.';
+  if (/fetch|network|load failed/i.test(msg)) return 'Keine Verbindung zur Datenbank. Bist du online, und stimmt VITE_SUPABASE_URL in Vercel?';
+  return `Anmelden hat nicht geklappt: ${msg}`;
 }
 export async function logout() { await sb().auth.signOut(); token = null; }
 
