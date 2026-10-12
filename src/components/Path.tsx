@@ -80,7 +80,7 @@ function Node({ n, stats, exams, profile, why, onClick }: { n: PathNode; stats: 
           <span className="node-t">
             <b>{title(n.id)}</b>
             {profile && <FitTag id={n.id} profile={profile} />}
-            <small>{n.state === 'locked' ? 'Noch gesperrt' : n.state === 'done' && lv === MAX_LEVEL ? 'Profi-Stufe erreicht 🏆' : `Stufe ${lv}: ${STAGES[lv - 1].name}`}</small>
+            <small>{n.state === 'locked' ? 'Noch gesperrt' : n.state === 'done' && stats[n.id]?.mastered ? 'Gemeistert 🏆' : n.state === 'done' && lv === MAX_LEVEL ? 'Profi-Stufe erreicht ⭐' : `Stufe ${lv}: ${STAGES[lv - 1].name}`}</small>
             <span className="node-bar" aria-hidden="true">{STAGES.map((_, k) => <i key={k} className={k < lv - 1 ? 'on' : ''} />)}</span>
           </span>
           {n.state === 'done' && <span className="node-ok" aria-label="geschafft">✓</span>}
