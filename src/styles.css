@@ -809,6 +809,13 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .kt-adult { border: 3px solid var(--blue); }
 .btn.danger { background: var(--red); box-shadow: 0 3px 0 color-mix(in srgb, var(--red) 55%, #000); }
 
+/* ===== Thema gemeistert ===== */
+.mastered { position: relative; overflow: hidden; text-align: center; justify-items: center; border: 3px solid var(--sun); }
+.mastered .ms-icon { font-size: 72px; line-height: 1; animation: pop-in .6s ease-out; }
+.mastered .ms-stars { font-size: 28px; margin: 0; letter-spacing: 4px; }
+.mastered p { margin: 0; }
+.mastered .ms-actions { display: grid; gap: 10px; width: 100%; }
+
 /* ===== KI-Fragen in der Aufgabe ===== */
 .ask-btn { margin-top: 2px; }
 .askai { display: grid; gap: 12px; min-width: 0; border-top: 2px dashed var(--line); padding-top: 14px; margin-top: 4px; }

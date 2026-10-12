@@ -19,6 +19,8 @@ type Feedback = { state: 'right' | 'wrong' | 'almost' | 'invalid'; msg: string }
 interface TaskState {
   task: Task | null; tries: number; hint: boolean; revealed: boolean; done: boolean; guided: boolean; heft: boolean;
   fb: Feedback | null; lastWrong: string | null; lastDiag: string | null; levelMsg: string; n: number;
+  /** gerade die Profi-Stufe geschafft */
+  mastered?: boolean;
   /** fürs Lerntagebuch: Startzeit, falsche Eingaben, genutzte Hilfen */
   t0: number; wrongs: string[]; helps: Help[];
   /** Fragen an die KI zu dieser Aufgabe offen */
@@ -36,9 +38,9 @@ const addHelp = (h: Help[], x: Help) => (h.includes(x) ? h : [...h, x]);
 const PARTY = ['🎉', '⭐', '✨', '🎈', '⭐', '🎉'];
 const ICON = { right: '✓', wrong: '✗', almost: '≈', invalid: '?' };
 
-interface Props { topic: Topic; stats: Stats; onStats: (s: Stats) => void; onLog?: (a: Attempt) => void }
+interface Props { topic: Topic; stats: Stats; onStats: (s: Stats) => void; onLog?: (a: Attempt) => void; onBack?: () => void; backLabel?: string }
 
-export function Practice({ topic, stats, onStats, onLog }: Props) {
+export function Practice({ topic, stats, onStats, onLog, onBack, backLabel }: Props) {
   const s: TopicStats = { ...freshStats(), ...stats[topic.id] };
   const [T, setT] = useState<TaskState>(() => newTask(topic, s));
   const [input, setInput] = useState('');
@@ -62,7 +64,11 @@ export function Practice({ topic, stats, onStats, onLog }: Props) {
         if (n.streak >= STREAK_UP && n.level < MAX_LEVEL) {
           n.level++; n.streak = 0; n.atLevel = 0;
           msg = `Stufe geschafft! ⭐ Als Nächstes: ${STAGES[n.level - 1].icon} ${STAGES[n.level - 1].name}.`;
-        } else if (n.streak >= STREAK_UP && n.level === MAX_LEVEL) msg = 'Du bist ein echter Profi in diesem Thema! 🏆';
+        } else if (n.streak >= STREAK_UP && n.level === MAX_LEVEL) {
+          n.streak = 0;
+          if (!n.mastered) { n.mastered = new Date().toISOString().slice(0, 10); state.mastered = true; }
+          else msg = 'Wieder 3 richtig in Folge. Du bist ein echter Profi! 🏆';
+        }
       } else n.streak = 0;
     } else {
       n.streak = 0; n.miss++;
@@ -118,7 +124,7 @@ export function Practice({ topic, stats, onStats, onLog }: Props) {
   const path = (
     <ol className="path5" aria-label={`Stufe ${s.level} von ${MAX_LEVEL}: ${stage.name}`}>
       {STAGES.map((st, i) => {
-        const lv = i + 1, state = lv < s.level ? 'done' : lv === s.level ? 'now' : 'locked';
+        const lv = i + 1, state = lv < s.level || s.mastered ? 'done' : lv === s.level ? 'now' : 'locked';
         return (
           <li key={st.name} className={state}>
             <span className="p5-dot" aria-hidden="true">{state === 'done' ? '⭐' : state === 'locked' ? '🔒' : st.icon}</span>
@@ -138,6 +144,25 @@ export function Practice({ topic, stats, onStats, onLog }: Props) {
           <h2 className="h2">Stufe {s.level}: {stage.name}</h2>
           <Html className="si-text" html={stage.intro.startsWith('<') ? stage.intro : `<p>${stage.intro}</p>`} />
           <button className="btn big wide" onClick={startStage}>Los geht's 👉</button>
+        </section>
+      </>
+    );
+  }
+
+  if (T.mastered) {
+    return (
+      <>
+        {path}
+        <section className="card panel mastered" role="status">
+          <span className="party" aria-hidden="true">{PARTY.map((c, i) => <i key={i} style={{ '--i': i } as CSSProperties}>{c}</i>)}</span>
+          <span className="ms-icon" aria-hidden="true">🏆</span>
+          <h2 className="h2">Thema gemeistert!</h2>
+          <p className="ms-stars" aria-label="5 von 5 Sternen">⭐⭐⭐⭐⭐</p>
+          <p>Du hast alle 5 Stufen von <b>{topic.title}</b> geschafft, auch die Profi-Stufe. Darauf kannst du richtig stolz sein!</p>
+          <div className="ms-actions">
+            {onBack && <button className="btn big wide" onClick={onBack}>{backLabel ?? 'Zum nächsten Thema'} 👉</button>}
+            <button className="btn quiet wide" onClick={() => { setT(newTask(topic, { ...freshStats(), ...stats[topic.id] }, T.n + 1)); setInput(''); }}>Noch ein paar Profi-Aufgaben</button>
+          </div>
         </section>
       </>
     );
@@ -216,7 +241,7 @@ export function Practice({ topic, stats, onStats, onLog }: Props) {
       <p className="foot-note">
         {s.level < MAX_LEVEL
           ? <>Noch <b>{toGo}</b> {toGo === 1 ? 'Aufgabe' : 'Aufgaben'} hintereinander ohne Hilfe richtig, dann geht es zur nächsten Stufe.{' '}</>
-          : <>Du bist auf der höchsten Stufe. Bleib dran!{' '}</>}
+          : s.mastered ? <>🏆 Thema gemeistert. Hier kannst du zum Wiederholen weiter üben.{' '}</> : <>Letzte Stufe! Noch <b>{toGo}</b> {toGo === 1 ? 'Aufgabe' : 'Aufgaben'} hintereinander ohne Hilfe richtig, dann hast du das Thema gemeistert.{' '}</>}
         <button className="linkbtn" onClick={reset}>Von vorne anfangen</button>
       </p>
     </>
