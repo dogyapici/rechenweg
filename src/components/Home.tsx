@@ -1,3 +1,4 @@
+import { cloudReady, type Account } from '../cloud';
 import { TOPICS } from '../topics';
 import type { Stats } from '../storage';
 import { CHAPTERS, FINAL, grade, nextNode, pathNodes, topicDone, type Exams, type PathNode } from '../curriculum';
@@ -16,10 +17,11 @@ const pct = (s: { right: number; total: number }) => s.total ? s.right / s.total
 interface Props {
   stats: Stats; exams: Exams; free: boolean; plan: Plan | null; profile: Profile | null; act: Activity; unlocked: Unlocked
   onProfile: () => void; onProgress: () => void; onParents: () => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void; onPath: (chapter?: string) => void
+  account?: Account | null; onAccount?: () => void; onStudents?: () => void
 }
 
 /** Startseite: was als Nächstes dran ist und wie es bisher läuft. */
-export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfile, onProgress, onParents, onOpen, onExam, onPlan, onPlacement, onPath }: Props) {
+export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfile, onProgress, onParents, onOpen, onExam, onPlan, onPlacement, onPath, account, onAccount, onStudents }: Props) {
   const today = isoDay(new Date());
   const nodes = pathNodes(stats, exams, free, title, [...(plan?.topics ?? []), ...reachable(profile)]);
   const next = nextNode(nodes, n => n.kind === 'topic' && !!profile && fitOf(n.id, profile) === 'now');
@@ -35,8 +37,16 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
   const allTopics = CHAPTERS.flatMap(c => c.topics);
   const doneTopics = allTopics.filter(id => topicDone(stats, id)).length;
 
+  const adult = account && account.role !== 'schueler';
   return (
     <>
+      {adult && onStudents && (
+        <button className="card parents-link kt-adult" onClick={onStudents}>
+          <span aria-hidden="true">{account.role === 'lehrer' ? '👩‍🏫' : '👪'}</span>
+          <span><b>{account.role === 'lehrer' ? 'Meine Schüler' : 'Fortschritt meines Kindes'}</b><small>{account.role === 'lehrer' ? 'Konten anlegen, Fortschritt und Fehler ansehen' : 'Aufgaben, Fehler und Fortschritt'}</small></span>
+          <span aria-hidden="true">›</span>
+        </button>
+      )}
       <section className="hello">
         <h1>Hallo{profile?.name ? ` ${profile.name}` : ''}! 👋</h1>
         <p className="hello-sub">{lit ? 'Tagesziel geschafft. Stark! Alles ab jetzt ist Bonus. 💪' : r ? `Noch ${DAILY_GOAL - r} ${DAILY_GOAL - r === 1 ? 'Aufgabe' : 'Aufgaben'} bis zum Tagesziel.` : s ? `Halte deine Serie: heute ${DAILY_GOAL} Aufgaben richtig lösen.` : `Schön, dass du da bist. Heute schaffst du ${DAILY_GOAL} Aufgaben!`}</p>
@@ -108,6 +118,13 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
         <span><b>Für Eltern und Nachhilfe</b><small>Fortschritt, Fehler und wo es hakt</small></span>
         <span aria-hidden="true">›</span>
       </button>
+      {cloudReady && onAccount && (
+        <button className="card parents-link" onClick={onAccount}>
+          <span aria-hidden="true">👤</span>
+          <span><b>{account ? `Angemeldet als ${account.name || account.username}` : 'Anmelden'}</b><small>{account ? 'Konto und Speichern' : 'Fortschritt im Konto speichern, damit dein Lehrer ihn sieht'}</small></span>
+          <span aria-hidden="true">›</span>
+        </button>
+      )}
     </>
   );
 }

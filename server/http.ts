@@ -1,7 +1,15 @@
 import { timingSafeEqual } from 'node:crypto';
 
-/** Nur wer den Zugangscode kennt, darf die KI nutzen (schützt den API-Schlüssel vor fremder Nutzung). */
-export function unauthorized(req: Request): Response | null {
+/**
+ * Nur wer den Zugangscode kennt, darf die KI nutzen (schützt den API-Schlüssel vor fremder Nutzung).
+ * Angemeldete Nutzer brauchen keinen Code: Ihr Anmelde-Token wird bei Supabase geprüft.
+ */
+export async function unauthorized(req: Request): Promise<Response | null> {
+  if (req.headers.get('authorization') && (await import('./supa.js').then(m => m.caller(req)))) return null;
+  return codeDenied(req);
+}
+
+export function codeDenied(req: Request): Response | null {
   const expected = process.env.APP_ACCESS_CODE;
   if (!expected) return json({ error: 'Auf dem Server fehlt APP_ACCESS_CODE.' }, 500);
   const given = req.headers.get('x-access-code') ?? '';

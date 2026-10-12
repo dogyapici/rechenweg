@@ -2,7 +2,7 @@ import { tutor, type TutorInput } from '../server/claude.js';
 import { aiError, json, readJson, unauthorized } from '../server/http.js';
 
 export async function POST(req: Request): Promise<Response> {
-  const denied = unauthorized(req);
+  const denied = await unauthorized(req);
   if (denied) return denied;
   const body = await readJson<TutorInput>(req);
   if (!body || !Array.isArray(body.messages)) return json({ error: 'Ungültige Anfrage.' }, 400);

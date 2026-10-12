@@ -1,4 +1,5 @@
 import { loadCode } from './storage';
+import { authToken } from './cloud';
 import type { ZettelResult } from './catalog';
 
 /** Aufrufe an die eigene Server-Funktion. Der API-Schlüssel liegt nur auf dem Server. */
@@ -6,10 +7,16 @@ export class AiError extends Error {
   constructor(message: string, readonly needsCode = false) { super(message); }
 }
 
+/** Angemeldet reicht das Konto, sonst gilt der Zugangscode. */
+function aiHeaders(): Record<string, string> {
+  const t = authToken();
+  return { 'content-type': 'application/json', 'x-access-code': loadCode(), ...(t ? { authorization: `Bearer ${t}` } : {}) };
+}
+
 async function post<T>(path: string, body: unknown, valid: (d: T) => boolean = d => typeof (d as { text?: unknown }).text === 'string'): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-access-code': loadCode() }, body: JSON.stringify(body) });
+    res = await fetch(path, { method: 'POST', headers: aiHeaders(), body: JSON.stringify(body) });
   } catch {
     throw new AiError('Keine Verbindung zum Server. Bist du online?');
   }

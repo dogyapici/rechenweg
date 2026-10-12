@@ -10,10 +10,10 @@ const { unauthorized } = await import('./http.js');
 describe('Zugangscode', () => {
   beforeEach(() => { process.env.APP_ACCESS_CODE = 'geheim'; });
   const req = (code?: string) => new Request('http://x/api/tutor', { method: 'POST', headers: code ? { 'x-access-code': code } : {} });
-  it('lässt den richtigen Code durch', () => expect(unauthorized(req('geheim'))).toBeNull());
-  it('blockt falschen oder fehlenden Code', () => {
-    expect(unauthorized(req('falsch'))?.status).toBe(401);
-    expect(unauthorized(req())?.status).toBe(401);
+  it('lässt den richtigen Code durch', async () => expect(await unauthorized(req('geheim'))).toBeNull());
+  it('blockt falschen oder fehlenden Code', async () => {
+    expect((await unauthorized(req('falsch')))?.status).toBe(401);
+    expect((await unauthorized(req()))?.status).toBe(401);
   });
 });
 

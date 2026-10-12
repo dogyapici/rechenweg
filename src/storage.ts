@@ -4,6 +4,7 @@ import type { Profile } from './profile';
 import type { Activity, Unlocked } from './progress';
 import { emptyJournal, type Journal } from './journal';
 import type { Seen } from './fresh';
+import type { CloudData, SyncMeta } from './cloud';
 
 /** Fortschritt und Zugangscode bleiben nur in diesem Browser gespeichert. */
 /** `intro`: höchste Stufe, deren Einführung schon gezeigt wurde. `atLevel`: erledigte Aufgaben auf der aktuellen Stufe. */
@@ -47,3 +48,19 @@ export const saveJournal = (j: Journal) => write('rechenweg-journal', j);
 /** Zuletzt gestellte Aufgaben pro Thema, damit sich nichts wiederholt */
 export const loadSeen = (): Seen => read<Seen>('rechenweg-seen', {});
 export const saveSeen = (s: Seen) => write('rechenweg-seen', s);
+
+/* ===== Abgleich mit dem Konto ===== */
+/** Alles, was zum Lernstand gehört (nicht Zugangscode und Geräte-Einstellungen). */
+export const PROGRESS_KEYS = ['rechenweg-stats', 'rechenweg-exams', 'rechenweg-activity', 'rechenweg-unlocked', 'rechenweg-journal', 'rechenweg-plan', 'rechenweg-profile', 'rechenweg-seen', 'rechenweg-last'];
+export function localData(): Omit<CloudData, 'v' | 'at'> {
+  return { stats: loadStats(), exams: loadExams(), act: loadActivity(), unlocked: loadUnlocked(), journal: loadJournal(), plan: loadPlan(), profile: loadProfile(), seen: loadSeen() };
+}
+export const hasLocalData = () => Object.keys(loadStats()).length > 0 || loadJournal().tries.length > 0 || Object.keys(loadExams()).length > 0;
+export function applyData(d: CloudData) {
+  saveStats(d.stats ?? {}); saveExams(d.exams ?? {}); saveActivity(d.act ?? {}); saveUnlocked(d.unlocked ?? {});
+  saveJournal(d.journal ?? emptyJournal()); savePlan(d.plan ?? null); if (d.profile) saveProfile(d.profile); else write('rechenweg-profile', null);
+  saveSeen(d.seen ?? {});
+}
+export function clearLocal() { for (const k of PROGRESS_KEYS) { try { localStorage.removeItem(k); } catch { /* egal */ } } }
+export const loadSyncMeta = (): SyncMeta => ({ user: null, at: 0, pushed: 0, ...read<Partial<SyncMeta>>('rechenweg-sync', {}) });
+export const saveSyncMeta = (m: SyncMeta) => write('rechenweg-sync', m);
