@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cloudReady, type Account } from '../cloud';
 import { TOPICS } from '../topics';
 import type { Stats } from '../storage';
@@ -36,6 +37,12 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
   const week = sum(0, dow), lastWeek = sum(dow + 1, dow + 7);
   const allTopics = CHAPTERS.flatMap(c => c.topics);
   const doneTopics = allTopics.filter(id => topicDone(stats, id)).length;
+
+  // Auf der Startseite nur die angefangenen Kapitel und das nächste, der Rest auf Wunsch.
+  const [allCh, setAllCh] = useState(false);
+  const started = (c: (typeof CHAPTERS)[number]) => !!exams[c.id] || c.topics.some(id => (stats[id]?.level ?? 1) > 1 || (stats[id]?.total ?? 0) > 0);
+  const firstNew = CHAPTERS.find(c => !started(c));
+  const shown = allCh ? CHAPTERS : CHAPTERS.filter(c => started(c) || c === firstNew);
 
   const adult = account && account.role !== 'schueler';
   return (
@@ -78,7 +85,7 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
         </button>
         <button className="kpi" onClick={onProgress}>
           <span className="kpi-i" aria-hidden="true">✏️</span>
-          <span><small>Diese Woche</small><b>{week}</b><em>richtig{lastWeek ? `, letzte Woche ${lastWeek}${week > lastWeek ? ' ↑' : ''}` : ' gelöst'}</em></span>
+          <span><small>Diese Woche</small><b>{week}</b><em>{lastWeek ? `Vorwoche: ${lastWeek}${week > lastWeek ? ' ↑' : ''}` : 'richtig gelöst'}</em></span>
         </button>
         <button className="kpi" onClick={() => onPath()}>
           <span className="kpi-i" aria-hidden="true">⭐</span>
@@ -92,7 +99,7 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
       <section className="card panel dash">
         <div className="dash-h"><h2>Dein Fortschritt</h2><button className="linkbtn" onClick={() => onPath()}>Ganzer Lernpfad ›</button></div>
         <ul className="chprog">
-          {CHAPTERS.map(ch => {
+          {shown.map(ch => {
             const n = ch.topics.length;
             const steps = ch.topics.reduce((a, id) => a + Math.min(MAX_LEVEL, stats[id]?.level ?? 1) - 1, 0);
             const ok = ch.topics.filter(id => topicDone(stats, id)).length;
@@ -108,6 +115,7 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
             );
           })}
         </ul>
+        {shown.length < CHAPTERS.length && <button className="linkbtn chprog-more" onClick={() => setAllCh(true)}>Alle {CHAPTERS.length} Kapitel zeigen</button>}
       </section>
 
       <Strengths stats={stats} onOpen={onOpen} />
@@ -247,7 +255,7 @@ function Badges({ unlocked, onClick }: { unlocked: Unlocked; onClick: () => void
   const got = ACHIEVEMENTS.filter(a => unlocked[a.id]).sort((a, b) => unlocked[b.id].localeCompare(unlocked[a.id]));
   const nxt = ACHIEVEMENTS.find(a => !unlocked[a.id]);
   return (
-    <button className="card panel badges" onClick={onClick}>
+    <button className="card panel badge-sum" onClick={onClick}>
       <span className="badges-i" aria-hidden="true">{got.length ? got.slice(0, 4).map(a => <i key={a.id}>{a.icon}</i>) : <i>🏅</i>}</span>
       <span><b>{got.length} von {ACHIEVEMENTS.length} Erfolgen</b><em>{nxt ? `Als Nächstes: ${nxt.icon} ${nxt.title}` : 'Du hast alle Erfolge! 👑'}</em></span>
       <span aria-hidden="true">›</span>

@@ -31,7 +31,7 @@ export function Path({ stats, exams, free, plan, profile, focus, onFree, onOpen,
 
   return (
     <>
-      <div className="path-h"><h1>Dein Lernpfad</h1><span>{done} von {nodes.length} geschafft</span></div>
+      <div className="path-h"><h1>Dein Lernpfad</h1><span>{done} von {nodes.length} Schritten geschafft</span></div>
       <ol className="map">
         {chapters.map(ch => {
           const isOpen = shown.has(ch.id);
