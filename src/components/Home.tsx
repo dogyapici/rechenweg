@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { MascotSays } from './Mascot';
+import { POKE, nextPoke, type Mood } from '../mascot';
 import { cloudReady, type Account } from '../cloud';
 import { TOPICS } from '../topics';
 import type { Stats } from '../storage';
@@ -45,6 +47,17 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
   const shown = allCh ? CHAPTERS : CHAPTERS.filter(c => started(c) || c === firstNew);
 
   const adult = account && account.role !== 'schueler';
+  // Plusi winkt zur Begrüßung und hüpft, wenn man es antippt.
+  const [mood, setMood] = useState<Mood>(lit ? 'happy' : 'wave');
+  const [said, setSaid] = useState(-1);
+  const timer = useRef(0);
+  useEffect(() => { timer.current = window.setTimeout(() => setMood('idle'), 2600); return () => window.clearTimeout(timer.current); }, []);
+  const poke = () => {
+    setSaid(k => nextPoke(k));
+    setMood('happy');
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setMood('idle'), 1400);
+  };
   return (
     <>
       {adult && onStudents && (
@@ -56,7 +69,11 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
       )}
       <section className="hello">
         <h1>Hallo{profile?.name ? ` ${profile.name}` : ''}! 👋</h1>
-        <p className="hello-sub">{lit ? 'Tagesziel geschafft. Stark! Alles ab jetzt ist Bonus. 💪' : r ? `Noch ${DAILY_GOAL - r} ${DAILY_GOAL - r === 1 ? 'Aufgabe' : 'Aufgaben'} bis zum Tagesziel.` : s ? `Halte deine Serie: heute ${DAILY_GOAL} Aufgaben richtig lösen.` : `Schön, dass du da bist. Heute schaffst du ${DAILY_GOAL} Aufgaben!`}</p>
+        <div className="hello-m">
+          <MascotSays mood={mood} bump={said} onPoke={poke} label="Plusi antippen: Plusi sagt etwas">
+            <p className="hello-sub" key={said} aria-live="polite">{said >= 0 ? POKE[said] : lit ? 'Tagesziel geschafft. Stark! Alles ab jetzt ist Bonus. 💪' : r ? `Noch ${DAILY_GOAL - r} ${DAILY_GOAL - r === 1 ? 'Aufgabe' : 'Aufgaben'} bis zum Tagesziel.` : s ? `Halte deine Serie: heute ${DAILY_GOAL} Aufgaben richtig lösen.` : `Schön, dass du da bist. Heute schaffst du ${DAILY_GOAL} Aufgaben!`}</p>
+          </MascotSays>
+        </div>
         {profile && <button className="chip" onClick={onProfile} aria-label="Profil ansehen und ändern">🎒 Kl. {profile.klasse} · {SCHULFORMEN.find(f => f.id === profile.schulform)?.name.split(' (')[0]} · {profile.land}</button>}
       </section>
 

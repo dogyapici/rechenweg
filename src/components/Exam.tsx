@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { MascotSays } from './Mascot';
 import { solHTML } from '../engine/index.js';
 import { CHAPTERS, FINAL, PASS, grade, type Exams } from '../curriculum';
 import { buildExam, mark, type ExamTask, type Mark } from '../exam';
@@ -135,8 +136,10 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom, onLog }:
         <div>
           <h2 className="h2">Note {g.note}: {g.word}</h2>
           <p>{num(pts)} von {tasks.length} Punkten ({Math.round(p * 100)} %) in {clock(secs)} Minuten</p>
-          <p className="exam-verdict">{p >= PASS ? (g.note <= 2 ? 'Super! Du bist bereit für die echte Klassenarbeit. 🎉' : 'Bestanden! Mit etwas Übung schaffst du noch eine bessere Note.') : 'Noch nicht bestanden. Übe die Themen unten noch einmal und versuch es dann wieder. Du schaffst das!'}</p>
         </div>
+        <MascotSays mood={p < PASS ? 'oops' : g.note <= 2 ? 'cheer' : 'happy'} size={64}>
+          <p className="exam-verdict">{p >= PASS ? (g.note <= 2 ? 'Super! Du bist bereit für die echte Klassenarbeit. 🎉' : 'Bestanden! Mit etwas Übung schaffst du noch eine bessere Note.') : 'Noch nicht bestanden. Übe die Themen unten noch einmal und versuch es dann wieder. Du schaffst das!'}</p>
+        </MascotSays>
       </section>
 
       <section className="card panel">

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Mascot } from './Mascot';
 
 export interface Party { icon: string; title: string; text: string; kind: 'goal' | 'badge' }
 
@@ -21,6 +22,7 @@ export function Celebrate({ party, more, onClose }: { party: Party; more: number
         ))}
       </div>
       <div className={`cel-card ${party.kind}`} onClick={e => e.stopPropagation()}>
+        <Mascot key={party.title} mood="cheer" size={78} className="cel-mascot" />
         <div className="cel-badge" aria-hidden="true"><span>{party.icon}</span></div>
         <p className="cel-k">{party.kind === 'goal' ? 'Tagesziel geschafft!' : 'Neuer Erfolg!'}</p>
         <h2 id="cel-t">{party.title}</h2>
