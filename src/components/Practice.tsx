@@ -11,6 +11,8 @@ import { AiExplain } from './AiExplain';
 import { AskAi } from './AskAi';
 import { Guide } from './Guide';
 import { Html } from './Html';
+import { Mascot } from './Mascot';
+import { moodFor } from '../mascot';
 import { HeftView } from './HeftView';
 import { answerLabel } from '../widgets';
 import type { Attempt, Help } from '../journal';
@@ -155,7 +157,7 @@ export function Practice({ topic, stats, onStats, onLog, onBack, backLabel }: Pr
         {path}
         <section className="card panel mastered" role="status">
           <span className="party" aria-hidden="true">{PARTY.map((c, i) => <i key={i} style={{ '--i': i } as CSSProperties}>{c}</i>)}</span>
-          <span className="ms-icon" aria-hidden="true">🏆</span>
+          <span className="ms-hero" aria-hidden="true"><Mascot mood="cheer" size={96} /><span className="ms-icon">🏆</span></span>
           <h2 className="h2">Thema gemeistert!</h2>
           <p className="ms-stars" aria-label="5 von 5 Sternen">⭐⭐⭐⭐⭐</p>
           <p>Du hast alle 5 Stufen von <b>{topic.title}</b> geschafft, auch die Profi-Stufe. Darauf kannst du richtig stolz sein!</p>
@@ -172,6 +174,8 @@ export function Practice({ topic, stats, onStats, onLog, onBack, backLabel }: Pr
   const k = T.task;
   const right = T.fb?.state === 'right';
   const toGo = STREAK_UP - s.streak;
+  // Richtige in Folge ohne Hilfe; nach dem Stufenaufstieg zählt die Stufe neu, dann feiert die Meldung.
+  const combo = right && T.tries === 1 && !T.hint && !T.helps.length ? s.streak : 0;
 
   return (
     <>
@@ -202,8 +206,8 @@ export function Practice({ topic, stats, onStats, onLog, onBack, backLabel }: Pr
         {T.fb && (
           <div className={`fb ${T.fb.state}`} role="status">
             {right && <span className="party" aria-hidden="true">{PARTY.map((c, i) => <i key={i} style={{ '--i': i } as CSSProperties}>{c}</i>)}</span>}
-            <span className="fb-icon" aria-hidden="true">{ICON[T.fb.state]}</span>
-            <span dangerouslySetInnerHTML={{ __html: T.fb.msg }} />
+            <span className="fb-m"><Mascot key={`${T.n}-${T.tries}-${T.fb.state}`} mood={moodFor(T.fb.state, combo, !!T.levelMsg && right)} size={60} /><span className="fb-icon" aria-hidden="true">{ICON[T.fb.state]}</span></span>
+            <span><span dangerouslySetInnerHTML={{ __html: T.fb.msg }} />{combo >= 2 && <span className="fb-combo">🔥 {combo} in Folge!</span>}</span>
           </div>
         )}
         {T.levelMsg && <p className="levelup">{T.levelMsg}</p>}
