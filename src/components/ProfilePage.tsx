@@ -49,7 +49,12 @@ export function ProfilePage({ profile, onSave, onBack }: { profile: Profile | nu
 
       {draft && (
         <section className="card panel">
-          <h2 className="h2">So sieht dein Lernpfad aus</h2>
+          <details className="pf-more">
+          <summary>
+            <h2 className="h2">So sieht dein Lernpfad aus</h2>
+            <small>{CATALOG.filter(c => fitOf(c.id, draft) === 'now').length} Themen jetzt dran · {CATALOG.filter(c => fitOf(c.id, draft) === 'past').length} zum Wiederholen · {CATALOG.filter(c => fitOf(c.id, draft) === 'later').length} kommen später</small>
+            <span className="linkbtn">Alle Themen ansehen</span>
+          </summary>
           <ul className="pf-preview">
             {CATALOG.map(c => {
               const fit = fitOf(c.id, draft), g = gradeOf(c.id, draft);
@@ -74,6 +79,7 @@ export function ProfilePage({ profile, onSave, onBack }: { profile: Profile | nu
               <p className="ai-note">Diese Themen kommen nach und nach dazu. Bis dahin kannst du im Bereich „Fragen“ alles dazu fragen.</p>
             </details>
           )}
+          </details>
           {draft.klasse >= MAX_COVERED && <p className="hintbox">Für Klasse {draft.klasse} gibt es in der App bisher vor allem Wiederholung. Themen wie Terme, Zinsen oder lineare Funktionen kommen noch dazu.</p>}
         </section>
       )}

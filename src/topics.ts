@@ -526,7 +526,7 @@ export const TOPICS: Topic[] = [
     id: 'teil', klasse: 6, title: 'Teiler, Vielfache und Primzahlen', short: 'Teilbarkeitsregeln, ggT und kgV. Das brauchst du später zum Kürzen und für den Hauptnenner.',
     exampleSol: () => ({ prompt: 'Was ist der größte gemeinsame Teiler (ggT) von 24 und 36?', sol: ggtTask(24, 36).sol }),
     theory: `
-      <p>Eine Zahl ist <b>durch 3 teilbar</b>, wenn bei 3 geteilt durch die Zahl kein Rest bleibt. ${M('12 : 3 = 4')} geht auf, also ist 3 ein <b>Teiler</b> von 12. Umgekehrt ist 12 ein <b>Vielfaches</b> von 3.</p>
+      <p>Eine Zahl ist <b>durch 3 teilbar</b>, wenn beim Teilen durch 3 kein Rest bleibt. ${M('12 : 3 = 4')} geht auf, also ist 3 ein <b>Teiler</b> von 12. Umgekehrt ist 12 ein <b>Vielfaches</b> von 3.</p>
       <p>Mit den <b>Teilbarkeitsregeln</b> siehst du es oft ohne zu rechnen:</p>
       <ul><li><b>durch 2</b>: die letzte Ziffer ist gerade (0, 2, 4, 6, 8)</li><li><b>durch 5</b>: die letzte Ziffer ist 0 oder 5</li><li><b>durch 10</b>: die letzte Ziffer ist 0</li><li><b>durch 3</b>: die <b>Quersumme</b> ist durch 3 teilbar. Bei 471 ist die Quersumme 4 + 7 + 1 = 12, also ist 471 durch 3 teilbar.</li><li><b>durch 9</b>: die Quersumme ist durch 9 teilbar</li></ul>
       <p>Eine <b>Primzahl</b> hat genau zwei Teiler: 1 und sich selbst. Die ersten sind 2, 3, 5, 7, 11, 13, 17, 19, 23, 29. Die 1 ist keine Primzahl.</p>

@@ -215,7 +215,7 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .ctx { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--blue-soft); color: var(--blue); border-radius: 14px; padding: 8px 12px; font-size: 16px; }
 .ctx button { border: 0; background: none; color: inherit; cursor: pointer; text-decoration: underline; }
 .chatform { display: flex; gap: 10px; align-items: flex-end; }
-.chatform textarea { flex: 1 1 auto; min-width: 0; border: 3px solid var(--line); border-radius: 16px; padding: 12px 14px; background: var(--paper); resize: none; font-size: 18px; }
+.chatform textarea { flex: 1 1 0; width: 0; min-width: 0; border: 3px solid var(--line); border-radius: 16px; padding: 12px 14px; background: var(--paper); resize: none; font-size: 18px; }
 .chatform textarea:focus { border-color: var(--blue); outline: none; }
 .settings { display: grid; gap: 10px; }
 .settings .ansrow { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -604,6 +604,7 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .map-ch-x { font-size: 24px; color: var(--muted); transition: transform .2s; flex: none; }
 .map-ch.on .map-ch-x { transform: rotate(90deg); }
 .map-ch .map-nodes { margin: 0 14px 0 14px; }
+.map-ch-why { padding: 0 14px 12px; color: var(--muted); font-size: 15px; }
 .extras { display: grid; gap: 10px; justify-items: start; }
 .extras .free { width: 100%; }
 @media (max-width: 420px) { .map-ch-bar { display: none; } }
@@ -669,13 +670,13 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .exnote { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; font: 800 22px/1 var(--f-display); color: #fff; background: var(--green); }
 .exnote.n3, .exnote.n4 { background: #d97706; }
 .exnote.n5, .exnote.n6 { background: #dc2626; }
-.badges { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer; padding: 14px 16px; border: 2px solid var(--line); color: var(--ink); }
-.badges > span:nth-child(2) { display: grid; gap: 2px; flex: 1; min-width: 0; }
-.badges b { font: 800 18px/1.25 var(--f-display); }
-.badges em { font-style: normal; color: var(--muted); font-size: 15px; }
+.badge-sum { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer; padding: 14px 16px; border: 2px solid var(--line); color: var(--ink); }
+.badge-sum > span:nth-child(2) { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.badge-sum b { font: 800 18px/1.25 var(--f-display); }
+.badge-sum em { font-style: normal; color: var(--muted); font-size: 15px; }
 .badges-i { display: flex; font-size: 26px; }
 .badges-i i { font-style: normal; margin-right: -4px; }
-.badges > span:last-child { font-size: 22px; color: var(--muted); }
+.badge-sum > span:last-child { font-size: 22px; color: var(--muted); }
 
 /* Säule ziehen und Zahlengerade */
 .bar-w { max-width: 380px; touch-action: none; cursor: ns-resize; }
@@ -824,4 +825,64 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 .askai .chat { min-height: 0; }
 .askai .chip { white-space: normal; text-align: left; }
 .askai .chatform .btn { flex: none; }
-.askai .chatform textarea { flex: 1 1 0; width: 0; font-size: 17px; }
+.askai .chatform textarea { font-size: 17px; }
+
+/* ===== Handy: ruhigere Überschriften, weniger Gedränge ===== */
+.chatform .btn { flex: none; }
+.try .chip { white-space: normal; text-align: left; max-width: 100%; }
+.chprog-more { justify-self: center; }
+@media (max-width: 720px) {
+  .top-in { padding: 8px 16px; }
+  .brand svg { width: 30px; height: 30px; }
+  .brand b { font-size: 20px; }
+  main { padding-top: 14px; gap: 14px; }
+  h2 { font-size: 21px; }
+  h3 { font-size: 18px; }
+  .h1 { font-size: 24px; }
+  .hello { gap: 8px; }
+  .hello h1 { font-size: 28px; }
+  .hello-sub { font-size: 16px; }
+  .thead { gap: 10px; }
+  .thead h1 { font-size: 22px; line-height: 1.2; }
+  .thead .back { width: 40px; height: 40px; font-size: 18px; }
+  .thead .ticon { width: 40px; height: 40px; font-size: 22px; border-radius: 12px; }
+  .lead { font-size: 16px; margin-top: -10px; }
+  .prompt { font-size: 21px; line-height: 1.7; }
+  .bubble { font-size: 18px; min-height: 0; }
+  .stepper button { padding: 8px 4px; font-size: 14px; }
+  .stepper .sn { width: 22px; height: 22px; font-size: 12px; }
+  .exnav b { font-size: 16px; }
+  .kpis { gap: 8px; }
+  .kpi { padding: 10px; gap: 8px; }
+  .kpi-i { width: 32px; height: 32px; font-size: 20px; border-radius: 10px; }
+  .kpi small { font-size: 11px; letter-spacing: .04em; }
+  .kpi b { font-size: 18px; }
+  .kpi em { font-size: 13px; line-height: 1.3; }
+  .dash h2 { font-size: 19px; }
+  .chprog-t b { font-size: 16px; }
+  .strengths h2 { font-size: 17px; }
+  .el-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .el-kpis > div { padding: 8px 10px; }
+  .el-kpis b { font-size: 21px; }
+  .parents-link { padding: 12px 16px; }
+  .badges { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .badges li { padding: 10px 6px; }
+  .badges small { font-size: 12px; }
+  .map-ch-t b { font-size: 17px; }
+  .map-ch-n { font-size: 11px; }
+  .map-ch .map-nodes { margin: 0 10px; padding-left: 22px; }
+  .node-b { gap: 10px; padding: 10px 12px; }
+  .node-b .ticon { width: 38px; height: 38px; font-size: 20px; border-radius: 11px; }
+  .node-t b { font-size: 16px; }
+  .node-t small { font-size: 13px; }
+  .node-ok { width: 26px; height: 26px; font-size: 14px; }
+  .node-bar i { width: 20px; }
+  .fit { font-size: 12px; padding: 2px 8px; }
+  .pf-preview li { font-size: 15px; }
+}
+.pf-more > summary { list-style: none; cursor: pointer; display: grid; gap: 4px; }
+.pf-more > summary::-webkit-details-marker { display: none; }
+.pf-more > summary small { color: var(--muted); font-size: 15px; }
+.pf-more > summary .linkbtn { justify-self: start; }
+.pf-more[open] > summary { margin-bottom: 14px; }
+.pf-more[open] > summary .linkbtn { display: none; }
