@@ -6,6 +6,8 @@ import { Calculator } from './components/Calculator';
 import { Tutor } from './components/Tutor';
 import { Exam } from './components/Exam';
 import { Zettel } from './components/Zettel';
+import { Mix } from './components/Mix';
+import { practiced } from './mix';
 import { Placement } from './components/Placement';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Progress } from './components/Progress';
@@ -19,11 +21,11 @@ import { Celebrate, type Party } from './components/Celebrate';
 import { loadActivity, loadExams, loadFree, loadJournal, loadPlan, loadProfile, loadStats, loadUnlocked, saveActivity, saveExams, saveFree, saveJournal, saveLast, savePlan, saveProfile, saveStats, saveUnlocked, type Stats } from './storage';
 import { isoDay, type Plan } from './plan';
 import { reachable, type Profile } from './profile';
-import { DAILY_GOAL, isActive, logExam, logStats, newAchievements, streak, type Activity, type Unlocked } from './progress';
-import { CHAPTERS, type Exams } from './curriculum';
+import { DAILY_GOAL, isActive, logExam, logMix, logStats, newAchievements, streak, type Activity, type Unlocked } from './progress';
+import { CHAPTERS, FINAL, type Exams } from './curriculum';
 import type { TutorContext } from './ai';
 
-export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' } | { name: 'eltern' } | { name: 'konto' } | { name: 'schueler' };
+export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'mix'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' } | { name: 'eltern' } | { name: 'konto' } | { name: 'schueler' };
 
 const ALL = CHAPTERS.flatMap(c => c.topics);
 const NAV = [['home', '🏠', 'Start'], ['path', '📚', 'Lernpfad'], ['plan', '📅', 'Klassenarbeit'], ['calc', '🧮', 'Rechner'], ['tutor', '💬', 'Fragen']] as const;
@@ -95,6 +97,11 @@ export function App() {
     setExams(e); saveExams(e);
     record(ref.current.stats, e, more ? logExam(ref.current.act, isoDay(new Date())) : ref.current.act);
   }, [record]);
+  /** Gemischt geübte Aufgabe: ins Lerntagebuch und fürs Tagesziel zählen, die Stufen im Thema bleiben, wie sie sind. */
+  const logMix_ = useCallback((a: Attempt) => {
+    logTry(a);
+    record(ref.current.stats, ref.current.exams, logMix(ref.current.act, a.ok, isoDay(new Date())));
+  }, [logTry, record]);
   const updateFree = useCallback((f: boolean) => { setFree(f); saveFree(f); }, []);
   /** Ein neuer Zettel heißt neue Klassenarbeit: Die alte Probe-Klassenarbeit zählt nicht mehr. */
   const updatePlan = useCallback((p: Plan | null) => {
@@ -111,8 +118,8 @@ export function App() {
   const placement = () => go({ name: 'placement', topics: profile && reachable(profile).length ? reachable(profile) : ALL, back: 'home' });
   const askTutor = useCallback((ctx: TutorContext | null) => { setTutorCtx(ctx); go({ name: 'tutor' }); }, [go]);
 
-  const fromPlan = view.name === 'plan' || (view.name === 'topic' && view.from === 'plan') || (view.name === 'exam' && view.id === 'plan') || (view.name === 'placement' && view.back === 'plan');
-  const fromPath = view.name === 'path' || (view.name === 'topic' && view.from === 'path') || (view.name === 'exam' && view.id !== 'plan');
+  const fromPlan = view.name === 'plan' || (view.name === 'topic' && view.from === 'plan') || (view.name === 'exam' && view.id === 'plan') || (view.name === 'mix' && (view.id === 'plan' || view.id === 'geuebt')) || (view.name === 'placement' && view.back === 'plan');
+  const fromPath = view.name === 'path' || (view.name === 'topic' && view.from === 'path') || (view.name === 'exam' && view.id !== 'plan') || (view.name === 'mix' && view.id !== 'plan' && view.id !== 'geuebt');
   const current = view.name === 'calc' || view.name === 'tutor' ? view.name : fromPlan ? 'plan' : fromPath ? 'path' : 'home';
   return (
     <>
@@ -139,13 +146,23 @@ export function App() {
       <main>
         {shared === 'bad' && <div className="card panel"><p>Dieser Bericht-Link ist leider beschädigt oder unvollständig. Bitte lassen Sie sich einen neuen Link schicken.</p><button className="btn" onClick={closeShared}>Zur App</button></div>}
         {shared && shared !== 'bad' && <ErrorBoundary key="shared"><Eltern data={shared} shared onBack={closeShared} /></ErrorBoundary>}
-        {!shared && <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' ? view.id : view.name}>
+        {!shared && <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' || view.name === 'mix' ? view.id : view.name}>
         {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} profile={profile} act={act} unlocked={unlocked} onProfile={() => go({ name: 'profile' })} onProgress={() => go({ name: 'progress' })} onParents={() => go({ name: 'eltern' })} account={account} onAccount={() => go({ name: 'konto' })} onStudents={() => go({ name: 'schueler' })} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
           onPlan={() => go({ name: 'plan' })} onPlacement={placement} onPath={focus => go({ name: 'path', focus })} />}
         {view.name === 'path' && <Path key={view.focus} stats={stats} exams={exams} free={free} plan={plan} profile={profile} focus={view.focus} onFree={updateFree} onOpen={id => go({ name: 'topic', id, from: 'path' })} onExam={id => go({ name: 'exam', id })} onPlacement={placement} />}
-        {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onLog={logExam_} onBack={() => go({ name: view.id === 'plan' ? 'plan' : 'path' })} onOpenTopic={id => go({ name: 'topic', id, from: view.id === 'plan' ? 'plan' : 'path' })}
+        {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onLog={logExam_} onBack={() => go({ name: view.id === 'plan' ? 'plan' : 'path' })} onOpenTopic={id => go({ name: 'topic', id, from: view.id === 'plan' ? 'plan' : 'path' })} onMix={() => go({ name: 'mix', id: view.id })}
           custom={view.id === 'plan' && plan ? { name: `Probe-Klassenarbeit${plan.title ? ': ' + plan.title : ''}`, topics: plan.topics, back: 'Zurück zum Lernplan' } : undefined} />}
-        {view.name === 'plan' && <Zettel plan={plan} stats={stats} exams={exams} onPlan={updatePlan} onOpen={id => go({ name: 'topic', id, from: 'plan' })} onExam={() => go({ name: 'exam', id: 'plan' })}
+        {view.name === 'mix' && (() => {
+          const ch = CHAPTERS.find(c => c.id === view.id);
+          const toPlan = view.id === 'plan' || view.id === 'geuebt';
+          const topics = view.id === 'plan' ? plan?.topics ?? [] : view.id === 'geuebt' ? practiced(stats, ALL) : ch ? ch.topics : FINAL.topics;
+          const name = view.id === 'plan' ? `Gemischt üben${plan?.title ? ': ' + plan.title : ''}` : view.id === 'geuebt' ? 'Gemischt üben' : `Gemischt üben: ${ch ? ch.title : FINAL.title}`;
+          const back = () => go(toPlan ? { name: 'plan' } : { name: 'exam', id: view.id });
+          return topics.length
+            ? <Mix name={name} topics={topics} stats={stats} back="Zurück zur Klassenarbeit" onBack={back} onLog={logMix_} onOpenTopic={id => go({ name: 'topic', id, from: toPlan ? 'plan' : 'path' })} />
+            : <div className="card panel"><p>Hier gibt es noch keine Themen zum Mischen.</p><button className="btn" onClick={back}>Zurück</button></div>;
+        })()}
+        {view.name === 'plan' && <Zettel plan={plan} stats={stats} exams={exams} onPlan={updatePlan} onOpen={id => go({ name: 'topic', id, from: 'plan' })} onExam={() => go({ name: 'exam', id: 'plan' })} onMix={id => go({ name: 'mix', id })}
           onPlacement={topics => go({ name: 'placement', topics, back: 'plan' })} onBack={() => go({ name: 'home' })} />}
         {view.name === 'placement' && <Placement topics={view.topics} stats={stats} onStats={updateStats} onDone={() => go({ name: view.back })} />}
         {view.name === 'topic' && (
