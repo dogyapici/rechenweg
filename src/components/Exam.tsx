@@ -12,13 +12,13 @@ import type { Attempt, ExamLog } from '../journal';
 import { loadSeen, saveSeen } from '../storage';
 import { remember } from '../fresh';
 
-interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void; custom?: { name: string; topics: string[]; back: string }; onLog?: (tries: Attempt[], exam: ExamLog) => void }
+interface Props { id: string; exams: Exams; onExams: (e: Exams) => void; onBack: () => void; onOpenTopic: (id: string) => void; custom?: { name: string; topics: string[]; back: string }; onLog?: (tries: Attempt[], exam: ExamLog) => void; onMix?: () => void }
 
 const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? id;
 const num = (x: number) => String(Math.round(x * 10) / 10).replace('.', ',');
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom, onLog }: Props) {
+export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom, onLog, onMix }: Props) {
   const ch = CHAPTERS.find(c => c.id === id);
   const name = custom ? custom.name : ch ? `Klassenarbeit: ${ch.title}` : FINAL.title;
   const topics = custom ? custom.topics : ch ? ch.topics : FINAL.topics;
@@ -78,6 +78,7 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom, onLog }:
           {prev && <p className="exam-prev">Dein bestes Ergebnis bisher: <b>Note {grade(prev.best).note}</b> ({Math.round(prev.best * 100)} %)</p>}
           <button className="btn big wide" onClick={start}>{prev ? 'Neue Klassenarbeit schreiben' : 'Klassenarbeit starten'} ✏️</button>
         </section>
+        {onMix && <MixCard onMix={onMix} />}
       </div>
     );
   }
@@ -171,9 +172,21 @@ export function Exam({ id, exams, onExams, onBack, onOpenTopic, custom, onLog }:
         </ol>
       </section>
       <div className="cta">
+        {onMix && weak.length > 0 && <button className="btn big soft" onClick={onMix}>🔀 Gemischt üben</button>}
         <button className="btn big" onClick={start}>Neue Klassenarbeit schreiben</button>
         <button className="btn quiet" onClick={onBack}>{back}</button>
       </div>
     </div>
+  );
+}
+
+/** Vor der Arbeit: ohne Note üben, mit Rückmeldung nach jeder Aufgabe. */
+export function MixCard({ onMix, text }: { onMix: () => void; text?: string }) {
+  return (
+    <section className="card panel mix-card">
+      <h2 className="h2">🔀 Gemischt üben</h2>
+      <p>{text ?? 'Aufgaben aus allen Themen durcheinander, ohne Note. Du siehst sofort, ob es stimmt.'} Hängst du fest, überspringst du die Aufgabe oder lässt dir eine andere geben.</p>
+      <button className="btn soft wide" onClick={onMix}>Gemischt üben 👉</button>
+    </section>
   );
 }
