@@ -7,12 +7,15 @@ import { STAGES } from '../stages';
 import type { Stats } from '../storage';
 import { look, tone } from '../ui/look';
 import { AccessCode } from './AccessCode';
+import { MixCard } from './Exam';
+import { practiced } from '../mix';
+import { CHAPTERS } from '../curriculum';
 
 const title = (id: string) => CATALOG.find(c => c.id === id)?.title ?? id;
 
 interface Props {
   plan: Plan | null; stats: Stats; exams: Exams;
-  onPlan: (p: Plan | null) => void; onOpen: (id: string) => void; onExam: () => void; onPlacement: (topics: string[]) => void; onBack: () => void;
+  onPlan: (p: Plan | null) => void; onOpen: (id: string) => void; onExam: () => void; onPlacement: (topics: string[]) => void; onBack: () => void; onMix: (id: 'plan' | 'geuebt') => void;
 }
 
 /** Die nächste Klassenarbeit: Themenzettel eintragen, dann Lernplan bis zum Termin. */
@@ -24,6 +27,9 @@ export function Zettel(p: Props) {
       {editing || !p.plan
         ? <ZettelForm plan={p.plan} onCancel={p.plan ? () => setEditing(false) : undefined} onSave={np => { p.onPlan(np); setEditing(false); window.scrollTo({ top: 0 }); }} />
         : <PlanView {...p} plan={p.plan} onEdit={() => setEditing(true)} />}
+      {!p.plan && practiced(p.stats, CHAPTERS.flatMap(c => c.topics)).length > 0 && (
+        <MixCard onMix={() => p.onMix('geuebt')} text="Noch kein Zettel? Wiederhole alles, was du schon geübt hast, gemischt und ohne Note." />
+      )}
     </div>
   );
 }
@@ -133,7 +139,7 @@ function ZettelForm({ plan, onSave, onCancel }: { plan: Plan | null; onSave: (p:
   );
 }
 
-function PlanView({ plan, stats, exams, onPlan, onOpen, onExam, onPlacement, onEdit }: Props & { plan: Plan; onEdit: () => void }) {
+function PlanView({ plan, stats, exams, onPlan, onOpen, onExam, onPlacement, onEdit, onMix }: Props & { plan: Plan; onEdit: () => void }) {
   const today = isoDay(new Date());
   const left = plan.date ? daysLeft(plan.date, today) : null;
   const days = schedule(plan, stats, today);
@@ -142,8 +148,7 @@ function PlanView({ plan, stats, exams, onPlan, onOpen, onExam, onPlacement, onE
   const probe = exams.plan;
   const fresh = plan.topics.every(id => !stats[id]?.total);
   const label = (it: PlanItem) => it.kind === 'topic' ? `${look(it.id).icon} ${title(it.id)}` : it.kind === 'probe' ? '📝 Probe-Klassenarbeit' : '🔁 Wiederholen: gemischte Aufgaben';
-  const act = (it: PlanItem) => (it.kind === 'topic' ? onOpen(it.id) : it.kind === 'probe' ? onExam() : onOpen(weakest()));
-  const weakest = () => plan.topics.reduce((a, b) => ((stats[b]?.level ?? 1) < (stats[a]?.level ?? 1) ? b : a));
+  const act = (it: PlanItem) => (it.kind === 'topic' ? onOpen(it.id) : it.kind === 'probe' ? onExam() : onMix('plan'));
 
   return (
     <>
@@ -206,6 +211,8 @@ function PlanView({ plan, stats, exams, onPlan, onOpen, onExam, onPlacement, onE
           </ol>
         </section>
       )}
+
+      {plan.topics.length > 1 && <MixCard onMix={() => onMix('plan')} text="Alle Themen von deinem Zettel durcheinander, so wie in der Arbeit, aber ohne Note und mit Rückmeldung nach jeder Aufgabe." />}
 
       <section className="card panel">
         <h2 className="h2">📝 Probe-Klassenarbeit</h2>

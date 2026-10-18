@@ -965,3 +965,13 @@ details.solbox[open] > summary { margin-bottom: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .m-poke:active .mascot { transform: none; } }
 .m-bubble p { margin: 0 !important; }
+
+/* Gemischt üben */
+.mix-score { display: flex; flex-wrap: wrap; gap: 8px; font-weight: 700; font-size: 15px; }
+.mix-score span { padding: 4px 12px; border-radius: 999px; background: var(--card); border: 2px solid var(--line); }
+.mix-score .ok { color: var(--green); background: var(--green-soft); border-color: transparent; }
+.mix-lv { white-space: nowrap; font-size: 14px; font-weight: 700; color: var(--muted); }
+.mix .task-h { flex-wrap: wrap; }
+.mix .stage-tag { white-space: normal; min-width: 0; }
+@media (min-width: 721px) { .mix .helpers.four { grid-template-columns: repeat(4, 1fr); } }
+.mix .helpers .btn { font-size: 16px; white-space: nowrap; padding: 12px 6px; }

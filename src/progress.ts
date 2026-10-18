@@ -44,6 +44,11 @@ export function logStats(act: Activity, before: Stats, after: Stats, today: stri
   const d = act[today] ?? emptyDay();
   return { ...act, [today]: { ...d, right: d.right + right, tasks: d.tasks + tasks } };
 }
+/** Gemischt geübte Aufgabe: zählt wie eine Aufgabe im Thema fürs Tagesziel. */
+export function logMix(act: Activity, ok: boolean, today: string): Activity {
+  const d = act[today] ?? emptyDay();
+  return { ...act, [today]: { ...d, tasks: d.tasks + 1, right: d.right + (ok ? 1 : 0) } };
+}
 export function logExam(act: Activity, today: string): Activity {
   const d = act[today] ?? emptyDay();
   return { ...act, [today]: { ...d, exams: d.exams + 1 } };
