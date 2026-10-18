@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react';
 export interface Look { icon: string; color: string; teaser: string }
 
 const LOOKS: Record<string, Look> = {
+  buch: { icon: '📸', color: '#0b7285', teaser: 'Aufgaben aus dem Buch' },
   pvs: { icon: '🎯', color: '#e8590c', teaser: 'Was rechne ich zuerst?' },
   teil: { icon: '🔢', color: '#5c7cfa', teaser: 'Welche Zahl passt hinein?' },
   groe: { icon: '📏', color: '#f08c00', teaser: 'km, kg und Minuten' },

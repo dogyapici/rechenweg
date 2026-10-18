@@ -67,3 +67,18 @@ describe('Themenzettel', () => {
     expect(create.mock.calls[0][0].output_config.format.type).toBe('json_schema');
   });
 });
+
+describe('Buchaufgaben', () => {
+  it('schickt das Foto mit und säubert die Antwort', async () => {
+    const { buch } = await import('./claude.js');
+    create.mockReset().mockResolvedValueOnce({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({
+      titel: 'S. 12', aufgaben: [{ nr: '1', text: 'Berechne 2/3 · 9', thema: 'brmul', art: 'rechnung', rechnung: '2/3 · 9', ergebnis: '6', einheit: '', loesung: '', teilrechnungen: [] }],
+    }) }] });
+    const r = await buch({ image: { data: 'abc', type: 'image/jpeg' }, welche: 'Nr. 1' });
+    expect(r.tasks[0]).toMatchObject({ nr: '1', topic: 'brmul', rechnung: '2/3 · 9' });
+    const call = create.mock.calls[0][0];
+    expect(call.messages[0].content[0].type).toBe('image');
+    expect(call.messages[0].content[1].text).toContain('Nr. 1');
+    expect(call.output_config.format.type).toBe('json_schema');
+  });
+});

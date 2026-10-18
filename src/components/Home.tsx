@@ -19,12 +19,12 @@ const pct = (s: { right: number; total: number }) => s.total ? s.right / s.total
 
 interface Props {
   stats: Stats; exams: Exams; free: boolean; plan: Plan | null; profile: Profile | null; act: Activity; unlocked: Unlocked
-  onProfile: () => void; onProgress: () => void; onParents: () => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void; onPath: (chapter?: string) => void
+  onProfile: () => void; onProgress: () => void; onParents: () => void; onOpen: (id: string) => void; onExam: (id: string) => void; onPlan: () => void; onPlacement: () => void; onPath: (chapter?: string) => void; onBuch: () => void
   account?: Account | null; onAccount?: () => void; onStudents?: () => void
 }
 
 /** Startseite: was als Nächstes dran ist und wie es bisher läuft. */
-export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfile, onProgress, onParents, onOpen, onExam, onPlan, onPlacement, onPath, account, onAccount, onStudents }: Props) {
+export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfile, onProgress, onParents, onOpen, onExam, onPlan, onPlacement, onPath, onBuch, account, onAccount, onStudents }: Props) {
   const today = isoDay(new Date());
   const nodes = pathNodes(stats, exams, free, title, [...(plan?.topics ?? []), ...reachable(profile)]);
   const next = nextNode(nodes, n => n.kind === 'topic' && !!profile && fitOf(n.id, profile) === 'now');
@@ -90,6 +90,12 @@ export function Home({ stats, exams, free, plan, profile, act, unlocked, onProfi
           <span className="continue-go" aria-hidden="true">▶</span>
         </button>
       )}
+
+      <button className="card parents-link buch-link" onClick={onBuch}>
+        <span aria-hidden="true">📸</span>
+        <span><b>Aufgaben aus dem Buch</b><small>Foto machen, lösen und sofort prüfen lassen</small></span>
+        <span aria-hidden="true">›</span>
+      </button>
 
       <section className="kpis" aria-label="Deine Zahlen">
         <button className={`kpi${lit ? ' lit' : ''}`} onClick={onProgress}>

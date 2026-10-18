@@ -5,6 +5,7 @@ import type { Activity, Unlocked } from './progress';
 import { emptyJournal, type Journal } from './journal';
 import type { Seen } from './fresh';
 import type { CloudData, SyncMeta } from './cloud';
+import type { BuchPage } from './buch';
 
 /** Fortschritt und Zugangscode bleiben nur in diesem Browser gespeichert. */
 /** `intro`: höchste Stufe, deren Einführung schon gezeigt wurde. `atLevel`: erledigte Aufgaben auf der aktuellen Stufe. */
@@ -47,6 +48,10 @@ export const saveProfile = (p: Profile) => write('rechenweg-profile', p);
 export const loadJournal = (): Journal => ({ ...emptyJournal(), ...read<Partial<Journal>>('rechenweg-journal', {}) });
 export const saveJournal = (j: Journal) => write('rechenweg-journal', j);
 /** Zuletzt gestellte Aufgaben pro Thema, damit sich nichts wiederholt */
+/** Fotografierte Buchseiten bleiben nur auf diesem Gerät. */
+export const loadBuch = (): BuchPage[] => read<BuchPage[]>('rechenweg-buch', []);
+export const saveBuch = (p: BuchPage[]) => write('rechenweg-buch', p);
+
 export const loadSeen = (): Seen => read<Seen>('rechenweg-seen', {});
 export const saveSeen = (s: Seen) => write('rechenweg-seen', s);
 

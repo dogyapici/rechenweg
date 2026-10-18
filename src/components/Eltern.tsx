@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { buildReport, encodeSnapshot, snapshot, SHARE_KEY, type Attempt, type Help, type Snapshot, type TopicRow, type TopicState } from '../journal';
+import { BUCH_TOPIC, buildReport, encodeSnapshot, snapshot, SHARE_KEY, type Attempt, type Help, type Snapshot, type TopicRow, type TopicState } from '../journal';
 import { TOPICS } from '../topics';
 import { CHAPTERS, FINAL } from '../curriculum';
 import { look } from '../ui/look';
 import { STAGES } from '../stages';
 import { Html } from './Html';
 
-const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? id;
+const title = (id: string) => TOPICS.find(t => t.id === id)?.title ?? (id === BUCH_TOPIC ? 'Aufgabe aus dem Buch' : id);
 const examName = (id: string) => (id === 'final' ? FINAL.title : id === 'plan' ? 'Probe-Klassenarbeit' : `Klassenarbeit: ${CHAPTERS.find(c => c.id === id)?.title ?? id}`);
 const pct = (x: number | null) => (x == null ? '–' : `${Math.round(x * 100)} %`);
 const mins = (s: number) => (s < 60 ? (s ? '< 1 Min.' : '0 Min.') : s < 3600 ? `${Math.round(s / 60)} Min.` : `${Math.floor(s / 3600)} Std. ${Math.round((s % 3600) / 60)} Min.`);
@@ -190,7 +190,7 @@ function Mistake({ m }: { m: Attempt }) {
   return (
     <li className={m.ok ? 'helped' : 'wrong'}>
       <div className="er-h"><span aria-hidden="true">{look(m.topic).icon}</span><b>{title(m.topic)}</b></div>
-      <small className="el-when">{when(m.t)}{m.src === 'arbeit' ? ' · Klassenarbeit' : ` · Stufe ${m.lv}`}</small>
+      <small className="el-when">{when(m.t)}{m.src === 'arbeit' ? ' · Klassenarbeit' : m.src === 'buch' ? ' · aus dem Buch' : ` · Stufe ${m.lv}`}</small>
       <Html as="p" html={m.q} />
       <p className="er-a">
         {m.wrong.length > 0 && <>Eingegeben: <b className="el-w">{m.wrong.join(' · ')}</b> · </>}
