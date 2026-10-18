@@ -12,7 +12,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!messages.length) return json({ error: 'Die Nachricht ist leer.' }, 400);
   const c = body.context;
   const context = c && typeof c.title === 'string' ? { title: c.title.slice(0, 1000), topic: String(c.topic ?? '').slice(0, 200), steps: String(c.steps ?? '').slice(0, 8000),
-    open: c.open === true, wrong: Array.isArray(c.wrong) ? c.wrong.slice(-3).map(w => String(w).slice(0, 60)) : [] } : null;
+    open: c.open === true, wrong: Array.isArray(c.wrong) ? c.wrong.slice(-3).map(w => String(w).slice(0, 60)) : [], unchecked: c.unchecked === true } : null;
   try {
     return json(await tutor({ messages, context }));
   } catch (e) {

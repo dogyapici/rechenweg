@@ -7,6 +7,7 @@ import { Tutor } from './components/Tutor';
 import { Exam } from './components/Exam';
 import { Zettel } from './components/Zettel';
 import { Mix } from './components/Mix';
+import { Buch } from './components/Buch';
 import { practiced } from './mix';
 import { Placement } from './components/Placement';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -25,7 +26,7 @@ import { DAILY_GOAL, isActive, logExam, logMix, logStats, newAchievements, strea
 import { CHAPTERS, FINAL, type Exams } from './curriculum';
 import type { TutorContext } from './ai';
 
-export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'mix'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' } | { name: 'eltern' } | { name: 'konto' } | { name: 'schueler' };
+export type View = { name: 'home' } | { name: 'topic'; id: string; from?: 'plan' | 'path' } | { name: 'path'; focus?: string } | { name: 'exam'; id: string } | { name: 'mix'; id: string } | { name: 'plan' } | { name: 'placement'; topics: string[]; back: 'home' | 'plan' } | { name: 'calc' } | { name: 'tutor' } | { name: 'progress' } | { name: 'profile' } | { name: 'eltern' } | { name: 'konto' } | { name: 'schueler' } | { name: 'buch' };
 
 const ALL = CHAPTERS.flatMap(c => c.topics);
 const NAV = [['home', '🏠', 'Start'], ['path', '📚', 'Lernpfad'], ['plan', '📅', 'Klassenarbeit'], ['calc', '🧮', 'Rechner'], ['tutor', '💬', 'Fragen']] as const;
@@ -102,6 +103,11 @@ export function App() {
     logTry(a);
     record(ref.current.stats, ref.current.exams, logMix(ref.current.act, a.ok, isoDay(new Date())));
   }, [logTry, record]);
+  /** Buchaufgabe, von der Recheneinheit geprüft: ins Lerntagebuch und fürs Tagesziel. */
+  const logBuch = useCallback((a: Attempt) => {
+    logTry(a);
+    record(ref.current.stats, ref.current.exams, logMix(ref.current.act, a.ok, isoDay(new Date())));
+  }, [logTry, record]);
   const updateFree = useCallback((f: boolean) => { setFree(f); saveFree(f); }, []);
   /** Ein neuer Zettel heißt neue Klassenarbeit: Die alte Probe-Klassenarbeit zählt nicht mehr. */
   const updatePlan = useCallback((p: Plan | null) => {
@@ -148,7 +154,8 @@ export function App() {
         {shared && shared !== 'bad' && <ErrorBoundary key="shared"><Eltern data={shared} shared onBack={closeShared} /></ErrorBoundary>}
         {!shared && <ErrorBoundary key={view.name === 'topic' || view.name === 'exam' || view.name === 'mix' ? view.id : view.name}>
         {view.name === 'home' && <Home stats={stats} exams={exams} free={free} plan={plan} profile={profile} act={act} unlocked={unlocked} onProfile={() => go({ name: 'profile' })} onProgress={() => go({ name: 'progress' })} onParents={() => go({ name: 'eltern' })} account={account} onAccount={() => go({ name: 'konto' })} onStudents={() => go({ name: 'schueler' })} onOpen={id => go({ name: 'topic', id })} onExam={id => go({ name: 'exam', id })}
-          onPlan={() => go({ name: 'plan' })} onPlacement={placement} onPath={focus => go({ name: 'path', focus })} />}
+          onPlan={() => go({ name: 'plan' })} onPlacement={placement} onPath={focus => go({ name: 'path', focus })} onBuch={() => go({ name: 'buch' })} />}
+        {view.name === 'buch' && <Buch onBack={() => go({ name: 'home' })} onLog={logBuch} onOpenTopic={id => go({ name: 'topic', id })} />}
         {view.name === 'path' && <Path key={view.focus} stats={stats} exams={exams} free={free} plan={plan} profile={profile} focus={view.focus} onFree={updateFree} onOpen={id => go({ name: 'topic', id, from: 'path' })} onExam={id => go({ name: 'exam', id })} onPlacement={placement} />}
         {view.name === 'exam' && <Exam key={view.id} id={view.id} exams={exams} onExams={updateExams} onLog={logExam_} onBack={() => go({ name: view.id === 'plan' ? 'plan' : 'path' })} onOpenTopic={id => go({ name: 'topic', id, from: view.id === 'plan' ? 'plan' : 'path' })} onMix={() => go({ name: 'mix', id: view.id })}
           custom={view.id === 'plan' && plan ? { name: `Probe-Klassenarbeit${plan.title ? ': ' + plan.title : ''}`, topics: plan.topics, back: 'Zurück zum Lernplan' } : undefined} />}
@@ -171,7 +178,7 @@ export function App() {
         {view.name === 'profile' && <ProfilePage profile={profile} onSave={p => { setProfile(p); saveProfile(p); go({ name: 'home' }); }} onBack={() => go({ name: 'home' })} />}
         {view.name === 'progress' && <Progress act={act} unlocked={unlocked} stats={stats} exams={exams} plan={plan} onBack={() => go({ name: 'home' })} />}
         {view.name === 'calc' && <Calculator onAskTutor={askTutor} />}
-        {view.name === 'tutor' && <Tutor context={tutorCtx} onClearContext={() => setTutorCtx(null)} />}
+        {view.name === 'tutor' && <Tutor context={tutorCtx} onClearContext={() => setTutorCtx(null)} onBuch={() => go({ name: 'buch' })} />}
         {view.name === 'konto' && <Konto account={account} sync={outErr || status} onBack={() => go({ name: 'home' })} onLogout={doLogout} onStudents={() => go({ name: 'schueler' })} />}
         {view.name === 'schueler' && account && account.role !== 'schueler' && <Schueler me={account} onBack={() => go({ name: 'home' })} />}
         {view.name === 'eltern' && <Eltern data={{ profile, stats, exams, act, journal }} synced={account?.role === 'schueler'} onBack={() => go({ name: 'home' })} onOpenTopic={id => go({ name: 'topic', id })} />}

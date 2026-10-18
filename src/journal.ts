@@ -13,9 +13,9 @@ export interface Attempt {
   /** Zeitpunkt in ms */
   t: number;
   topic: string;
-  /** Stufe 1–5 beim Üben, 0 in einer Klassenarbeit */
+  /** Stufe 1–5 beim Üben, 0 in einer Klassenarbeit oder bei einer Buchaufgabe */
   lv: number;
-  src: 'ueben' | 'arbeit';
+  src: 'ueben' | 'arbeit' | 'buch';
   /** Aufgabe als HTML (gekürzt) */
   q: string;
   /** richtige Lösung als HTML */
@@ -32,6 +32,9 @@ export interface Attempt {
   /** Bearbeitungszeit in Sekunden (gedeckelt) */
   sec: number;
 }
+
+/** Thema einer Buchaufgabe, die zu keinem App-Thema passt */
+export const BUCH_TOPIC = 'buch';
 
 export interface ExamLog { t: number; id: string; name: string; p: number; secs: number; n: number }
 export interface Journal { tries: Attempt[]; exams: ExamLog[] }
@@ -115,7 +118,8 @@ export function buildReport(j: Journal, stats: Stats, act: Activity, exams: Exam
   const d7 = back(6), d30 = back(29);
   const activeDays = Object.keys(act).filter(d => (act[d].tasks || act[d].right || act[d].exams) && d <= today);
 
-  const ids = [...new Set([...Object.keys(stats), ...j.tries.map(a => a.topic)])];
+  // Buchaufgaben ohne passendes App-Thema stehen nur bei den Fehlern, nicht in der Themenliste.
+  const ids = [...new Set([...Object.keys(stats), ...j.tries.map(a => a.topic)])].filter(id => id !== BUCH_TOPIC);
   const topics: TopicRow[] = ids.map(id => {
     const ts = j.tries.filter(a => a.topic === id && a.src === 'ueben');
     const all = j.tries.filter(a => a.topic === id);

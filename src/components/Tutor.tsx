@@ -7,7 +7,7 @@ import { Html } from './Html';
 interface Msg extends ChatTurn { checks?: string[]; error?: boolean }
 const SUGGESTIONS = ['Warum gilt Punkt vor Strich?', 'Was ist ein Hauptnenner?', 'Wie rechne ich 3/4 : 1/2?', 'Wie löse ich 4x − 7 = 13?'];
 
-export function Tutor({ context, onClearContext }: { context: TutorContext | null; onClearContext: () => void }) {
+export function Tutor({ context, onClearContext, onBuch }: { context: TutorContext | null; onClearContext: () => void; onBuch?: () => void }) {
   const [chat, setChat] = useState<Msg[]>([]);
   const [busy, setBusy] = useState(false);
   const [needsCode, setNeedsCode] = useState(false);
@@ -53,6 +53,7 @@ export function Tutor({ context, onClearContext }: { context: TutorContext | nul
         <div ref={endRef} />
       </div>
       {needsCode && <AccessCode onSaved={() => setNeedsCode(false)} />}
+      {!chat.length && onBuch && <button className="btn soft wide" onClick={onBuch}>📸 Aufgabe aus dem Buch fotografieren</button>}
       {!chat.length && <div className="try"><span>Zum Beispiel:</span>{SUGGESTIONS.map(s => <button key={s} className="chip" onClick={() => send(s)}>{s}</button>)}</div>}
       <form className="chatform" onSubmit={e => { e.preventDefault(); send(draft); }}>
         <textarea id="chatin" rows={2} value={draft} onChange={e => setDraft(e.target.value)} placeholder="Deine Frage …" aria-label="Deine Frage"

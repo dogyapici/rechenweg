@@ -1,6 +1,7 @@
 import { loadCode } from './storage';
 import { authToken } from './cloud';
 import type { ZettelResult } from './catalog';
+import type { BuchResult } from './buch';
 
 /** Aufrufe an die eigene Server-Funktion. Der API-Schlüssel liegt nur auf dem Server. */
 export class AiError extends Error {
@@ -32,10 +33,15 @@ export const explain = (r: ExplainRequest) => post<{ text: string }>('/api/expla
 
 export interface ChatTurn { role: 'user' | 'assistant'; content: string }
 /** `open`: Die Aufgabe ist noch nicht gelöst, die KI darf das Ergebnis nicht verraten. `wrong`: bisherige falsche Eingaben. */
-export interface TutorContext { title: string; topic: string; steps: string; open?: boolean; wrong?: string[] }
+/** `unchecked`: Lösungsvorschlag der KI statt Rechenweg der Recheneinheit (Buchaufgaben, die die Engine nicht rechnen kann). */
+export interface TutorContext { title: string; topic: string; steps: string; open?: boolean; wrong?: string[]; unchecked?: boolean }
 export const askTutor = (messages: ChatTurn[], context: TutorContext | null) =>
   post<{ text: string; checks: string[] }>('/api/tutor', { messages, context });
 
 /** Themenzettel lesen lassen: Die KI schreibt die Punkte ab und schlägt passende App-Themen vor. */
 export const readZettel = (r: { text?: string; image?: { data: string; type: string } }) =>
   post<ZettelResult>('/api/zettel', r, d => Array.isArray(d.points));
+
+/** Aufgaben von einer Buchseite ablesen lassen. Gerechnet wird danach in der App (src/buch.ts). */
+export const readBuch = (r: { text?: string; image?: { data: string; type: string }; welche?: string }) =>
+  post<BuchResult>('/api/buch', r, d => Array.isArray(d.tasks));

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { MathError, htmlToText, solHTML, solveAny } from '../src/engine/index.js';
 import { CATALOG, CATALOG_IDS, type ZettelResult } from '../src/catalog.js';
+import { cleanBuch, type BuchResult } from '../src/buch.js';
 
 /**
  * KI-Schicht. Die KI rechnet nie selbst: Erklärungen bekommen den fertigen Rechenweg der Engine,
@@ -11,10 +12,10 @@ const client = new Anthropic(); // liest ANTHROPIC_API_KEY
 
 type Msg = Anthropic.Beta.BetaMessageParam;
 
-async function ask(params: { system: string; messages: Msg[]; tools?: Anthropic.Beta.BetaTool[]; schema?: Record<string, unknown> }) {
+async function ask(params: { system: string; messages: Msg[]; tools?: Anthropic.Beta.BetaTool[]; schema?: Record<string, unknown>; maxTokens?: number }) {
   return client.beta.messages.create({
     model: MODEL,
-    max_tokens: 4000,
+    max_tokens: params.maxTokens ?? 4000,
     system: params.system,
     messages: params.messages,
     tools: params.tools,
@@ -62,12 +63,14 @@ const RECHNEN: Anthropic.Beta.BetaTool = {
 };
 
 export interface ChatTurn { role: 'user' | 'assistant'; content: string }
-export interface TutorInput { messages: ChatTurn[]; context?: { title: string; topic: string; steps: string; open?: boolean; wrong?: string[] } | null }
+export interface TutorInput { messages: ChatTurn[]; context?: { title: string; topic: string; steps: string; open?: boolean; wrong?: string[]; unchecked?: boolean } | null }
 export interface TutorOutput { text: string; checks: string[] }
 
 /** Aufgabe aus der App für den Tutor. Ist sie noch offen, bekommt die KI den Rechenweg nur, um gezielt helfen zu können. */
 export function tutorContext(c: NonNullable<TutorInput['context']>): string {
-  let s = `\n\nDer Schüler fragt zu dieser Aufgabe aus der App (Thema: ${c.topic}): ${c.title}\nRechenweg der Engine (garantiert richtig):\n${c.steps}`;
+  let s = c.unchecked
+    ? `\n\nDer Schüler fragt zu dieser Aufgabe aus seinem Schulbuch (Thema: ${c.topic}): ${c.title}\nDie Recheneinheit kann diese Aufgabe nicht selbst lösen. Lösungsvorschlag einer KI (NICHT geprüft, kann Fehler enthalten; prüfe jede Rechnung darin mit dem Werkzeug „rechnen“):\n${c.steps}`
+    : `\n\nDer Schüler fragt zu dieser Aufgabe aus der App (Thema: ${c.topic}): ${c.title}\nRechenweg der Engine (garantiert richtig):\n${c.steps}`;
   if (c.wrong?.length) s += `\nBisherige falsche Antworten des Schülers: ${c.wrong.map(w => `„${w}“`).join(', ')}`;
   if (c.open) s += `\n\nDer Schüler sitzt GERADE an dieser Aufgabe und hat sie noch nicht gelöst.
 - Verrate auf keinen Fall das Endergebnis, auch nicht, wenn er darum bittet, und rechne die Aufgabe nicht ganz vor. Sag dann freundlich, dass er es gleich selbst schafft, und hilf beim nächsten Schritt.
@@ -153,4 +156,64 @@ ${list}`;
     .map(p => ({ text: p.text, topic: CATALOG_IDS.includes(p.topic) ? p.topic : null }));
   const date = typeof raw.datum === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.datum) ? raw.datum : null;
   return { title: typeof raw.titel === 'string' ? raw.titel.slice(0, 80) : '', date, points };
+}
+
+export interface BuchInput { text?: string; image?: { data: string; type: string }; welche?: string }
+
+const BUCH_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['titel', 'aufgaben'],
+  properties: {
+    titel: { type: 'string', description: 'Kurzer Name für die Seite, z. B. „S. 84: Brüche addieren“; leer, wenn nichts erkennbar ist' },
+    aufgaben: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false,
+        required: ['nr', 'text', 'thema', 'art', 'rechnung', 'ergebnis', 'einheit', 'loesung', 'teilrechnungen'],
+        properties: {
+          nr: { type: 'string', description: 'Nummer wie im Buch, mit Teilaufgabe, z. B. „3a“' },
+          text: { type: 'string', description: 'Aufgabenstellung genau wie im Buch' },
+          thema: { type: 'string', enum: [...CATALOG_IDS, 'keins'] },
+          art: { type: 'string', enum: ['rechnung', 'ansatz', 'ki'] },
+          rechnung: { type: 'string', description: 'Term oder Gleichung für die Recheneinheit, leer bei art „ki“' },
+          ergebnis: { type: 'string', description: 'Dein eigenes Ergebnis als Zahl, Bruch oder x = …; leer, wenn es keine einzelne Zahl ist' },
+          einheit: { type: 'string', description: 'Einheit des Ergebnisses, z. B. €, cm, kg; sonst leer' },
+          loesung: { type: 'string', description: 'Nur bei art „ki“: kurzer Lösungsweg für ein Kind, höchstens 80 Wörter; sonst leer' },
+          teilrechnungen: {
+            type: 'array', description: 'Nur bei art „ki“: jede Rechnung aus deinem Lösungsweg einzeln',
+            items: { type: 'object', additionalProperties: false, required: ['term', 'ergebnis'], properties: { term: { type: 'string' }, ergebnis: { type: 'string' } } },
+          },
+        },
+      },
+    },
+  },
+};
+
+/**
+ * Liest Aufgaben von einer Schulbuchseite (Foto oder Text). Die KI schreibt ab und stellt die Rechnung auf;
+ * ausgerechnet und geprüft wird in der App mit der Recheneinheit (src/buch.ts).
+ */
+export async function buch(inp: BuchInput): Promise<BuchResult> {
+  const list = CATALOG.map(c => `- ${c.id}: ${c.title}`).join('\n');
+  const system = `Du hilfst einer Mathe-Lern-App für Schüler ab Klasse 5. Ein Schüler zeigt dir Übungsaufgaben aus seinem Mathebuch oder von einem Arbeitsblatt.
+Schreibe jede Aufgabe einzeln ab. Teilaufgaben (a, b, c …) sind eigene Aufgaben; schreibe dann die gemeinsame Anweisung mit in den Text, z. B. „Berechne: 3/4 + 1/8“.
+Die App hat eine exakte Recheneinheit. Sie kann Terme mit + − · : Klammern, Brüchen (3/4) und Dezimalzahlen (2,5) ausrechnen und lineare Gleichungen mit x lösen. Sie kann keine Potenzen, Wurzeln, Einheiten, Vergleiche, Runden, Zeichnen oder Begründen.
+Wähle für jede Aufgabe „art“:
+- „rechnung“: Die Aufgabe ist selbst ein Term oder eine Gleichung (Berechne, Löse, Kürze). „rechnung“ ist genau dieser Term oder diese Gleichung.
+- „ansatz“: Eine Textaufgabe oder Anweisung, deren Antwort eine einzige Zahl ist, die man mit EINEM Term ausrechnet (z. B. „3/4 von 20 €“ → 3/4 · 20). „rechnung“ ist dieser Term.
+- „ki“: alles andere (mehrere Antworten, Vergleiche, Zeichnen, Begründen, Runden, Potenzen, Geometrie ohne einfache Formel …). „rechnung“ bleibt leer. Schreibe dann in „loesung“ einen kurzen Lösungsweg und in „teilrechnungen“ jede Rechnung daraus einzeln.
+Schreibweise für „rechnung“ und „term“: nur Zahlen, + - · : / ( ) und x, Dezimalzahlen mit Komma. Gemischte Zahlen als (2 + 1/2). Heißt die Variable anders, nimm x. Keine Einheiten, kein = am Ende eines Terms.
+„ergebnis“: rechne zur Kontrolle selbst; die App vergleicht das mit der Recheneinheit.
+Ordne jede Aufgabe einem Thema der App zu oder „keins“.
+Ist etwas unleserlich, lass die Aufgabe weg. Erfinde keine Aufgaben. Höchstens 30 Aufgaben.
+Themen der App:
+${list}`;
+  const content: Anthropic.Beta.BetaContentBlockParam[] = [];
+  if (inp.image) content.push({ type: 'image', source: { type: 'base64', media_type: inp.image.type as 'image/jpeg', data: inp.image.data } });
+  const which = inp.welche?.trim() ? `\nDer Schüler will nur diese Aufgaben machen: ${inp.welche.trim()}. Lass alle anderen weg.` : '';
+  content.push({ type: 'text', text: (inp.text?.trim() ? `Die Aufgaben:\n${inp.text}` : 'Das Foto zeigt die Aufgaben.') + which });
+  const res = await ask({ system, messages: [{ role: 'user', content }], schema: BUCH_SCHEMA, maxTokens: 12000 });
+  if (res.stop_reason === 'refusal') throw new Error('refusal');
+  return cleanBuch(JSON.parse(textOf(res.content)));
 }

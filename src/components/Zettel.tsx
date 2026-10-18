@@ -10,6 +10,7 @@ import { AccessCode } from './AccessCode';
 import { MixCard } from './Exam';
 import { practiced } from '../mix';
 import { CHAPTERS } from '../curriculum';
+import { shrink } from '../photo';
 
 const title = (id: string) => CATALOG.find(c => c.id === id)?.title ?? id;
 
@@ -32,16 +33,6 @@ export function Zettel(p: Props) {
       )}
     </div>
   );
-}
-
-/** Bild verkleinern, damit es schnell hochgeladen ist (lange Seite höchstens 1600 px). */
-async function shrink(file: File): Promise<{ data: string; type: string }> {
-  const bmp = await createImageBitmap(file);
-  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
-  return { data: c.toDataURL('image/jpeg', 0.85).split(',')[1], type: 'image/jpeg' };
 }
 
 type Read = { status: 'idle' | 'loading' | 'error'; msg?: string; needsCode?: boolean };
